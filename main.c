@@ -3,7 +3,7 @@
 #include "raylib.h"
 #include "raymath.h"
 
-const Vector2 VECTOR2_ZERO = {0.0f, 0.0f};
+#define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
 #define EXIT_KEY KEY_E
 #define EXIT_KEY_MODIFIER KEY_LEFT_CONTROL
@@ -22,16 +22,20 @@ const Vector2 VECTOR2_ZERO = {0.0f, 0.0f};
 
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
-#define FRAME_TIME 0.1f
+#define FRAME_TIME 0.1
 
 #define BACKGROUND_COLOR GRAY
-#define FRAME_BOX_COLOR GRAY
-#define FRAME_BOX_SIZE 32
+
+#define FRAME_ROW_COLOR GRAY
+#define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
-const Color FRAME_RHOMBUS_UNSELECTED_COLOR = {123, 123, 123, 255};
+#define FRAME_RHOMBUS_UNSELECTED_COLOR (Color) {123, 123, 123, 255}
 #define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
 
-
+#define HITBOX_ROW_SIZE 32
+#define HITBOX_CIRCLE_INACTIVE_COLOR (Color) {63, 63, 63, 255}
+#define HITBOX_CIRCLE_ACTIVE_COLOR RAYWHITE
+#define HITBOX_CIRCLE_RADIUS 12
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     Vector2 topPoint = {pos.x, pos.y - ySize};
@@ -57,6 +61,7 @@ int main() {
 
     int frameIdx = 0;
     int frameCount = sprite.width / FRAME_WIDTH;
+    bool *hitboxActiveFrames = calloc(sizeof(bool), frameCount);
 
     float playingFrameTime = 0.0f;
 
@@ -65,6 +70,7 @@ int main() {
     //     PLAYING = 1,
     //     DRAGGING = 2
     // } State;
+    // State state = IDLE;
 
     bool playing = false;
     
@@ -95,11 +101,14 @@ int main() {
         if (IsMouseButtonPressed(SELECT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
             float mouseXInFrames = mousePos.x;
-            float mouseYInFrames = mousePos.y + FRAME_BOX_SIZE - WINDOW_Y;
+            float mouseYInFrames = mousePos.y - (WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE);
 
-            if (mouseXInFrames >= 0.0f && mouseXInFrames < FRAME_BOX_SIZE * frameCount && mouseYInFrames >= 0.0f && mouseYInFrames < FRAME_BOX_SIZE) {
+            
+            if (mouseXInFrames >= 0.0f && mouseXInFrames < FRAME_ROW_SIZE * frameCount && mouseYInFrames >= 0.0f && mouseYInFrames < FRAME_ROW_SIZE + HITBOX_ROW_SIZE) {
                 playing = false;
-                frameIdx = Clamp((int) mouseXInFrames / FRAME_BOX_SIZE, 0, frameCount - 1); // clamp just to be safe
+                frameIdx = Clamp((int) mouseXInFrames / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
+                
+                if (mouseYInFrames > FRAME_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
             }
         }
 
@@ -117,18 +126,25 @@ int main() {
         ClearBackground(BACKGROUND_COLOR);
         
         Rectangle source = {FRAME_WIDTH * frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
-        DrawRectangle(0, WINDOW_Y - FRAME_BOX_SIZE, frameCount * FRAME_BOX_SIZE, FRAME_BOX_SIZE, FRAME_BOX_COLOR);
+        DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE, frameCount * FRAME_ROW_SIZE, FRAME_ROW_SIZE, FRAME_ROW_COLOR);
 
         for (int i = 0; i < frameCount; i++) {
-            Color color = i == frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
-            Vector2 center = {i * FRAME_BOX_SIZE + FRAME_BOX_SIZE / 2, WINDOW_Y - FRAME_BOX_SIZE / 2};
-            DrawRhombus(center, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, color);
+            int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
+
+            Color hitboxColor = hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
+            int hitboxYPos = WINDOW_Y - HITBOX_ROW_SIZE / 2;
+            DrawCircle(xPos, hitboxYPos, HITBOX_CIRCLE_RADIUS, hitboxColor);
+
+            Color frameColor = i == frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
+            Vector2 frameCenter = {xPos, WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE / 2};
+            DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
         }
         
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         EndDrawing();
     }
 
+    free(hitboxActiveFrames);
     CloseWindow();
     return EXIT_SUCCESS;
 }
