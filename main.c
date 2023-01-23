@@ -12,9 +12,6 @@
 #define EXIT_KEY_MODIFIER KEY_LEFT_CONTROL
 
 #define TEST_IMAGE_PATH "Jab.png"
-#define MAX_SCALE 2.0f
-#define MIN_SCALE 2.0f
-#define SCROLL_SPEED 0.75f
 #define APP_NAME "Combat Animator"
 #define WINDOW_X 800
 #define WINDOW_Y 480
@@ -22,7 +19,9 @@
 #define PREVIOUS_FRAME_KEY KEY_LEFT
 #define NEXT_FRAME_KEY KEY_RIGHT
 #define SELECT_BUTTON MOUSE_BUTTON_LEFT
-
+#define SCALE_SPEED 0.75f
+#define SCALE_MODIFIER_KEY KEY_LEFT_CONTROL
+#define PAN_MODIFIER_KEY KEY_LEFT_CONTROL
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
 #define FRAME_TIME 0.1
@@ -62,22 +61,33 @@ int main() {
     typedef enum State {
         IDLE = 0,
         PLAYING = 1,
-        DRAGGING_HANDLE = 2
+        DRAGGING_HANDLE = 2,
+        PANNING_SPRITE = 3
     } State;
     State state = IDLE;
     float playingFrameTime = 0.0f;
     Handle draggingHandle = NONE;
+    Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
 
     while (!WindowShouldClose()) {
-        
         if (IsKeyPressed(EXIT_KEY) && IsKeyDown(EXIT_KEY_MODIFIER))
             break;
-        
+
         if (state == DRAGGING_HANDLE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
                 state = IDLE;
             } else {
                 SetHitboxHandle(GetMousePosition(), spritePos, spriteScale, &hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+            }
+        } else if (state == PANNING_SPRITE) {
+            if (IsMouseButtonReleased(SELECT_BUTTON)) {
+                state = IDLE;
+            } else {
+                Vector2 mousePos = GetMousePosition();
+                float globalPanX = spritePos.x + panningSpriteLocalPos.x * spriteScale;
+                float globalPanY = spritePos.y + panningSpriteLocalPos.y * spriteScale;
+                spritePos.x += mousePos.x - globalPanX;
+                spritePos.y += mousePos.y - globalPanY;
             }
         } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
@@ -92,6 +102,11 @@ int main() {
                 if (mouseYInFrames > FRAME_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
             } else if ((draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, hitbox)) != NONE) {
                 state = DRAGGING_HANDLE;
+            } else if (IsKeyDown(PAN_MODIFIER_KEY)) {
+                state = PANNING_SPRITE;
+                Vector2 mousePos = GetMousePosition();
+                panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
+                panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
             }
         } else if (IsKeyPressed(PLAY_ANIMATION_KEY)) {
             if (state == PLAYING) {
@@ -100,13 +115,14 @@ int main() {
                 state = PLAYING;
                 playingFrameTime = 0.0f;
             }
-        } else if (GetMouseWheelMove() != 0.0f && IsKeyDown(KEY_LEFT_CONTROL)) {
+        } else if (GetMouseWheelMove() != 0.0f && IsKeyDown(SCALE_MODIFIER_KEY)) {
             Vector2 mousePos = GetMousePosition();
             float localX = (mousePos.x - spritePos.x) / spriteScale;
             float localY = (mousePos.y - spritePos.y) / spriteScale;
-            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCROLL_SPEED : SCROLL_SPEED;
+            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCALE_SPEED : SCALE_SPEED;
             spritePos.x = mousePos.x - localX * spriteScale;
             spritePos.y = mousePos.y - localY * spriteScale;
+
         } else {
             int direction = (IsKeyPressed(NEXT_FRAME_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_FRAME_KEY) ? 1 : 0);
             if (direction) {
