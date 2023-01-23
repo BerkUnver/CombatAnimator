@@ -30,7 +30,7 @@ Handle SelectHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox hit
     if (CheckCollisionPointRec(mousePos, centerHandleRect)) {
         return CENTER;
     }
-    
+
     return NONE;
 }
 
@@ -46,6 +46,7 @@ bool SetHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox *hitbox,
         case RADIUS:
             hitbox->radius = abs(x - hitbox->x);
             return true;
-        default: return false;
+        default:
+            return false;
     }
 }

@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include "raylib.h"
 #include "raymath.h"
-
 #include "hitbox.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
@@ -19,19 +18,22 @@
 #define PREVIOUS_FRAME_KEY KEY_LEFT
 #define NEXT_FRAME_KEY KEY_RIGHT
 #define SELECT_BUTTON MOUSE_BUTTON_LEFT
+#define UNDO_KEY KEY_Z
+#define UNDO_KEY_MODIFIER KEY_LEFT_CONTROL
+#define REDO_KEY KEY_Z
+#define REDO_KEY_MODIFIER_1 KEY_LEFT_ALT
+#define REDO_KEY_MODIFIER_2 KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
-#define SCALE_MODIFIER_KEY KEY_LEFT_CONTROL
-#define PAN_MODIFIER_KEY KEY_LEFT_CONTROL
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
 #define FRAME_TIME 0.1
 
 #define BACKGROUND_COLOR GRAY
 
-#define FRAME_ROW_COLOR GRAY
+#define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
-#define FRAME_RHOMBUS_UNSELECTED_COLOR (Color) {123, 123, 123, 255}
+#define FRAME_RHOMBUS_UNSELECTED_COLOR HITBOX_CIRCLE_INACTIVE_COLOR
 #define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
@@ -73,38 +75,37 @@ int main() {
         if (IsKeyPressed(EXIT_KEY) && IsKeyDown(EXIT_KEY_MODIFIER))
             break;
 
+        Vector2 mousePos = GetMousePosition();
+        
         if (state == DRAGGING_HANDLE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
                 state = IDLE;
             } else {
-                SetHitboxHandle(GetMousePosition(), spritePos, spriteScale, &hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+                SetHitboxHandle(mousePos, spritePos, spriteScale, &hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
             }
         } else if (state == PANNING_SPRITE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
                 state = IDLE;
             } else {
-                Vector2 mousePos = GetMousePosition();
                 float globalPanX = spritePos.x + panningSpriteLocalPos.x * spriteScale;
                 float globalPanY = spritePos.y + panningSpriteLocalPos.y * spriteScale;
                 spritePos.x += mousePos.x - globalPanX;
                 spritePos.y += mousePos.y - globalPanY;
             }
+        } else if (IsKeyPressed(UNDO_KEY) && IsKeyDown(UNDO_KEY_MODIFIER)) {
+            
+
         } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
-            Vector2 mousePos = GetMousePosition();
-            float mouseXInFrames = mousePos.x;
-            float mouseYInFrames = mousePos.y - (WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE);
-
-
-            if (mouseXInFrames >= 0.0f && mouseXInFrames < FRAME_ROW_SIZE * frameCount && mouseYInFrames >= 0.0f && mouseYInFrames < FRAME_ROW_SIZE + HITBOX_ROW_SIZE) {
-                state = IDLE;
-                frameIdx = Clamp((int) mouseXInFrames / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
-
-                if (mouseYInFrames > FRAME_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
+            if (WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE < mousePos.y && mousePos.y <= WINDOW_Y) {
+                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * frameCount) {
+                    state = IDLE;
+                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
+                    if (mousePos.y > WINDOW_Y - HITBOX_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
+                }
             } else if ((draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, hitbox)) != NONE) {
                 state = DRAGGING_HANDLE;
-            } else if (IsKeyDown(PAN_MODIFIER_KEY)) {
+            } else {
                 state = PANNING_SPRITE;
-                Vector2 mousePos = GetMousePosition();
                 panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
                 panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
             }
@@ -115,8 +116,7 @@ int main() {
                 state = PLAYING;
                 playingFrameTime = 0.0f;
             }
-        } else if (GetMouseWheelMove() != 0.0f && IsKeyDown(SCALE_MODIFIER_KEY)) {
-            Vector2 mousePos = GetMousePosition();
+        } else if (GetMouseWheelMove() != 0.0f) {
             float localX = (mousePos.x - spritePos.x) / spriteScale;
             float localY = (mousePos.y - spritePos.y) / spriteScale;
             spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCALE_SPEED : SCALE_SPEED;
@@ -156,7 +156,7 @@ int main() {
             DrawHitbox(spritePos, spriteScale, hitbox);
         }
 
-        DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE, frameCount * FRAME_ROW_SIZE, FRAME_ROW_SIZE, FRAME_ROW_COLOR);
+        DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE, WINDOW_X, FRAME_ROW_SIZE + HITBOX_ROW_SIZE, FRAME_ROW_COLOR);
         for (int i = 0; i < frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
     
