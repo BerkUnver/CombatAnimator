@@ -1,7 +1,10 @@
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "raylib.h"
 #include "raymath.h"
+
+#include "hitbox.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
@@ -32,11 +35,6 @@
 #define FRAME_RHOMBUS_UNSELECTED_COLOR (Color) {123, 123, 123, 255}
 #define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
 
-#define HITBOX_ROW_SIZE 32
-#define HITBOX_CIRCLE_INACTIVE_COLOR (Color) {63, 63, 63, 255}
-#define HITBOX_CIRCLE_ACTIVE_COLOR RAYWHITE
-#define HITBOX_CIRCLE_RADIUS 12
-
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     Vector2 topPoint = {pos.x, pos.y - ySize};
     Vector2 leftPoint = {pos.x - xSize, pos.y};
@@ -52,67 +50,72 @@ int main() {
     SetTargetFPS(60);
 
     Texture2D sprite = LoadTexture(TEST_IMAGE_PATH);
-    
-    float drawSizeX = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW * FRAME_WIDTH / sprite.height;
-    float drawSizeY = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW;
-    float drawX = (WINDOW_X - drawSizeX) / 2.0f;
-    float drawY = (WINDOW_Y - drawSizeY) / 2.0f;
-    Rectangle dest = {drawX, drawY, drawSizeX, drawSizeY};
+
+    float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
+    float drawSizeX = FRAME_WIDTH * spriteScale;
+    float drawSizeY = sprite.height * spriteScale;
+    Vector2 spritePos = {(WINDOW_X - drawSizeX) / 2.0f, (WINDOW_Y - drawSizeY) / 2.0f};
 
     int frameIdx = 0;
     int frameCount = sprite.width / FRAME_WIDTH;
     bool *hitboxActiveFrames = calloc(sizeof(bool), frameCount);
 
+    Hitbox hitbox = {40.0f, 40.0f, 24.0f};
+
+    typedef enum State {
+        IDLE = 0,
+        PLAYING = 1,
+        DRAGGING_HANDLE = 2
+    } State;
+    State state = IDLE;
     float playingFrameTime = 0.0f;
+    Handle draggingHandle = NONE;
 
-    // typedef enum State {
-    //     IDLE = 0,
-    //     PLAYING = 1,
-    //     DRAGGING = 2
-    // } State;
-    // State state = IDLE;
-
-    bool playing = false;
-    
-    while(!WindowShouldClose()) {
+    while (!WindowShouldClose()) {
         
         if (IsKeyPressed(EXIT_KEY) && IsKeyDown(EXIT_KEY_MODIFIER))
             break;
         
-        if (IsKeyPressed(PLAY_ANIMATION_KEY)) {
-            if (playing) {
-                playing  = false;
+        if (state == DRAGGING_HANDLE) {
+            if (IsMouseButtonReleased(SELECT_BUTTON)) {
+                state = IDLE;
             } else {
-                playing = true;
+                SetHitboxHandle(GetMousePosition(), spritePos, spriteScale, &hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+            }
+        } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
+            Vector2 mousePos = GetMousePosition();
+            float mouseXInFrames = mousePos.x;
+            float mouseYInFrames = mousePos.y - (WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE);
+
+
+            if (mouseXInFrames >= 0.0f && mouseXInFrames < FRAME_ROW_SIZE * frameCount && mouseYInFrames >= 0.0f && mouseYInFrames < FRAME_ROW_SIZE + HITBOX_ROW_SIZE) {
+                state = IDLE;
+                frameIdx = Clamp((int) mouseXInFrames / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
+
+                if (mouseYInFrames > FRAME_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
+            } else if ((draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, hitbox)) != NONE) {
+                state = DRAGGING_HANDLE;
+            }
+        } else if (IsKeyPressed(PLAY_ANIMATION_KEY)) {
+            if (state == PLAYING) {
+                state = IDLE;
+            } else {
+                state = PLAYING;
                 playingFrameTime = 0.0f;
             }
         } else {
             int direction = (IsKeyPressed(NEXT_FRAME_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_FRAME_KEY) ? 1 : 0);
             if (direction) {
-                playing = false;
+                state = IDLE;
                 int newFrame = frameIdx + direction;
-                
+
                 if (newFrame < 0) frameIdx = frameCount - 1;
                 else if (newFrame >= frameCount) frameIdx = 0;
                 else frameIdx = newFrame;
             }
         }
 
-        if (IsMouseButtonPressed(SELECT_BUTTON)) {
-            Vector2 mousePos = GetMousePosition();
-            float mouseXInFrames = mousePos.x;
-            float mouseYInFrames = mousePos.y - (WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE);
-
-            
-            if (mouseXInFrames >= 0.0f && mouseXInFrames < FRAME_ROW_SIZE * frameCount && mouseYInFrames >= 0.0f && mouseYInFrames < FRAME_ROW_SIZE + HITBOX_ROW_SIZE) {
-                playing = false;
-                frameIdx = Clamp((int) mouseXInFrames / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
-                
-                if (mouseYInFrames > FRAME_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
-            }
-        }
-
-        if (playing) {
+        if (state == PLAYING) {
             playingFrameTime += GetFrameTime();
             if (playingFrameTime >= FRAME_TIME)
             {
@@ -126,11 +129,17 @@ int main() {
         ClearBackground(BACKGROUND_COLOR);
         
         Rectangle source = {FRAME_WIDTH * frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
-        DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE, frameCount * FRAME_ROW_SIZE, FRAME_ROW_SIZE, FRAME_ROW_COLOR);
+        Rectangle dest = {spritePos.x, spritePos.y, drawSizeX, drawSizeY};
+        DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
+        
+        if (hitboxActiveFrames[frameIdx]) {
+            DrawHitbox(spritePos, spriteScale, hitbox);
+        }
 
+        DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE, frameCount * FRAME_ROW_SIZE, FRAME_ROW_SIZE, FRAME_ROW_COLOR);
         for (int i = 0; i < frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
-
+    
             Color hitboxColor = hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
             int hitboxYPos = WINDOW_Y - HITBOX_ROW_SIZE / 2;
             DrawCircle(xPos, hitboxYPos, HITBOX_CIRCLE_RADIUS, hitboxColor);
@@ -139,8 +148,7 @@ int main() {
             Vector2 frameCenter = {xPos, WINDOW_Y - HITBOX_ROW_SIZE - FRAME_ROW_SIZE / 2};
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
         }
-        
-        DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
+
         EndDrawing();
     }
 
