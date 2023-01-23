@@ -14,7 +14,7 @@
 #define TEST_IMAGE_PATH "Jab.png"
 #define MAX_SCALE 2.0f
 #define MIN_SCALE 2.0f
-#define SCROLL_SPEED 0.25f
+#define SCROLL_SPEED 0.75f
 #define APP_NAME "Combat Animator"
 #define WINDOW_X 800
 #define WINDOW_Y 480
@@ -46,15 +46,12 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
 
 int main() {
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
-    
     SetTargetFPS(60);
 
     Texture2D sprite = LoadTexture(TEST_IMAGE_PATH);
 
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
-    float drawSizeX = FRAME_WIDTH * spriteScale;
-    float drawSizeY = sprite.height * spriteScale;
-    Vector2 spritePos = {(WINDOW_X - drawSizeX) / 2.0f, (WINDOW_Y - drawSizeY) / 2.0f};
+    Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
 
     int frameIdx = 0;
     int frameCount = sprite.width / FRAME_WIDTH;
@@ -103,6 +100,13 @@ int main() {
                 state = PLAYING;
                 playingFrameTime = 0.0f;
             }
+        } else if (GetMouseWheelMove() != 0.0f && IsKeyDown(KEY_LEFT_CONTROL)) {
+            Vector2 mousePos = GetMousePosition();
+            float localX = (mousePos.x - spritePos.x) / spriteScale;
+            float localY = (mousePos.y - spritePos.y) / spriteScale;
+            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCROLL_SPEED : SCROLL_SPEED;
+            spritePos.x = mousePos.x - localX * spriteScale;
+            spritePos.y = mousePos.y - localY * spriteScale;
         } else {
             int direction = (IsKeyPressed(NEXT_FRAME_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_FRAME_KEY) ? 1 : 0);
             if (direction) {
@@ -129,7 +133,7 @@ int main() {
         ClearBackground(BACKGROUND_COLOR);
         
         Rectangle source = {FRAME_WIDTH * frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
-        Rectangle dest = {spritePos.x, spritePos.y, drawSizeX, drawSizeY};
+        Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
         if (hitboxActiveFrames[frameIdx]) {

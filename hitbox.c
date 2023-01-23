@@ -15,17 +15,22 @@ void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox) {
 }
 
 Handle SelectHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox hitbox) {
-    float hitboxGlobalX = pos.x + hitbox.x * scale;
-    float hitboxGlobalY = pos.y + hitbox.y * scale;
-    Rectangle centerHandleRect = {hitboxGlobalX - HANDLE_RADIUS, hitboxGlobalY - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
+    float radiusGlobalX = pos.x + (hitbox.x + hitbox.radius) * scale;
+    float radiusGlobalY = pos.y + hitbox.y * scale;
+    Rectangle radiusHandleRect = {radiusGlobalX - HANDLE_RADIUS, radiusGlobalY - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
 
-    Rectangle radiusHandleRect = centerHandleRect;
-    radiusHandleRect.x = pos.x + (hitbox.x + hitbox.radius) * scale;
     if (CheckCollisionPointRec(mousePos, radiusHandleRect)) {
         return RADIUS;
-    } else if (CheckCollisionPointRec(mousePos, centerHandleRect)) {
+    }
+    
+    float centerGlobalX = pos.x + hitbox.x * scale;
+    float centerGlobalY = pos.y + hitbox.y * scale;
+    Rectangle centerHandleRect = {centerGlobalX - HANDLE_RADIUS, centerGlobalY - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
+
+    if (CheckCollisionPointRec(mousePos, centerHandleRect)) {
         return CENTER;
     }
+    
     return NONE;
 }
 
