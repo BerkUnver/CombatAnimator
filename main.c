@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "hitbox.h"
+#include "editor_history.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
@@ -29,7 +30,7 @@
 #define FRAME_TIME 0.1
 
 #define BACKGROUND_COLOR GRAY
-
+const Hitbox DEFAULT_HITBOX = {40, 40, 24};
 #define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
@@ -54,11 +55,9 @@ int main() {
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
     Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
 
+    
     int frameIdx = 0;
-    int frameCount = sprite.width / FRAME_WIDTH;
-    bool *hitboxActiveFrames = calloc(sizeof(bool), frameCount);
-
-    Hitbox hitbox = {40.0f, 40.0f, 24.0f};
+    EditorHistory *history = AllocEditorHistory(DEFAULT_HITBOX, sprite.width / FRAME_WIDTH);
 
     typedef enum State {
         IDLE = 0,
@@ -81,7 +80,7 @@ int main() {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
                 state = IDLE;
             } else {
-                SetHitboxHandle(mousePos, spritePos, spriteScale, &hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+                SetHitboxHandle(mousePos, spritePos, spriteScale, &GetState(history)->hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
             }
         } else if (state == PANNING_SPRITE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
@@ -97,17 +96,21 @@ int main() {
 
         } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
             if (WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE < mousePos.y && mousePos.y <= WINDOW_Y) {
-                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * frameCount) {
+                EditorState *editorState = GetState(history);
+                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * editorState->frameCount) {
                     state = IDLE;
-                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, frameCount - 1); // clamp just to be safe
-                    if (mousePos.y > WINDOW_Y - HITBOX_ROW_SIZE) hitboxActiveFrames[frameIdx] = !hitboxActiveFrames[frameIdx];
+                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, editorState->frameCount - 1); // clamp just to be safe
+                    if (mousePos.y > WINDOW_Y - HITBOX_ROW_SIZE) editorState->hitboxActiveFrames[frameIdx] = !editorState->hitboxActiveFrames[frameIdx];
                 }
-            } else if ((draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, hitbox)) != NONE) {
-                state = DRAGGING_HANDLE;
             } else {
-                state = PANNING_SPRITE;
-                panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
-                panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
+                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, GetState(history)->hitbox);
+                if (draggingHandle != NONE) {
+                    state = DRAGGING_HANDLE;
+                } else {
+                    state = PANNING_SPRITE;
+                    panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
+                    panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
+                }
             }
         } else if (IsKeyPressed(PLAY_ANIMATION_KEY)) {
             if (state == PLAYING) {
@@ -129,8 +132,8 @@ int main() {
                 state = IDLE;
                 int newFrame = frameIdx + direction;
 
-                if (newFrame < 0) frameIdx = frameCount - 1;
-                else if (newFrame >= frameCount) frameIdx = 0;
+                if (newFrame < 0) frameIdx = GetState(history)->frameCount - 1;
+                else if (newFrame >= GetState(history)->frameCount) frameIdx = 0;
                 else frameIdx = newFrame;
             }
         }
@@ -141,7 +144,7 @@ int main() {
             {
                 playingFrameTime = fmod(playingFrameTime, FRAME_TIME);
                 frameIdx++;
-                if (frameIdx >= frameCount) frameIdx = 0;
+                if (frameIdx >= GetState(history)->frameCount) frameIdx = 0;
             }
         }
         
@@ -152,15 +155,16 @@ int main() {
         Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
-        if (hitboxActiveFrames[frameIdx]) {
-            DrawHitbox(spritePos, spriteScale, hitbox);
+        EditorState *es = GetState(history); // safe because state isn't changed after this
+        if (es->hitboxActiveFrames[frameIdx]) {
+            DrawHitbox(spritePos, spriteScale, es->hitbox);
         }
 
         DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE, WINDOW_X, FRAME_ROW_SIZE + HITBOX_ROW_SIZE, FRAME_ROW_COLOR);
-        for (int i = 0; i < frameCount; i++) {
+        for (int i = 0; i < es->frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
     
-            Color hitboxColor = hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
+            Color hitboxColor = es->hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
             int hitboxYPos = WINDOW_Y - HITBOX_ROW_SIZE / 2;
             DrawCircle(xPos, hitboxYPos, HITBOX_CIRCLE_RADIUS, hitboxColor);
 
@@ -171,8 +175,9 @@ int main() {
 
         EndDrawing();
     }
-
-    free(hitboxActiveFrames);
+    
+    UnloadTexture(sprite);
+    FreeEditorHistory(history);
     CloseWindow();
     return EXIT_SUCCESS;
 }

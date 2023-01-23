@@ -22,7 +22,7 @@ typedef enum Handle {
 typedef struct Hitbox {
     int x;
     int y;
-    float radius;
+    int radius;
 } Hitbox;
 
 void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox);
