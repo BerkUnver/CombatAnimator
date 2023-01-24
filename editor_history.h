@@ -6,6 +6,7 @@
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 
+/// @brief THIS CONTAINS A MALLOC, DO NOT DUPLICATE
 typedef struct EditorState {
     Hitbox hitbox;
     bool *hitboxActiveFrames;
@@ -20,12 +21,17 @@ typedef struct EditorHistory {
     int _statesLength;
 } EditorHistory;
 
+typedef enum ChangeOptions {
+    UNDO,
+    REDO
+} ChangeOptions;
 
-EditorHistory *AllocEditorHistory(Hitbox hitbox, int frameCount);
-void FreeEditorHistory(EditorHistory *history);
-EditorState *GetState(EditorHistory *history);
-void CommitState(EditorHistory *history);
-void UndoState(EditorHistory *history);
-void RedoState(EditorHistory *history);
+EditorState EditorStateDeepCopy(EditorState state);
+
+EditorHistory AllocEditorHistory(EditorState *initial);
+void FreeEditorHistory(EditorHistory history);
+
+void CommitState(EditorHistory *history, EditorState *state);
+void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions option);
 
 #endif

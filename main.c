@@ -21,9 +21,7 @@
 #define SELECT_BUTTON MOUSE_BUTTON_LEFT
 #define UNDO_KEY KEY_Z
 #define UNDO_KEY_MODIFIER KEY_LEFT_CONTROL
-#define REDO_KEY KEY_Z
-#define REDO_KEY_MODIFIER_1 KEY_LEFT_ALT
-#define REDO_KEY_MODIFIER_2 KEY_LEFT_CONTROL
+#define REDO_KEY_MODIFIER KEY_LEFT_ALT
 #define SCALE_SPEED 0.75f
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
@@ -57,7 +55,9 @@ int main() {
 
     
     int frameIdx = 0;
-    EditorHistory *history = AllocEditorHistory(DEFAULT_HITBOX, sprite.width / FRAME_WIDTH);
+    int frameCount = sprite.width / FRAME_WIDTH;
+    EditorState editorState = {DEFAULT_HITBOX, calloc(frameCount, sizeof(bool)), frameCount};
+    EditorHistory history = AllocEditorHistory(&editorState);
 
     typedef enum State {
         IDLE = 0,
@@ -78,9 +78,10 @@ int main() {
         
         if (state == DRAGGING_HANDLE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
+                CommitState(&history, &editorState);
                 state = IDLE;
             } else {
-                SetHitboxHandle(mousePos, spritePos, spriteScale, &GetState(history)->hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+                SetHitboxHandle(mousePos, spritePos, spriteScale, &editorState.hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
             }
         } else if (state == PANNING_SPRITE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
@@ -91,19 +92,28 @@ int main() {
                 spritePos.x += mousePos.x - globalPanX;
                 spritePos.y += mousePos.y - globalPanY;
             }
-        } else if (IsKeyPressed(UNDO_KEY) && IsKeyDown(UNDO_KEY_MODIFIER)) {
-            
+        } else if (IsKeyPressed(UNDO_KEY) && IsKeyDown(UNDO_KEY_MODIFIER)) { // undo
+            state = IDLE;
+            ChangeOptions option = UNDO;
+            if (IsKeyDown(REDO_KEY_MODIFIER)) option = REDO;
+
+            ChangeState(&history, &editorState, option);
+
+            int maxIdx = editorState.frameCount - 1;
+            if (frameIdx > maxIdx) frameIdx = maxIdx;
 
         } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
             if (WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE < mousePos.y && mousePos.y <= WINDOW_Y) {
-                EditorState *editorState = GetState(history);
-                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * editorState->frameCount) {
+                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * editorState.frameCount) { // toggle whether frame is active
                     state = IDLE;
-                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, editorState->frameCount - 1); // clamp just to be safe
-                    if (mousePos.y > WINDOW_Y - HITBOX_ROW_SIZE) editorState->hitboxActiveFrames[frameIdx] = !editorState->hitboxActiveFrames[frameIdx];
+                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, editorState.frameCount - 1); // clamp just to be safe
+                    if (mousePos.y > WINDOW_Y - HITBOX_ROW_SIZE) {
+                        editorState.hitboxActiveFrames[frameIdx] = !editorState.hitboxActiveFrames[frameIdx];
+                        CommitState(&history, &editorState);
+                    };
                 }
             } else {
-                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, GetState(history)->hitbox);
+                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, editorState.hitbox);
                 if (draggingHandle != NONE) {
                     state = DRAGGING_HANDLE;
                 } else {
@@ -132,8 +142,8 @@ int main() {
                 state = IDLE;
                 int newFrame = frameIdx + direction;
 
-                if (newFrame < 0) frameIdx = GetState(history)->frameCount - 1;
-                else if (newFrame >= GetState(history)->frameCount) frameIdx = 0;
+                if (newFrame < 0) frameIdx = editorState.frameCount - 1;
+                else if (newFrame >= editorState.frameCount) frameIdx = 0;
                 else frameIdx = newFrame;
             }
         }
@@ -144,7 +154,7 @@ int main() {
             {
                 playingFrameTime = fmod(playingFrameTime, FRAME_TIME);
                 frameIdx++;
-                if (frameIdx >= GetState(history)->frameCount) frameIdx = 0;
+                if (frameIdx >= editorState.frameCount) frameIdx = 0;
             }
         }
         
@@ -155,16 +165,15 @@ int main() {
         Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
-        EditorState *es = GetState(history); // safe because state isn't changed after this
-        if (es->hitboxActiveFrames[frameIdx]) {
-            DrawHitbox(spritePos, spriteScale, es->hitbox);
+        if (editorState.hitboxActiveFrames[frameIdx]) {
+            DrawHitbox(spritePos, spriteScale, editorState.hitbox);
         }
 
         DrawRectangle(0, WINDOW_Y - FRAME_ROW_SIZE - HITBOX_ROW_SIZE, WINDOW_X, FRAME_ROW_SIZE + HITBOX_ROW_SIZE, FRAME_ROW_COLOR);
-        for (int i = 0; i < es->frameCount; i++) {
+        for (int i = 0; i < editorState.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
     
-            Color hitboxColor = es->hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
+            Color hitboxColor = editorState.hitboxActiveFrames[i] ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
             int hitboxYPos = WINDOW_Y - HITBOX_ROW_SIZE / 2;
             DrawCircle(xPos, hitboxYPos, HITBOX_CIRCLE_RADIUS, hitboxColor);
 
@@ -178,6 +187,7 @@ int main() {
     
     UnloadTexture(sprite);
     FreeEditorHistory(history);
+    free(editorState.hitboxActiveFrames);
     CloseWindow();
     return EXIT_SUCCESS;
 }
