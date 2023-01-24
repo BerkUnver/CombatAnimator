@@ -4,11 +4,47 @@
 #include "editor_history.h"
 #include "hitbox.h"
 
+EditorState AllocEditorState(int frames) {
+    EditorState state;
+    state.frameCount = frames;
+    state.hitboxCount = 0;
+    state.hitboxes = NULL;
+    state.hitboxActiveFrames = NULL;
+    return state;
+}
+
+void FreeEditorState(EditorState state) {
+    free(state.hitboxes);
+    free(state.hitboxActiveFrames);
+}
+
+void AddHitbox(EditorState *state, Hitbox hitbox) { // Should work on nullptrs
+    int oldMax = state->hitboxCount * state->frameCount;
+    state->hitboxCount++;
+    state->hitboxes = realloc(state->hitboxes, sizeof(Hitbox) * state->hitboxCount);
+    state->hitboxes[state->hitboxCount - 1] = hitbox;
+    state->hitboxActiveFrames = realloc(state->hitboxActiveFrames, sizeof(bool) * state->hitboxCount * state->frameCount);
+    int newMax = state->hitboxCount * state->frameCount;
+    for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false;
+        state->hitboxActiveFrames[i] = false;
+    }
+}
+
 EditorState EditorStateDeepCopy(EditorState state) {
-    int activeFramesSize = sizeof(bool) * state.frameCount;
+    int activeFramesSize = sizeof(bool) * state.hitboxCount * state.frameCount;
     bool *activeFramesCopy = malloc(activeFramesSize);
     memcpy(activeFramesCopy, state.hitboxActiveFrames, activeFramesSize);
-    return (EditorState) {state.hitbox, activeFramesCopy, state.frameCount};
+
+    int hitboxesSize = sizeof(Hitbox) * state.hitboxCount;
+    Hitbox *hitboxesCopy = malloc(hitboxesSize);
+    memcpy(hitboxesCopy, state.hitboxes, hitboxesSize);
+    
+    EditorState newState;
+    newState.hitboxCount = state.hitboxCount;
+    newState.frameCount = state.frameCount;
+    newState.hitboxes = hitboxesCopy;
+    newState.hitboxActiveFrames = activeFramesCopy;
+    return newState;
 }
 
 EditorHistory AllocEditorHistory(EditorState *initial) {
@@ -24,14 +60,14 @@ EditorHistory AllocEditorHistory(EditorState *initial) {
 
 void FreeEditorHistory(EditorHistory history) {
     for (int i = 0; i < history._mostRecentStateIdx; i++) {
-        free(history._states[i].hitboxActiveFrames);
+        FreeEditorState(history._states[i]);
     }
     free(history._states);
 }
 
 void CommitState(EditorHistory *history, EditorState *state) {
     for (int i = history->_currentStateIdx + 1; i <= history->_mostRecentStateIdx; i++) {
-        free(history->_states[i].hitboxActiveFrames);
+        FreeEditorState(history->_states[i]);
     }
 
     history->_currentStateIdx++;
@@ -43,7 +79,6 @@ void CommitState(EditorHistory *history, EditorState *state) {
         history->_statesLength += HISTORY_BUFFER_SIZE_INCREMENT;
     }
 
-    // this is a near duplicate of the origin
     history->_states[history->_currentStateIdx] = EditorStateDeepCopy(*state);
 }
 
@@ -62,5 +97,5 @@ void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions optio
 
     EditorState oldState = *state;
     *state = EditorStateDeepCopy(history->_states[history->_currentStateIdx]);
-    free(oldState.hitboxActiveFrames);
+    FreeEditorState(oldState);
 }

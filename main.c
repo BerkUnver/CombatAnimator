@@ -37,10 +37,6 @@ const Hitbox DEFAULT_HITBOX = {40, 40, 24};
 #define FRAME_RHOMBUS_UNSELECTED_COLOR HITBOX_CIRCLE_INACTIVE_COLOR
 #define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
 
-#define HITBOX_HEADER_MARGIN_X 8
-#define HITBOX_HEADER_MARGIN_Y 4
-#define HITBOX_HEADER_TEXT "Hitboxes"
-
 #define HITBOX_ROW_SIZE 32
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
@@ -57,17 +53,10 @@ int main() {
     SetTargetFPS(60);
 
     Texture2D sprite = LoadTexture(TEST_IMAGE_PATH);
-    const int fontSize = GetFontDefault().baseSize;
     
-    const int hitboxHeaderHeight = fontSize + HITBOX_HEADER_MARGIN_Y * 2; 
-    const int timelineHeight = FRAME_ROW_SIZE + hitboxHeaderHeight + HITBOX_ROW_SIZE;
+    const int timelineHeight = FRAME_ROW_SIZE + HITBOX_ROW_SIZE;
     const int timelineY = WINDOW_Y - timelineHeight;
-    const int hitboxHeaderY = timelineY + FRAME_ROW_SIZE;
-    const int hitboxHeaderTextX = HITBOX_HEADER_MARGIN_X;
-    // const int hitboxHeaderTextWidth = MeasureText(HITBOX_HEADER_TEXT, fontSize);
-    // const int hitboxHeaderTextHeight = hitboxHeaderHeight;
-    const int hitboxHeaderTextY = hitboxHeaderY + HITBOX_HEADER_MARGIN_Y;
-    const int hitboxRowY = hitboxHeaderY + hitboxHeaderHeight;
+    const int hitboxRowY = timelineY + FRAME_ROW_SIZE;
     
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
     Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
@@ -75,7 +64,8 @@ int main() {
     
     int frameIdx = 0;
     int frameCount = sprite.width / FRAME_WIDTH;
-    EditorState state = {DEFAULT_HITBOX, calloc(frameCount, sizeof(bool)), frameCount};
+    EditorState state = AllocEditorState(frameCount);
+    AddHitbox(&state, DEFAULT_HITBOX);
     EditorHistory history = AllocEditorHistory(&state);
 
     typedef enum Mode {
@@ -100,7 +90,7 @@ int main() {
                 CommitState(&history, &state);
                 mode = IDLE;
             } else {
-                SetHitboxHandle(mousePos, spritePos, spriteScale, &state.hitbox, draggingHandle); // not handling illegal handle set for now b/c it shouldn't happen.
+                SetHitboxHandle(mousePos, spritePos, spriteScale, &state.hitboxes[0], draggingHandle); // todo : temporary
             }
         } else if (mode == PANNING_SPRITE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
@@ -132,7 +122,7 @@ int main() {
                     };
                 }
             } else {
-                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, state.hitbox);
+                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, state.hitboxes[0]);
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
                 } else {
@@ -185,13 +175,11 @@ int main() {
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
         if (state.hitboxActiveFrames[frameIdx]) {
-            DrawHitbox(spritePos, spriteScale, state.hitbox);
+            DrawHitbox(spritePos, spriteScale, state.hitboxes[0]);
         }
 
-
         DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
-        DrawText(HITBOX_HEADER_TEXT, hitboxHeaderTextX, hitboxHeaderTextY, fontSize, FONT_COLOR);
-        
+
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
     
@@ -209,7 +197,7 @@ int main() {
     
     UnloadTexture(sprite);
     FreeEditorHistory(history);
-    free(state.hitboxActiveFrames);
+    FreeEditorState(state);
     CloseWindow();
     return EXIT_SUCCESS;
 }
