@@ -61,14 +61,11 @@ int main() {
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
     Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
 
-    
-    int frameIdx = 0;
     EditorState state = AllocEditorState(sprite.width / FRAME_WIDTH);
     AddHitbox(&state, DEFAULT_HITBOX);
     // AddHitbox(&state, DEFAULT_HITBOX);
     EditorHistory history = AllocEditorHistory(&state);
 
-    int hitboxIdx = -1;
     typedef enum Mode {
         IDLE = 0,
         PLAYING = 1,
@@ -114,11 +111,6 @@ int main() {
 
             ChangeState(&history, &state, option);
 
-            int maxFrameIdx = state.frameCount - 1;
-            if (frameIdx > maxFrameIdx) frameIdx = maxFrameIdx;
-            int maxHitboxIdx = state.hitboxCount - 1;
-            if (hitboxIdx > maxHitboxIdx) hitboxIdx = maxHitboxIdx;
-
         } else if (IsKeyPressed(NEW_HITBOX_KEY) && IsKeyDown(NEW_HITBOX_KEY_MODIFIER)) {
             AddHitbox(&state, DEFAULT_HITBOX);
             CommitState(&history, &state);
@@ -128,19 +120,18 @@ int main() {
             if (timelineY < mousePos.y && mousePos.y <= WINDOW_Y) {
                 if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) { // toggle whether frame is active
                     mode = IDLE;
-                    frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
+                    state.frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
                     if (mousePos.y > hitboxRowY && state.hitboxCount >= 1) {
-                        int column = Clamp((mousePos.y - hitboxRowY) / HITBOX_ROW_SIZE, 0, state.hitboxCount - 1);
-                        hitboxIdx = column;
-                        bool active = !GetHitboxActive(&state, frameIdx, column);
-                        SetHitboxActive(&state, frameIdx, column, active);
+                        state.hitboxIdx = Clamp((mousePos.y - hitboxRowY) / HITBOX_ROW_SIZE, 0, state.hitboxCount - 1);
+                        bool active = !GetHitboxActive(&state, state.frameIdx, state.hitboxIdx);
+                        SetHitboxActive(&state, state.frameIdx, state.hitboxIdx, active);
                         CommitState(&history, &state);
                     } else {
-                        hitboxIdx = -1;
+                        state.hitboxIdx = -1;
                     }
                 }
-            } else if (hitboxIdx >= 0) {
-                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, state.hitboxes[hitboxIdx]);
+            } else if (state.hitboxIdx >= 0) {
+                draggingHandle = SelectHitboxHandle(mousePos, spritePos, spriteScale, state.hitboxes[state.hitboxIdx]);
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
                 } else {
@@ -167,17 +158,17 @@ int main() {
             int frameDir = (IsKeyPressed(NEXT_FRAME_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_FRAME_KEY) ? 1 : 0);
             if (frameDir) {
                 mode = IDLE;
-                int newFrame = frameIdx + frameDir;
+                int newFrame = state.frameIdx + frameDir;
 
-                if (newFrame < 0) frameIdx = state.frameCount - 1;
-                else if (newFrame >= state.frameCount) frameIdx = 0;
-                else frameIdx = newFrame;
+                if (newFrame < 0) state.frameIdx = state.frameCount - 1;
+                else if (newFrame >= state.frameCount) state.frameIdx = 0;
+                else state.frameIdx = newFrame;
             }
 
             int hitboxDir = (IsKeyPressed(NEXT_HITBOX_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_HITBOX_KEY) ? 1 : 0);
             if (hitboxDir) {
                 mode = IDLE;
-                hitboxIdx = Clamp(hitboxIdx + hitboxDir, -1, state.hitboxCount - 1);
+                state.hitboxIdx = Clamp(state.hitboxIdx + hitboxDir, -1, state.hitboxCount - 1);
             }
         }
 
@@ -187,8 +178,8 @@ int main() {
             if (playingFrameTime >= FRAME_TIME)
             {
                 playingFrameTime = fmod(playingFrameTime, FRAME_TIME);
-                frameIdx++;
-                if (frameIdx >= state.frameCount) frameIdx = 0;
+                int newFrameIdx = state.frameIdx + 1;
+                state.frameIdx = newFrameIdx >= state.frameCount ? 0 : newFrameIdx;
             }
         }
         
@@ -196,23 +187,23 @@ int main() {
         BeginDrawing();
         ClearBackground(BACKGROUND_COLOR);
         
-        Rectangle source = {FRAME_WIDTH * frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
+        Rectangle source = {FRAME_WIDTH * state.frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
         Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
-        if (hitboxIdx >= 0 && GetHitboxActive(&state, frameIdx, hitboxIdx)) {
-            DrawHitbox(spritePos, spriteScale, state.hitboxes[hitboxIdx]);
+        if (state.hitboxIdx >= 0 && GetHitboxActive(&state, state.frameIdx, state.hitboxIdx)) {
+            DrawHitbox(spritePos, spriteScale, state.hitboxes[state.hitboxIdx]);
         }
 
         DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
-        int xPos = FRAME_ROW_SIZE * frameIdx;
-        int yPos = hitboxIdx >= 0 ? timelineY + FRAME_ROW_SIZE + hitboxIdx * HITBOX_ROW_SIZE : timelineY;
+        int xPos = FRAME_ROW_SIZE * state.frameIdx;
+        int yPos = state.hitboxIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.hitboxIdx * HITBOX_ROW_SIZE : timelineY;
         DrawRectangle(xPos, yPos, FRAME_ROW_SIZE, FRAME_ROW_SIZE, SELECTED_COLOR);
 
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
     
-            Color frameColor = i == frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
+            Color frameColor = i == state.frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
             Vector2 frameCenter = {xPos, timelineY + FRAME_ROW_SIZE / 2};
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
 

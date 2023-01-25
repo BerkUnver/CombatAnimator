@@ -10,6 +10,8 @@ EditorState AllocEditorState(int frames) {
     state.hitboxCount = 0;
     state.hitboxes = NULL;
     state._hitboxActiveFrames = NULL;
+    state.frameIdx = 0;
+    state.hitboxIdx = -1;
     return state;
 }
 
@@ -52,6 +54,8 @@ EditorState EditorStateDeepCopy(EditorState state) {
     newState.frameCount = state.frameCount;
     newState.hitboxes = hitboxesCopy;
     newState._hitboxActiveFrames = activeFramesCopy;
+    newState.frameIdx = state.frameIdx;
+    newState.hitboxIdx = state.hitboxIdx;
     return newState;
 }
 

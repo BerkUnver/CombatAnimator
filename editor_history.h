@@ -11,6 +11,8 @@ typedef struct EditorState {
     int hitboxCount;
     bool *_hitboxActiveFrames;
     int frameCount;
+    int hitboxIdx;
+    int frameIdx;
 } EditorState;
 
 
