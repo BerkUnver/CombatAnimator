@@ -18,14 +18,17 @@
 #define PLAY_ANIMATION_KEY KEY_ENTER
 #define PREVIOUS_FRAME_KEY KEY_LEFT
 #define NEXT_FRAME_KEY KEY_RIGHT
-#define PREVIOUS_HITBOX_KEY KEY_UP
-#define NEXT_HITBOX_KEY KEY_DOWN
+#define PREVIOUS_SHAPE_KEY KEY_UP
+#define NEXT_SHAPE_KEY KEY_DOWN
 #define SELECT_BUTTON MOUSE_BUTTON_LEFT
 #define UNDO_KEY KEY_Z
 #define UNDO_KEY_MODIFIER KEY_LEFT_CONTROL
 #define REDO_KEY_MODIFIER KEY_LEFT_SHIFT
 #define NEW_HITBOX_KEY KEY_N
 #define NEW_HITBOX_KEY_MODIFIER KEY_LEFT_CONTROL
+const CombatShape DEFAULT_HITBOX = {HITBOX, 40, 40, 24};
+#define NEW_HURTBOX_KEY_MODIFIER KEY_LEFT_SHIFT
+const CombatShape DEFAULT_HURTBOX = {HURTBOX, 40, 40, 24};
 #define SCALE_SPEED 0.75f
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
@@ -34,7 +37,6 @@
 #define BACKGROUND_COLOR GRAY
 #define FONT_COLOR RAYWHITE
 #define SELECTED_COLOR (Color) {123, 123, 123, 255}
-const CombatShape DEFAULT_HITBOX = {HITBOX, 40, 40, 24};
 #define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
@@ -112,7 +114,8 @@ int main() {
             ChangeState(&history, &state, option);
 
         } else if (IsKeyPressed(NEW_HITBOX_KEY) && IsKeyDown(NEW_HITBOX_KEY_MODIFIER)) {
-            AddShape(&state, DEFAULT_HITBOX);
+            CombatShape shape = IsKeyDown(NEW_HURTBOX_KEY_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;            
+            AddShape(&state, shape);
             CommitState(&history, &state);
             mode = IDLE;
 
@@ -171,7 +174,7 @@ int main() {
                 else state.frameIdx = newFrame;
             }
 
-            int shapeDir = (IsKeyPressed(NEXT_HITBOX_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_HITBOX_KEY) ? 1 : 0);
+            int shapeDir = (IsKeyPressed(NEXT_SHAPE_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_SHAPE_KEY) ? 1 : 0);
             if (shapeDir) {
                 mode = IDLE;
                 state.shapeIdx = Clamp(state.shapeIdx + shapeDir, -1, state.shapeCount - 1);
@@ -215,9 +218,14 @@ int main() {
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
 
             for (int j = 0; j < state.shapeCount; j++) {
-                Color shapeColor = GetShapeActive(&state, i, j) ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
+                Color color;
+                bool active = GetShapeActive(&state, i, j);
+                if (state.shapes[j].boxType == HITBOX)
+                    color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
+                else 
+                    color = active ? HURTBOX_CIRLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
                 int shapeY = hitboxRowY + SHAPE_ROW_SIZE * (j + 0.5);
-                DrawCircle(xPos, shapeY, SHAPE_ICON_CIRCLE_RADIUS, shapeColor);
+                DrawCircle(xPos, shapeY, SHAPE_ICON_CIRCLE_RADIUS, color);
             }        
         }
 
