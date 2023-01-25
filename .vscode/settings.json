@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "raylib.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "editor_history.h": "c"
     }
 }

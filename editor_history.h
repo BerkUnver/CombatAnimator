@@ -2,16 +2,17 @@
 #define EDITOR_HISTORY
 
 #include <stdlib.h>
-#include "hitbox.h"
+#include "combat_shape.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 
 typedef struct EditorState {
-    Hitbox *hitboxes;
-    int hitboxCount;
-    bool *_hitboxActiveFrames;
+    CombatShape *shapes;
+    int shapeCount;
+    bool *_shapeActiveFrames;
+
     int frameCount;
-    int hitboxIdx;
+    int shapeIdx;
     int frameIdx;
 } EditorState;
 
@@ -31,9 +32,9 @@ typedef enum ChangeOptions {
 EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState state);
 
-bool GetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx);
-void SetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx, bool enabled);
-void AddHitbox(EditorState *state, Hitbox hitbox);
+bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
+void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
+void AddShape(EditorState *state, CombatShape shape);
 EditorState EditorStateDeepCopy(EditorState state);
 
 EditorHistory AllocEditorHistory(EditorState *initial);

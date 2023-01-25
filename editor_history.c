@@ -2,60 +2,61 @@
 #include <stdio.h>
 #include <string.h>
 #include "editor_history.h"
-#include "hitbox.h"
+#include "combat_shape.h"
 
 EditorState AllocEditorState(int frames) {
     EditorState state;
+    state.shapeCount = 0;
+    state.shapes = NULL;
+    state._shapeActiveFrames = NULL;
+
     state.frameCount = frames;
-    state.hitboxCount = 0;
-    state.hitboxes = NULL;
-    state._hitboxActiveFrames = NULL;
     state.frameIdx = 0;
-    state.hitboxIdx = -1;
+    state.shapeIdx = -1;
     return state;
 }
 
 void FreeEditorState(EditorState state) {
-    free(state.hitboxes);
-    free(state._hitboxActiveFrames);
+    free(state.shapes);
+    free(state._shapeActiveFrames);
 }
 
-bool GetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx) {
-    return state->_hitboxActiveFrames[state->frameCount * hitboxIdx + frameIdx];
+bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
+    return state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx];
 }
 
-void SetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx, bool active) {
-    state->_hitboxActiveFrames[state->frameCount * hitboxIdx + frameIdx] = active;
+void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active) {
+    state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = active;
 }
 
-void AddHitbox(EditorState *state, Hitbox hitbox) { // Should work on nullptrs
-    int oldMax = state->hitboxCount * state->frameCount;
-    state->hitboxCount++;
-    state->hitboxes = realloc(state->hitboxes, sizeof(Hitbox) * state->hitboxCount);
-    state->hitboxes[state->hitboxCount - 1] = hitbox;
-    state->_hitboxActiveFrames = realloc(state->_hitboxActiveFrames, sizeof(bool) * state->hitboxCount * state->frameCount);
-    int newMax = state->hitboxCount * state->frameCount;
-    for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false;
-        state->_hitboxActiveFrames[i] = false;
+void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptrs
+    int oldMax = state->shapeCount * state->frameCount;
+    state->shapeCount++;
+    state->shapes = realloc(state->shapes, sizeof(CombatShape) * state->shapeCount);
+    state->shapes[state->shapeCount - 1] = shape;
+    state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->shapeCount * state->frameCount);
+    int newMax = state->shapeCount * state->frameCount;
+    for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false
+        state->_shapeActiveFrames[i] = false;
     }
 }
 
 EditorState EditorStateDeepCopy(EditorState state) {
-    int activeFramesSize = sizeof(bool) * state.hitboxCount * state.frameCount;
+    int activeFramesSize = sizeof(bool) * state.shapeCount * state.frameCount;
     bool *activeFramesCopy = malloc(activeFramesSize);
-    memcpy(activeFramesCopy, state._hitboxActiveFrames, activeFramesSize);
+    memcpy(activeFramesCopy, state._shapeActiveFrames, activeFramesSize);
 
-    int hitboxesSize = sizeof(Hitbox) * state.hitboxCount;
-    Hitbox *hitboxesCopy = malloc(hitboxesSize);
-    memcpy(hitboxesCopy, state.hitboxes, hitboxesSize);
+    int shapesSize = sizeof(CombatShape) * state.shapeCount;
+    CombatShape *shapesCopy = malloc(shapesSize);
+    memcpy(shapesCopy, state.shapes, shapesSize);
     
     EditorState newState;
-    newState.hitboxCount = state.hitboxCount;
+    newState.shapeCount = state.shapeCount;
     newState.frameCount = state.frameCount;
-    newState.hitboxes = hitboxesCopy;
-    newState._hitboxActiveFrames = activeFramesCopy;
+    newState.shapes = shapesCopy;
+    newState._shapeActiveFrames = activeFramesCopy;
     newState.frameIdx = state.frameIdx;
-    newState.hitboxIdx = state.hitboxIdx;
+    newState.shapeIdx = state.shapeIdx;
     return newState;
 }
 
