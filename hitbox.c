@@ -3,11 +3,13 @@
 #include "raylib.h"
 #include "hitbox.h"
 
-void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox) {
+void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox, bool handlesActive) {
     float x = pos.x + hitbox.x * scale;
     float y = pos.y + hitbox.y * scale;
     float r = hitbox.radius * scale;
     DrawCircle(x, y, r, HITBOX_COLOR);
+    if (!handlesActive) return;
+    DrawCircleLines(x, y, r, HITBOX_OUTLINE_COLOR);
     DrawCircle(x, y, HANDLE_RADIUS, HITBOX_OUTLINE_COLOR);
     DrawCircle(x, y, HANDLE_INTERIOR_RADIUS, HANDLE_INTERIOR_COLOR);
     DrawCircle(x + r, y, HANDLE_RADIUS, HITBOX_OUTLINE_COLOR);

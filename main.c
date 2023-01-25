@@ -93,7 +93,7 @@ int main() {
                 CommitState(&history, &state);
                 mode = IDLE;
             } else {
-                SetHitboxHandle(mousePos, spritePos, spriteScale, &state.hitboxes[0], draggingHandle); // todo : temporary
+                SetHitboxHandle(mousePos, spritePos, spriteScale, &state.hitboxes[state.hitboxIdx], draggingHandle); // todo : temporary
             }
         } else if (mode == PANNING_SPRITE) {
             if (IsMouseButtonReleased(SELECT_BUTTON)) {
@@ -191,8 +191,9 @@ int main() {
         Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
         DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
-        if (state.hitboxIdx >= 0 && GetHitboxActive(&state, state.frameIdx, state.hitboxIdx)) {
-            DrawHitbox(spritePos, spriteScale, state.hitboxes[state.hitboxIdx]);
+        for (int i = 0; i < state.hitboxCount; i++) {
+            if (GetHitboxActive(&state, state.frameIdx, i)) 
+                DrawHitbox(spritePos, spriteScale, state.hitboxes[i], i == state.hitboxIdx);
         }
 
         DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background

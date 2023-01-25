@@ -7,7 +7,7 @@
 #define HANDLE_INTERIOR_COLOR RAYWHITE
 
 #define HITBOX_OUTLINE_COLOR (Color) {255, 0, 0, 255}
-#define HITBOX_COLOR (Color) {255, 0, 0, 123}
+#define HITBOX_COLOR (Color) {255, 0, 0, 63}
 #define HITBOX_CIRCLE_INACTIVE_COLOR (Color) {63, 63, 63, 255}
 #define HITBOX_CIRCLE_ACTIVE_COLOR RAYWHITE
 #define HITBOX_CIRCLE_RADIUS 12
@@ -24,7 +24,7 @@ typedef struct Hitbox {
     int radius;
 } Hitbox;
 
-void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox);
+void DrawHitbox(Vector2 pos, float scale, Hitbox hitbox, bool handlesActive);
 Handle SelectHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox hitbox);
 bool SetHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox *hitbox, Handle handle);
 
