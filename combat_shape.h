@@ -21,9 +21,10 @@
 #define HURTBOX_CIRLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
 typedef enum Handle {
-    NONE = -1,
-    CENTER = 0,
-    RADIUS = 1
+    NONE,
+    CENTER,
+    CIRCLE_RADIUS,
+    RECTANGLE_CORNER
 } Handle;
 
 typedef enum BoxType {
@@ -31,12 +32,29 @@ typedef enum BoxType {
     HURTBOX
 } BoxType;
 
+typedef union ShapeData {
+    int circleRadius;
+    struct {
+        int rightX;
+        int bottomY;
+    } rectangle;
+} ShapeData;
+
+typedef enum ShapeType {
+    CIRCLE,
+    RECTANGLE
+} ShapeType;
+
 typedef struct CombatShape {
     BoxType boxType;
+    ShapeType shapeType;
+    ShapeData data;
     int x;
     int y;
-    int radius;
 } CombatShape;
+
+CombatShape CombatShapeRectangle(int x, int y, int rightX, int bottomY, BoxType type);
+CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type);
 
 void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive);
 Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape);

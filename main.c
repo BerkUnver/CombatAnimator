@@ -26,9 +26,7 @@
 #define REDO_KEY_MODIFIER KEY_LEFT_SHIFT
 #define NEW_HITBOX_KEY KEY_N
 #define NEW_HITBOX_KEY_MODIFIER KEY_LEFT_CONTROL
-const CombatShape DEFAULT_HITBOX = {HITBOX, 40, 40, 24};
 #define NEW_HURTBOX_KEY_MODIFIER KEY_LEFT_SHIFT
-const CombatShape DEFAULT_HURTBOX = {HURTBOX, 40, 40, 24};
 #define SCALE_SPEED 0.75f
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
@@ -56,6 +54,9 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
 }
 
 int main() {
+    const CombatShape DEFAULT_HITBOX = CombatShapeRectangle(40, 40, 24, 24, HITBOX);
+    const CombatShape DEFAULT_HURTBOX = CombatShapeRectangle(40, 40, 24, 24, HURTBOX);
+
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
 
