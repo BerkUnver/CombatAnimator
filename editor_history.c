@@ -9,13 +9,21 @@ EditorState AllocEditorState(int frames) {
     state.frameCount = frames;
     state.hitboxCount = 0;
     state.hitboxes = NULL;
-    state.hitboxActiveFrames = NULL;
+    state._hitboxActiveFrames = NULL;
     return state;
 }
 
 void FreeEditorState(EditorState state) {
     free(state.hitboxes);
-    free(state.hitboxActiveFrames);
+    free(state._hitboxActiveFrames);
+}
+
+bool GetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx) {
+    return state->_hitboxActiveFrames[state->frameCount * hitboxIdx + frameIdx];
+}
+
+void SetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx, bool active) {
+    state->_hitboxActiveFrames[state->frameCount * hitboxIdx + frameIdx] = active;
 }
 
 void AddHitbox(EditorState *state, Hitbox hitbox) { // Should work on nullptrs
@@ -23,17 +31,17 @@ void AddHitbox(EditorState *state, Hitbox hitbox) { // Should work on nullptrs
     state->hitboxCount++;
     state->hitboxes = realloc(state->hitboxes, sizeof(Hitbox) * state->hitboxCount);
     state->hitboxes[state->hitboxCount - 1] = hitbox;
-    state->hitboxActiveFrames = realloc(state->hitboxActiveFrames, sizeof(bool) * state->hitboxCount * state->frameCount);
+    state->_hitboxActiveFrames = realloc(state->_hitboxActiveFrames, sizeof(bool) * state->hitboxCount * state->frameCount);
     int newMax = state->hitboxCount * state->frameCount;
     for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false;
-        state->hitboxActiveFrames[i] = false;
+        state->_hitboxActiveFrames[i] = false;
     }
 }
 
 EditorState EditorStateDeepCopy(EditorState state) {
     int activeFramesSize = sizeof(bool) * state.hitboxCount * state.frameCount;
     bool *activeFramesCopy = malloc(activeFramesSize);
-    memcpy(activeFramesCopy, state.hitboxActiveFrames, activeFramesSize);
+    memcpy(activeFramesCopy, state._hitboxActiveFrames, activeFramesSize);
 
     int hitboxesSize = sizeof(Hitbox) * state.hitboxCount;
     Hitbox *hitboxesCopy = malloc(hitboxesSize);
@@ -43,7 +51,7 @@ EditorState EditorStateDeepCopy(EditorState state) {
     newState.hitboxCount = state.hitboxCount;
     newState.frameCount = state.frameCount;
     newState.hitboxes = hitboxesCopy;
-    newState.hitboxActiveFrames = activeFramesCopy;
+    newState._hitboxActiveFrames = activeFramesCopy;
     return newState;
 }
 

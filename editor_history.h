@@ -9,7 +9,7 @@
 typedef struct EditorState {
     Hitbox *hitboxes;
     int hitboxCount;
-    bool *hitboxActiveFrames;
+    bool *_hitboxActiveFrames;
     int frameCount;
 } EditorState;
 
@@ -29,9 +29,9 @@ typedef enum ChangeOptions {
 EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState state);
 
+bool GetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx);
+void SetHitboxActive(EditorState *state, int frameIdx, int hitboxIdx, bool enabled);
 void AddHitbox(EditorState *state, Hitbox hitbox);
-bool GetHitboxActive(EditorState state, int hitboxIdx, int frameIdx);
-void SetHitboxActive(EditorState state, int hitboxIdx, int frameIdx, bool enabled);
 EditorState EditorStateDeepCopy(EditorState state);
 
 EditorHistory AllocEditorHistory(EditorState *initial);

@@ -43,9 +43,12 @@ bool SetHitboxHandle(Vector2 mousePos, Vector2 pos, float scale, Hitbox *hitbox,
             hitbox->x = x;
             hitbox->y = y;
             return true;
-        case RADIUS:
-            hitbox->radius = abs(x - hitbox->x);
-            return true;
+        
+        case RADIUS: {
+            int newRadius = round(x - hitbox->x);
+            hitbox->radius = newRadius > 0 ? newRadius : 0;
+        } return true;
+        
         default:
             return false;
     }
