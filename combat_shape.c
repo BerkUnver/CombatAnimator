@@ -25,6 +25,17 @@ CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type) {
     return shape;
 }
 
+CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType type) {
+    CombatShape shape;
+    shape.x = x;
+    shape.y = y;
+    shape.shapeType = CAPSULE;
+    shape.data.capsule.radius = radius;
+    shape.data.capsule.height = height;
+    shape.boxType = type;
+    return shape;
+} 
+
 void DrawHandle(int x, int y, Color strokeColor) {
     DrawCircle(x, y, HANDLE_RADIUS, strokeColor);
     DrawCircle(x, y, HANDLE_INTERIOR_RADIUS, HANDLE_INTERIOR_COLOR);
@@ -68,6 +79,22 @@ void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesAc
             DrawHandle(x + rightX, y + bottomY, outlineColor);
         } return;
 
+        case CAPSULE: {
+            float globalHeight = shape.data.capsule.height * scale;
+            float globalRadius = shape.data.capsule.radius * scale;
+            float rectX = x - globalRadius;
+            float rectY = y - globalHeight - globalRadius;
+            float width = globalRadius * 2;
+            float height = (globalHeight + globalRadius) * 2;
+            Rectangle rect = {rectX, rectY, width, height};
+            DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
+            if (!handlesActive) return;
+            DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
+            DrawHandle(x, y, outlineColor);
+            DrawHandle(x + globalRadius, y, outlineColor);
+            DrawHandle(x, y + globalHeight, outlineColor); 
+        } return;
+
         default: return;
     }
 }
@@ -78,62 +105,75 @@ Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, Comba
         return CheckCollisionPointRec(mousePos, rect);
     }
 
+    float centerGlobalX = pos.x + shape.x * scale;
+    float centerGlobalY = pos.y + shape.y * scale;
+    
     switch (shape.shapeType) {
         case CIRCLE: {
             float radiusGlobalX = pos.x + (shape.x + shape.data.circleRadius) * scale;
-            float radiusGlobalY = pos.y + shape.y * scale;
-
-            if (IsCollidingHandle(radiusGlobalX, radiusGlobalY)) {
+            if (IsCollidingHandle(radiusGlobalX, centerGlobalY))
                 return CIRCLE_RADIUS;
-            }
         } break;
 
         case RECTANGLE: {
             float handleGlobalX = pos.x + (shape.x + shape.data.rectangle.rightX) * scale;
             float handleGlobalY = pos.y + (shape.y + shape.data.rectangle.bottomY) * scale;
-            printf("handle local pos: (%i, %i)\n", shape.data.rectangle.rightX, shape.data.rectangle.bottomY);
-            printf("handle global pos: (%f, %f)\n", handleGlobalX, handleGlobalY);
-            if (IsCollidingHandle(handleGlobalX, handleGlobalY)) {
-                puts("Selected rectangle corner");
+            if (IsCollidingHandle(handleGlobalX, handleGlobalY))
                 return RECTANGLE_CORNER;
-            }
+        } break;
+
+        case CAPSULE: {
+            float heightHandleGlobalY = pos.y + (shape.y + shape.data.capsule.height) * scale;
+            if (IsCollidingHandle(centerGlobalX, heightHandleGlobalY))
+                return CAPSULE_HEIGHT;
+            
+            float radiusHandleGlobalX =  pos.x + (shape.x + shape.data.capsule.radius) * scale;
+            if (IsCollidingHandle(radiusHandleGlobalX, centerGlobalY))
+                return CAPSULE_RADIUS;
         } break;
 
         default: break;
     }
 
-    float centerGlobalX = pos.x + shape.x * scale;
-    float centerGlobalY = pos.y + shape.y * scale;
-    if (IsCollidingHandle(centerGlobalX, centerGlobalY)) {
+
+    if (IsCollidingHandle(centerGlobalX, centerGlobalY))
         return CENTER;
-    }
     return NONE;
 }
 
 bool SetCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape *shape, Handle handle) {
-    float x = round((mousePos.x - pos.x) / scale);
-    float y = round((mousePos.y - pos.y) / scale);
-    
+    float globalX = round((mousePos.x - pos.x) / scale);
+    float globalY = round((mousePos.y - pos.y) / scale);
+
+    float x = globalX > shape->x ? globalX - shape->x : 0;
+    float y = globalY > shape->y ? globalY - shape->y : 0;
     switch (handle) {
         case CENTER:
-            shape->x = x;
-            shape->y = y;
+            shape->x = globalX;
+            shape->y = globalY;
             return true;
         
         case CIRCLE_RADIUS:
             if (shape->shapeType != CIRCLE) return false;
-            int newRadius = round(x - shape->x);
-            shape->data.circleRadius = newRadius > 0 ? newRadius : 0;
+            shape->data.circleRadius = x;
             return true;
         
         case RECTANGLE_CORNER:
             if (shape->shapeType != RECTANGLE) return false;
-            int rightX = round(x - shape->x);
-            int bottomY = round(y - shape->y);
-            shape->data.rectangle.rightX = rightX;
-            shape->data.rectangle.bottomY = bottomY;
+            shape->data.rectangle.rightX = x;
+            shape->data.rectangle.bottomY = y;
             return true;
         
+        case CAPSULE_HEIGHT:
+            if (shape->shapeType != CAPSULE) return false;
+            shape->data.capsule.height = y;
+            return true;
+        
+        case CAPSULE_RADIUS:
+            if (shape->shapeType != CAPSULE) return false;
+            shape->data.capsule.radius = x;
+            return true;
+
         default:
             return false;
     }

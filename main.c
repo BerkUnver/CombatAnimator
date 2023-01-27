@@ -54,8 +54,8 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
 }
 
 int main() {
-    const CombatShape DEFAULT_HITBOX = CombatShapeRectangle(40, 40, 24, 24, HITBOX);
-    const CombatShape DEFAULT_HURTBOX = CombatShapeRectangle(40, 40, 24, 24, HURTBOX);
+    const CombatShape DEFAULT_HITBOX = CombatShapeCapsule(40, 40, 24, 24, HITBOX);
+    const CombatShape DEFAULT_HURTBOX = CombatShapeCapsule(40, 40, 24, 24, HURTBOX);
 
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
@@ -115,7 +115,7 @@ int main() {
             ChangeState(&history, &state, option);
 
         } else if (IsKeyPressed(NEW_HITBOX_KEY) && IsKeyDown(NEW_HITBOX_KEY_MODIFIER)) {
-            CombatShape shape = IsKeyDown(NEW_HURTBOX_KEY_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;            
+            CombatShape shape = IsKeyDown(NEW_HURTBOX_KEY_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;
             AddShape(&state, shape);
             CommitState(&history, &state);
             mode = IDLE;

@@ -2,6 +2,7 @@
 #define COMBAT_SHAPE
 #include "raylib.h"
 
+#define COMBAT_SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
 #define HANDLE_INTERIOR_RADIUS 6.0f
 #define HANDLE_INTERIOR_COLOR RAYWHITE
@@ -24,7 +25,9 @@ typedef enum Handle {
     NONE,
     CENTER,
     CIRCLE_RADIUS,
-    RECTANGLE_CORNER
+    RECTANGLE_CORNER,
+    CAPSULE_HEIGHT,
+    CAPSULE_RADIUS
 } Handle;
 
 typedef enum BoxType {
@@ -38,11 +41,16 @@ typedef union ShapeData {
         int rightX;
         int bottomY;
     } rectangle;
+    struct {
+        int radius;
+        int height;
+    } capsule;
 } ShapeData;
 
 typedef enum ShapeType {
     CIRCLE,
-    RECTANGLE
+    RECTANGLE,
+    CAPSULE
 } ShapeType;
 
 typedef struct CombatShape {
@@ -55,6 +63,7 @@ typedef struct CombatShape {
 
 CombatShape CombatShapeRectangle(int x, int y, int rightX, int bottomY, BoxType type);
 CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type);
+CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType type);
 
 void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive);
 Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape);
