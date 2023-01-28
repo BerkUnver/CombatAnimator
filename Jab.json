@@ -1,0 +1,11 @@
+{
+	"shapes":	[{
+			"shapeType":	"RECTANGLE",
+			"boxType":	"HITBOX",
+			"data":	{
+				"rightX":	75,
+				"bottomY":	24
+			}
+		}],
+	"frameCount":	16
+}

@@ -33,17 +33,37 @@ void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active)
 cJSON *SerializeState(EditorState state) {
     cJSON *shapes = cJSON_CreateArray();
     for (int i = 0; i < state.shapeCount; i++) {
-        cJSON *shape = SerializeShape(state.shapes[i]);
-        if (!shape) {
-            cJSON_Delete(shapes);
-            return NULL;
+        CombatShape shape = state.shapes[i];
+        const char *shapeType;
+        const char *boxType;
+        switch(shape.boxType) {
+            case HITBOX: boxType = "HITBOX";
+            case HURTBOX: boxType = "HURTBOX";
+            default: return NULL;
         }
-        cJSON_AddItemToArray(shapes, shape);
+        
+        cJSON *data = cJSON_CreateObject();
+        switch (shape.shapeType) {
+            case CIRCLE: 
+                shapeType = "CIRCLE";
+                cJSON_AddItemToObject(data, "radius", shape.data.circleRadius);
+                break;
+            case RECTANGLE: 
+                shapeType = "RECTANGLE";
+                cJSON_AddToObject(data, "rightX", shape.data.rectangle.rightX);
+                cJSON_AddItemToObject(data, "bottomY", shape.data.rectangle.bottomY);
+                break;
+            case CAPSULE: 
+                shapeType = "CAPSULE"; 
+                cJSON_AddItemToObject(data, "radius", shape.data.capsule.radius);
+                break;
+            default: return NULL;
+        }
+
+        cJSON *jsonShape = cJSON_CreateObject();
+        cJSON_AddItemToObject(jsonShape,"shapeType", cJSON_CreateString(shapeType));
+        cJSON_AddItemToObject(jsonShape, "boxType", cJSON_CreateString(boxType));
     }
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json, "shapes", shapes);
-    cJSON_AddNumberToObject(json, "frameCount", state.frameCount);
-    return json;
 }
 
 void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptrs

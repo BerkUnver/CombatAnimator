@@ -2,6 +2,7 @@
 #define EDITOR_HISTORY
 
 #include <stdlib.h>
+#include "cjson/cJSON.h"
 #include "combat_shape.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
@@ -31,6 +32,7 @@ typedef enum ChangeOptions {
 
 EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState state);
+cJSON *SerializeState(EditorState state);
 
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);

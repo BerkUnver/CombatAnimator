@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "raylib.h"
 #include "raymath.h"
 #include "combat_shape.h"
@@ -12,21 +13,24 @@
 #define EXIT_KEY_MODIFIER KEY_LEFT_CONTROL
 
 #define TEST_IMAGE_PATH "Jab.png"
+#define TEST_SAVE_PATH "Jab.json"
 #define APP_NAME "Combat Animator"
 #define WINDOW_X 800
 #define WINDOW_Y 480
-#define PLAY_ANIMATION_KEY KEY_ENTER
-#define PREVIOUS_FRAME_KEY KEY_LEFT
-#define NEXT_FRAME_KEY KEY_RIGHT
-#define PREVIOUS_SHAPE_KEY KEY_UP
-#define NEXT_SHAPE_KEY KEY_DOWN
-#define SELECT_BUTTON MOUSE_BUTTON_LEFT
-#define UNDO_KEY KEY_Z
-#define UNDO_KEY_MODIFIER KEY_LEFT_CONTROL
-#define REDO_KEY_MODIFIER KEY_LEFT_SHIFT
-#define NEW_HITBOX_KEY KEY_N
-#define NEW_HITBOX_KEY_MODIFIER KEY_LEFT_CONTROL
-#define NEW_HURTBOX_KEY_MODIFIER KEY_LEFT_SHIFT
+#define KEY_PLAY_ANIMATION KEY_ENTER
+#define KEY_PREVIOUS_FRAME KEY_LEFT
+#define KEY_NEXT_FRAME KEY_RIGHT
+#define KEY_PREVIOUS_SHAPE KEY_UP
+#define KEY_NEXT_SHAPE KEY_DOWN
+#define MOUSE_BUTTON_SELECT MOUSE_BUTTON_LEFT
+#define KEY_UNDO KEY_Z
+#define KEY_UNDO_MODIFIER KEY_LEFT_CONTROL
+#define KEY_REDO_MODIFIER KEY_LEFT_SHIFT
+#define KEY_NEW_HITBOX KEY_N
+#define KEY_NEW_HITBOX_MODIFIER KEY_LEFT_CONTROL
+#define KEY_NEW_HURTBOX_MODIFIER KEY_LEFT_SHIFT
+#define KEY_SAVE KEY_S
+#define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
 #define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
@@ -94,14 +98,14 @@ int main() {
         
         // model update here
         if (mode == DRAGGING_HANDLE) {
-            if (IsMouseButtonReleased(SELECT_BUTTON)) {
+            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
                 CommitState(&history, &state);
                 mode = IDLE;
             } else {
                 SetCombatShapeHandle(mousePos, spritePos, spriteScale, &state.shapes[state.shapeIdx], draggingHandle); // todo : temporary
             }
         } else if (mode == PANNING_SPRITE) {
-            if (IsMouseButtonReleased(SELECT_BUTTON)) {
+            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
                 mode = IDLE;
             } else {
                 float globalPanX = spritePos.x + panningSpriteLocalPos.x * spriteScale;
@@ -109,20 +113,31 @@ int main() {
                 spritePos.x += mousePos.x - globalPanX;
                 spritePos.y += mousePos.y - globalPanY;
             }
-        } else if (IsKeyPressed(UNDO_KEY) && IsKeyDown(UNDO_KEY_MODIFIER)) { // undo
+        } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
+            cJSON *saved = SerializeState(state);
+            if (!saved) {
+                puts("Failed to save file for unknown reason");
+            } else {
+                char *str = cJSON_Print(saved);
+                FILE *file = fopen(TEST_SAVE_PATH, "w+");
+                fwrite(str, sizeof(char), strlen(str), file);
+                free(str);
+                fclose(file);
+            }
+        } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) { // undo
             mode = IDLE;
             ChangeOptions option = UNDO;
-            if (IsKeyDown(REDO_KEY_MODIFIER)) option = REDO;
+            if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
 
             ChangeState(&history, &state, option);
 
-        } else if (IsKeyPressed(NEW_HITBOX_KEY) && IsKeyDown(NEW_HITBOX_KEY_MODIFIER)) {
-            CombatShape shape = IsKeyDown(NEW_HURTBOX_KEY_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;
+        } else if (IsKeyPressed(KEY_NEW_HITBOX) && IsKeyDown(KEY_NEW_HITBOX_MODIFIER)) {
+            CombatShape shape = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;
             AddShape(&state, shape);
             CommitState(&history, &state);
             mode = IDLE;
 
-        } else if (IsMouseButtonPressed(SELECT_BUTTON)) {
+        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
             if (timelineY < mousePos.y && mousePos.y <= WINDOW_Y) {
                 if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) { // toggle whether frame is active
                     mode = IDLE;
@@ -152,7 +167,7 @@ int main() {
                     panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
                 }
             }
-        } else if (IsKeyPressed(PLAY_ANIMATION_KEY)) {
+        } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
                 mode = IDLE;
             } else {
@@ -167,7 +182,7 @@ int main() {
             spritePos.y = mousePos.y - localY * spriteScale;
 
         } else {
-            int frameDir = (IsKeyPressed(NEXT_FRAME_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_FRAME_KEY) ? 1 : 0);
+            int frameDir = (IsKeyPressed(KEY_NEXT_FRAME) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_FRAME) ? 1 : 0);
             if (frameDir) {
                 mode = IDLE;
                 int newFrame = state.frameIdx + frameDir;
@@ -177,7 +192,7 @@ int main() {
                 else state.frameIdx = newFrame;
             }
 
-            int shapeDir = (IsKeyPressed(NEXT_SHAPE_KEY) ? 1 : 0) - (IsKeyPressed(PREVIOUS_SHAPE_KEY) ? 1 : 0);
+            int shapeDir = (IsKeyPressed(KEY_NEXT_SHAPE) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_SHAPE) ? 1 : 0);
             if (shapeDir) {
                 mode = IDLE;
                 state.shapeIdx = Clamp(state.shapeIdx + shapeDir, -1, state.shapeCount - 1);
