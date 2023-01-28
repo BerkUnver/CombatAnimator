@@ -3,6 +3,7 @@
 #include <string.h>
 #include "editor_history.h"
 #include "combat_shape.h"
+#include "cjson/cJSON.h"
 
 EditorState AllocEditorState(int frames) {
     EditorState state;
@@ -27,6 +28,22 @@ bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
 
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active) {
     state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = active;
+}
+
+cJSON *SerializeState(EditorState state) {
+    cJSON *shapes = cJSON_CreateArray();
+    for (int i = 0; i < state.shapeCount; i++) {
+        cJSON *shape = SerializeShape(state.shapes[i]);
+        if (!shape) {
+            cJSON_Delete(shapes);
+            return NULL;
+        }
+        cJSON_AddItemToArray(shapes, shape);
+    }
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json, "shapes", shapes);
+    cJSON_AddNumberToObject(json, "frameCount", state.frameCount);
+    return json;
 }
 
 void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptrs

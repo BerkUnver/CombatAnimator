@@ -54,8 +54,8 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
 }
 
 int main() {
-    const CombatShape DEFAULT_HITBOX = CombatShapeCapsule(40, 40, 24, 24, HITBOX);
-    const CombatShape DEFAULT_HURTBOX = CombatShapeCapsule(40, 40, 24, 24, HURTBOX);
+    const CombatShape DEFAULT_HITBOX = CombatShapeRectangle(40, 40, 24, 24, HITBOX);
+    const CombatShape DEFAULT_HURTBOX = CombatShapeRectangle(40, 40, 24, 24, HURTBOX);
 
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
@@ -66,7 +66,9 @@ int main() {
     Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
 
     EditorState state = AllocEditorState(sprite.width / FRAME_WIDTH);
-    // AddShape(&state, DEFAULT_HITBOX);
+    AddShape(&state, DEFAULT_HITBOX);
+    SetShapeActive(&state, 0, 0, true);
+    state.shapeIdx = 0; // temporary test code
     EditorHistory history = AllocEditorHistory(&state);
 
     typedef enum Mode {
@@ -224,7 +226,7 @@ int main() {
                 if (state.shapes[j].boxType == HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
                 else 
-                    color = active ? HURTBOX_CIRLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
+                    color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
                 int shapeY = hitboxRowY + SHAPE_ROW_SIZE * (j + 0.5);
                 DrawCircle(xPos, shapeY, SHAPE_ICON_CIRCLE_RADIUS, color);
             }        

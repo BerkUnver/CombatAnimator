@@ -1,6 +1,7 @@
 #ifndef COMBAT_SHAPE
 #define COMBAT_SHAPE
 #include "raylib.h"
+#include "cjson/cJSON.h"
 
 #define COMBAT_SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
@@ -19,7 +20,7 @@
 #define HURTBOX_COLOR (Color) {0, 255, 255, COMBAT_SHAPE_ALPHA}
 
 #define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
-#define HURTBOX_CIRLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
+#define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
 typedef enum Handle {
     NONE,
@@ -64,6 +65,8 @@ typedef struct CombatShape {
 CombatShape CombatShapeRectangle(int x, int y, int rightX, int bottomY, BoxType type);
 CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type);
 CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType type);
+
+cJSON *SerializeShape(CombatShape shape);
 
 void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive);
 Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape);
