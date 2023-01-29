@@ -24,9 +24,23 @@
 #define KEY_UNDO KEY_Z
 #define KEY_UNDO_MODIFIER KEY_LEFT_CONTROL
 #define KEY_REDO_MODIFIER KEY_LEFT_SHIFT
-#define KEY_NEW_HITBOX KEY_N
-#define KEY_NEW_HITBOX_MODIFIER KEY_LEFT_CONTROL
+#define KEY_NEW_FRAME KEY_N
+#define KEY_NEW_FRAME_MODIFIER KEY_LEFT_ALT
+
+#define KEY_NEW_SHAPE_MODIFIER KEY_LEFT_CONTROL
 #define KEY_NEW_HURTBOX_MODIFIER KEY_LEFT_SHIFT
+#define KEY_NEW_CIRCLE KEY_ONE
+#define KEY_NEW_RECTANGLE KEY_TWO
+#define KEY_NEW_CAPSULE KEY_THREE
+
+#define DEFAULT_SHAPE_X 40.0f
+#define DEFAULT_SHAPE_Y 40.f
+#define DEFAULT_CIRCLE_RADIUS 24.0f
+#define DEFAULT_RECTANGLE_WIDTH 24.0f
+#define DEFAULT_RECTANGLE_HEIGHT 24.0f
+#define DEFAULT_CAPSULE_RADIUS 24.0f
+#define DEFAULT_CAPSULE_HEIGHT 24.0f
+
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
@@ -43,6 +57,7 @@
 
 #define SHAPE_ROW_SIZE 32
 #define SHAPE_ICON_CIRCLE_RADIUS 12
+
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     Vector2 topPoint = {pos.x, pos.y - ySize};
@@ -86,17 +101,14 @@ int main(int argc, char **argv) {
         printf("Please put the name of the png file to make an animation for as the argument to this file");
         return EXIT_FAILURE;
     }
-
-    const CombatShape DEFAULT_HITBOX = CombatShapeRectangle(40, 40, 24, 24, HITBOX);
-    const CombatShape DEFAULT_HURTBOX = CombatShapeRectangle(40, 40, 24, 24, HURTBOX);
+    const char *texturePath = argv[1];
 
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
 
-    char *texturePath = argv[1];
     Texture2D texture = LoadTexture(texturePath);
     if (texture.id <= 0) {
-        printf("Failed to load texture\n");
+        printf("Failed to load texture.\n");
         CloseWindow();
         return EXIT_FAILURE;
     }
@@ -126,9 +138,8 @@ int main(int argc, char **argv) {
     EditorHistory history = AllocEditorHistory(&state);
 
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
-    float frameWidth = texture.width / state.frameCount;
     Vector2 spritePos = {
-        (WINDOW_X - frameWidth * spriteScale) / 2.0f,
+        (WINDOW_X - texture.width / state.frameCount * spriteScale) / 2.0f,
         (WINDOW_Y - texture.height * spriteScale) / 2.0f
     };
 
@@ -189,12 +200,30 @@ int main(int argc, char **argv) {
 
             ChangeState(&history, &state, option);
 
-        } else if (IsKeyPressed(KEY_NEW_HITBOX) && IsKeyDown(KEY_NEW_HITBOX_MODIFIER)) {
-            CombatShape shape = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? DEFAULT_HURTBOX : DEFAULT_HITBOX;
-            AddShape(&state, shape);
+        } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
+            AddFrame(&state);
             CommitState(&history, &state);
-            mode = IDLE;
 
+        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CONTROL
+            CombatShape shape;
+            BoxType type = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? HURTBOX : HITBOX;
+            bool newShapeInstanced = true;
+            if (IsKeyPressed(KEY_NEW_CIRCLE)) {
+                shape = CombatShapeCircle(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_CIRCLE_RADIUS, type);
+            } else if (IsKeyPressed(KEY_NEW_RECTANGLE)) {
+                shape = CombatShapeRectangle(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_RECTANGLE_WIDTH, DEFAULT_RECTANGLE_HEIGHT, type);
+            } else if (IsKeyPressed(KEY_NEW_CAPSULE)) {
+                shape = CombatShapeCapsule(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_CAPSULE_RADIUS, DEFAULT_CAPSULE_HEIGHT, type);
+            } else {
+                newShapeInstanced = false;
+            }
+
+            if (newShapeInstanced) {
+                AddShape(&state, shape);
+                state.shapeIdx = state.shapeCount - 1;
+                CommitState(&history, &state);
+                mode = IDLE;
+            }
         } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
             if (timelineY < mousePos.y && mousePos.y <= WINDOW_Y) {
                 if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) { // toggle whether frame is active
@@ -271,7 +300,8 @@ int main(int argc, char **argv) {
         // drawing
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
-        
+
+        float frameWidth = texture.width / state.frameCount;
         Rectangle source = {frameWidth * state.frameIdx, 0.0f, frameWidth, texture.height};
         Rectangle dest = {spritePos.x, spritePos.y, frameWidth * spriteScale, texture.height * spriteScale};
         DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);

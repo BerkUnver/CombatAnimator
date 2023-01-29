@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include "editor_history.h"
 #include "combat_shape.h"
 #include "cjson/cJSON.h"
@@ -40,6 +39,21 @@ void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptr
     for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false
         state->_shapeActiveFrames[i] = false;
     }
+}
+
+void AddFrame(EditorState *state) {
+    int oldFrameCount = state->frameCount;
+    bool* oldFrames = state->_shapeActiveFrames;
+    state->frameCount++;
+    state->_shapeActiveFrames = malloc(sizeof(bool) * state->frameCount * state->shapeCount);
+    int chunkSize = (int) sizeof(bool) * oldFrameCount;
+    for (int shapeIdx = 0; shapeIdx < state->shapeCount; shapeIdx++) {
+        bool *startPtr = state->_shapeActiveFrames + shapeIdx * state->frameCount;
+        bool *oldStartPtr = oldFrames + shapeIdx * oldFrameCount;
+        memcpy(startPtr, oldStartPtr, chunkSize);
+        startPtr[state->frameCount - 1] = false; // new frame is set to false;
+    }
+    free(oldFrames);
 }
 
 EditorState EditorStateDeepCopy(EditorState state) {

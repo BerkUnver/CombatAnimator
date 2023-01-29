@@ -8,7 +8,7 @@
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define STR_SHAPES "shapes"
 #define STR_FRAME_COUNT "frameCount"
-#define STR_SHAPE_ACTIVE_FRAMES "_shapeActiveFrames"
+#define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
 
 typedef struct EditorState {
     CombatShape *shapes;
@@ -37,6 +37,7 @@ void FreeEditorState(EditorState state);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 void AddShape(EditorState *state, CombatShape shape);
+void AddFrame(EditorState *state);
 EditorState EditorStateDeepCopy(EditorState state);
 cJSON *SerializeState(EditorState state);
 

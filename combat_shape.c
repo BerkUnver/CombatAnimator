@@ -192,9 +192,9 @@ void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesAc
             DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
             if (handlesActive) {
                 DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
-                DrawHandle(0, 0, outlineColor);
-                DrawHandle(globalRadius, 0, outlineColor);
-                DrawHandle(0, globalHeight, outlineColor); 
+                DrawHandle(x, y, outlineColor);
+                DrawHandle(x + globalRadius, y, outlineColor);
+                DrawHandle(x, y + globalRadius, outlineColor);
             }
             rlPopMatrix();
         } return;
@@ -226,15 +226,13 @@ Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, Comba
         } break;
 
         case CAPSULE: {
-            float heightX = pos.x + (shape.x + shape.data.capsule.height) * scale;
-            float heightY = pos.y + (shape.y + shape.data.capsule.height) * scale;
-            if (IsCollidingHandle(mousePos, heightX, heightY))
-                return CAPSULE_HEIGHT;
-            
             float radiusX = pos.x + (shape.x + shape.data.capsule.radius) * scale;
-            float radiusY = pos.y + (shape.y + shape.data.capsule.radius) * scale;
-            if (IsCollidingHandle(mousePos, radiusX, radiusY))
+            if (IsCollidingHandle(mousePos, radiusX, centerGlobalY))
                 return CAPSULE_RADIUS;
+
+            float heightY = pos.y + (shape.y + shape.data.capsule.height) * scale;
+            if (IsCollidingHandle(mousePos, centerGlobalX, heightY))
+                return CAPSULE_HEIGHT;
         } break;
 
         default: break;
