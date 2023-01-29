@@ -22,6 +22,22 @@
 #define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
 #define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
+#define STR_HITBOX "HITBOX"
+#define STR_HURTBOX "HURTBOX"
+#define STR_CIRCLE "CIRCLE"
+#define STR_RECTANGLE "RECTANGLE"
+#define STR_CAPSULE "CAPSULE"
+#define STR_CIRCLE_RADIUS "radius"
+#define STR_RECTANGLE_RIGHT_X "rightX"
+#define STR_RECTANGLE_BOTTOM_Y "bottomY"
+#define STR_CAPSULE_RADIUS "radius"
+#define STR_CAPSULE_HEIGHT "height"
+#define STR_SHAPE_TYPE "shapeType"
+#define STR_BOX_TYPE "boxType"
+#define STR_DATA "data"
+#define STR_X "x"
+#define STR_Y "y"
+
 typedef enum Handle {
     NONE,
     CENTER,
@@ -67,6 +83,7 @@ CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type);
 CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType type);
 
 cJSON *SerializeShape(CombatShape shape);
+bool DeserializeShape(cJSON *json, CombatShape *out);
 
 void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive);
 Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape);

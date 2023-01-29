@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "raylib.h"
 #include "rlgl.h"
 #include "cjson/cJSON.h"
@@ -42,8 +41,8 @@ CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType typ
 cJSON *SerializeShape(CombatShape shape) {
     const char *boxType;
     switch(shape.boxType) {
-        case HITBOX: boxType = "HITBOX"; break;
-        case HURTBOX: boxType = "HURTBOX"; break;
+        case HITBOX: boxType = STR_HITBOX; break;
+        case HURTBOX: boxType = STR_HURTBOX ; break;
         default: return NULL;
     }
 
@@ -51,20 +50,20 @@ cJSON *SerializeShape(CombatShape shape) {
     cJSON *data = cJSON_CreateObject();
     switch (shape.shapeType) {
         case CIRCLE:
-            shapeType = "CIRCLE";
-            cJSON_AddNumberToObject(data, "radius", shape.data.circleRadius);
+            shapeType = STR_CIRCLE;
+            cJSON_AddNumberToObject(data, STR_CIRCLE_RADIUS, shape.data.circleRadius);
             break;
 
         case RECTANGLE:
-            shapeType = "RECTANGLE";
-            cJSON_AddNumberToObject(data, "rightX", shape.data.rectangle.rightX);
-            cJSON_AddNumberToObject(data, "bottomY", shape.data.rectangle.bottomY);
+            shapeType = STR_RECTANGLE;
+            cJSON_AddNumberToObject(data, STR_RECTANGLE_RIGHT_X, shape.data.rectangle.rightX);
+            cJSON_AddNumberToObject(data, STR_RECTANGLE_BOTTOM_Y, shape.data.rectangle.bottomY);
             break;
 
         case CAPSULE:
-            shapeType = "CAPSULE";
-            cJSON_AddNumberToObject(data, "radius", shape.data.capsule.radius);
-            cJSON_AddNumberToObject(data, "height", shape.data.capsule.height);
+            shapeType = STR_CAPSULE;
+            cJSON_AddNumberToObject(data, STR_CAPSULE_RADIUS, shape.data.capsule.radius);
+            cJSON_AddNumberToObject(data, STR_CAPSULE_HEIGHT, shape.data.capsule.height);
             break;
 
         default:
@@ -73,12 +72,71 @@ cJSON *SerializeShape(CombatShape shape) {
     }
 
     cJSON *jsonShape = cJSON_CreateObject();
-    cJSON_AddStringToObject(jsonShape,"shapeType", shapeType);
-    cJSON_AddStringToObject(jsonShape, "boxType", boxType);
-    cJSON_AddItemToObject(jsonShape, "data", data);
+    cJSON_AddStringToObject(jsonShape,STR_SHAPE_TYPE, shapeType);
+    cJSON_AddStringToObject(jsonShape, STR_BOX_TYPE, boxType);
+    cJSON_AddItemToObject(jsonShape, STR_DATA, data);
+    cJSON_AddNumberToObject(jsonShape, STR_X, shape.x);
+    cJSON_AddNumberToObject(jsonShape, STR_Y, shape.y);
     return jsonShape;
 }
 
+// all boilerplate
+bool DeserializeShape(cJSON *json, CombatShape *out) {
+    if (!cJSON_IsObject(json)) return false;
+
+    cJSON *xJson = cJSON_GetObjectItem(json, STR_X);
+    if (!xJson || !cJSON_IsNumber(xJson)) return false;
+    out->x = (int) cJSON_GetNumberValue(xJson);
+
+    cJSON *yJson = cJSON_GetObjectItem(json, STR_Y);
+    if (!yJson || !cJSON_IsNumber(yJson)) return false;
+    out->y = (int) cJSON_GetNumberValue(yJson);
+
+    cJSON *shapeTypeJson = cJSON_GetObjectItem(json, STR_SHAPE_TYPE);
+    if (!shapeTypeJson || !cJSON_IsString(shapeTypeJson)) return false;
+    char *shapeTypeStr = cJSON_GetStringValue(shapeTypeJson);
+    if (strcmp(shapeTypeStr, STR_CIRCLE) == 0) out->shapeType = CIRCLE;
+    else if (strcmp(shapeTypeStr, STR_RECTANGLE) == 0) out->shapeType = RECTANGLE;
+    else if (strcmp(shapeTypeStr, STR_CAPSULE) == 0) out->shapeType = CAPSULE;
+    else return false;
+
+    cJSON *boxTypeJson = cJSON_GetObjectItem(json, STR_BOX_TYPE);
+    if (!boxTypeJson || !cJSON_IsString(boxTypeJson)) return false;
+    char *boxTypeStr = cJSON_GetStringValue(boxTypeJson);
+    if (strcmp(boxTypeStr, STR_HITBOX) == 0) out->boxType = HITBOX;
+    else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) out->boxType = HURTBOX;
+    else return false;
+
+    cJSON *data = cJSON_GetObjectItem(json, STR_DATA);
+    if (!data || !cJSON_IsObject(data)) return false;
+    switch (out->shapeType) {
+        case CIRCLE: {
+            cJSON *radius = cJSON_GetObjectItem(data, STR_CIRCLE_RADIUS);
+            if (!radius || !cJSON_IsNumber(radius)) return false;
+            out->data.circleRadius = (int) cJSON_GetNumberValue(radius);
+        } return true;
+
+        case RECTANGLE: {
+            cJSON *rightX = cJSON_GetObjectItem(data, STR_RECTANGLE_RIGHT_X);
+            if (!rightX || !cJSON_IsNumber(rightX)) return false;
+            cJSON *bottomY = cJSON_GetObjectItem(data, STR_RECTANGLE_BOTTOM_Y);
+            if (!bottomY || !cJSON_IsNumber(bottomY)) return false;
+            out->data.rectangle.rightX = (int) cJSON_GetNumberValue(rightX);
+            out->data.rectangle.bottomY = (int) cJSON_GetNumberValue(bottomY);
+        } return true;
+
+        case CAPSULE: {
+            cJSON *radius = cJSON_GetObjectItem(data, STR_CAPSULE_RADIUS);
+            if (!radius || !cJSON_IsNumber(radius)) return false;
+            cJSON *height = cJSON_GetObjectItem(data, STR_CAPSULE_HEIGHT);
+            if (!height || !cJSON_IsNumber(height)) return false;
+            out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
+            out->data.capsule.height = (int) cJSON_GetNumberValue(height);
+        } return true;
+
+        default: return false; // unreachable
+    }
+}
 
 void DrawHandle(int x, int y, Color strokeColor) {
     DrawCircle(x, y, HANDLE_RADIUS, strokeColor);

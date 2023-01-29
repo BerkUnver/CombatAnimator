@@ -32,38 +32,74 @@ void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active)
 
 cJSON *SerializeState(EditorState state) {
     cJSON *shapes = cJSON_CreateArray();
-    for (int i = 0; i < state.shapeCount; i++) {
-        CombatShape shape = state.shapes[i];
-        const char *shapeType;
-        const char *boxType;
-        switch(shape.boxType) {
-            case HITBOX: boxType = "HITBOX";
-            case HURTBOX: boxType = "HURTBOX";
-            default: return NULL;
+    for (int i = 0; i < state.shapeCount; i++) { // should not enter if state.shapes is null cause count is also 0
+        cJSON *shape = SerializeShape(state.shapes[i]);
+        if (!shape) {
+            cJSON_Delete(shapes);
+            return NULL;
         }
-        
-        cJSON *data = cJSON_CreateObject();
-        switch (shape.shapeType) {
-            case CIRCLE: 
-                shapeType = "CIRCLE";
-                cJSON_AddItemToObject(data, "radius", shape.data.circleRadius);
-                break;
-            case RECTANGLE: 
-                shapeType = "RECTANGLE";
-                cJSON_AddToObject(data, "rightX", shape.data.rectangle.rightX);
-                cJSON_AddItemToObject(data, "bottomY", shape.data.rectangle.bottomY);
-                break;
-            case CAPSULE: 
-                shapeType = "CAPSULE"; 
-                cJSON_AddItemToObject(data, "radius", shape.data.capsule.radius);
-                break;
-            default: return NULL;
-        }
-
-        cJSON *jsonShape = cJSON_CreateObject();
-        cJSON_AddItemToObject(jsonShape,"shapeType", cJSON_CreateString(shapeType));
-        cJSON_AddItemToObject(jsonShape, "boxType", cJSON_CreateString(boxType));
+        cJSON_AddItemToArray(shapes, shape);
     }
+
+    cJSON *activeFrames = cJSON_CreateArray();
+    int activeCount = state.frameCount * state.shapeCount;
+    for (int i = 0; i < activeCount; i++) {
+        cJSON *val = cJSON_CreateNumber(state._shapeActiveFrames[i]);
+        cJSON_AddItemToArray(activeFrames, val);
+    }
+
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json, STR_SHAPE_ACTIVE_FRAMES, activeFrames);
+    cJSON_AddItemToObject(json, STR_SHAPES, shapes);
+    cJSON_AddNumberToObject(json, STR_FRAME_COUNT, state.frameCount);
+    return json;
+}
+
+bool DeserializeState(cJSON *json, EditorState *out) {
+    if (!cJSON_IsObject(json)) return false;
+
+    cJSON *frameCount = cJSON_GetObjectItem(json, STR_FRAME_COUNT);
+    if (!frameCount || !cJSON_IsNumber(frameCount)) return false;
+    out->frameCount = (int) cJSON_GetNumberValue(frameCount);
+
+
+    cJSON *shapes = cJSON_GetObjectItem(json, STR_SHAPES);
+    if (!shapes || !cJSON_IsArray(shapes)) return false;
+    out->shapeCount = cJSON_GetArraySize(shapes); // o(n), but that's ok, should never be that long
+    if (out->shapeCount > 0) {
+        out->shapes = malloc(sizeof(CombatShape) * out->shapeCount);
+        cJSON *jsonShape;
+        int shapeIdx = 0;
+        cJSON_ArrayForEach(jsonShape, shapes) {
+            CombatShape shape;
+            if (!DeserializeShape(jsonShape, &shape)) {
+                free(out->shapes);
+                return false;
+            }
+            out->shapes[shapeIdx] = shape;
+            shapeIdx++;
+        }
+    }
+
+    cJSON *activeFrames = cJSON_GetObjectItem(json, STR_SHAPE_ACTIVE_FRAMES);
+    if (!activeFrames || !cJSON_IsArray(activeFrames)) return false;
+    int activeCount = out->shapeCount * out->frameCount; // frameCount will always be >= 1, if shapeCount = 0 then shapes is null
+    if (activeCount > 0) {
+        cJSON *active;
+        out->_shapeActiveFrames = malloc(sizeof(bool) * activeCount);
+        int activeIdx = 0;
+        cJSON_ArrayForEach(active, activeFrames) {
+            if (!cJSON_IsNumber(active) || activeIdx >= activeCount) {
+                return false;
+            }
+            out->_shapeActiveFrames[activeIdx] = cJSON_GetNumberValue(active) == 0 ? false : true;
+            activeIdx++;
+        }
+    }
+
+    out->frameIdx = 0;
+    out->shapeIdx = -1;
+    return true;
 }
 
 void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptrs

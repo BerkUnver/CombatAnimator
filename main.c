@@ -9,8 +9,8 @@
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
-#define EXIT_KEY KEY_E
-#define EXIT_KEY_MODIFIER KEY_LEFT_CONTROL
+#define KEY_EXIT KEY_E
+#define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
 #define TEST_IMAGE_PATH "Jab.png"
 #define TEST_SAVE_PATH "Jab.json"
@@ -36,9 +36,8 @@
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
 #define FRAME_TIME 0.1
 
-#define BACKGROUND_COLOR GRAY
-#define FONT_COLOR RAYWHITE
-#define SELECTED_COLOR (Color) {123, 123, 123, 255}
+#define COLOR_BACKGROUND GRAY
+#define COLOR_SELECTED (Color) {123, 123, 123, 255}
 #define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
@@ -65,21 +64,34 @@ int main() {
     SetTargetFPS(60);
 
     Texture2D sprite = LoadTexture(TEST_IMAGE_PATH);
-        
+
     float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
     Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
 
-    EditorState state = AllocEditorState(sprite.width / FRAME_WIDTH);
-    AddShape(&state, DEFAULT_HITBOX);
-    SetShapeActive(&state, 0, 0, true);
+    EditorState state;
+
+    FILE *file = fopen(TEST_SAVE_PATH, "r+");
+    if (!file) {
+        state = AllocEditorState(sprite.width / FRAME_WIDTH);
+    } else {
+        char buffer[1024];
+        fread(buffer, sizeof(char), 1023, file);
+        buffer[1023] = '\0';
+        cJSON *json = cJSON_Parse(buffer);
+        if (!json || !DeserializeState(json, &state))
+            state = AllocEditorState(sprite.width / FRAME_WIDTH);
+        free(json);
+    }
+
+
     state.shapeIdx = 0; // temporary test code
     EditorHistory history = AllocEditorHistory(&state);
 
     typedef enum Mode {
-        IDLE = 0,
-        PLAYING = 1,
-        DRAGGING_HANDLE = 2,
-        PANNING_SPRITE = 3
+        IDLE,
+        PLAYING,
+        DRAGGING_HANDLE,
+        PANNING_SPRITE
     } Mode;
     Mode mode = IDLE;
     float playingFrameTime = 0.0f;
@@ -87,7 +99,7 @@ int main() {
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
 
     while (!WindowShouldClose()) {
-        if (IsKeyPressed(EXIT_KEY) && IsKeyDown(EXIT_KEY_MODIFIER))
+        if (IsKeyPressed(KEY_EXIT) && IsKeyDown(KEY_EXIT_MODIFIER))
             break;
 
         // updating these here and not after the model update causes changes to be reflected one frame late.
@@ -116,13 +128,13 @@ int main() {
         } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
             cJSON *saved = SerializeState(state);
             if (!saved) {
-                puts("Failed to save file for unknown reason");
+                puts("Failed to save file for unknown reason.");
             } else {
                 char *str = cJSON_Print(saved);
-                FILE *file = fopen(TEST_SAVE_PATH, "w+");
-                fwrite(str, sizeof(char), strlen(str), file);
+                FILE *saveFile = fopen(TEST_SAVE_PATH, "w+");
+                fwrite(str, sizeof(char), strlen(str), saveFile);
                 free(str);
-                fclose(file);
+                fclose(saveFile);
             }
         } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) { // undo
             mode = IDLE;
@@ -212,7 +224,7 @@ int main() {
         
         // drawing
         BeginDrawing();
-        ClearBackground(BACKGROUND_COLOR);
+        ClearBackground(COLOR_BACKGROUND);
         
         Rectangle source = {FRAME_WIDTH * state.frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
         Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
@@ -226,7 +238,7 @@ int main() {
         DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int xPos = FRAME_ROW_SIZE * state.frameIdx;
         int yPos = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
-        DrawRectangle(xPos, yPos, FRAME_ROW_SIZE, FRAME_ROW_SIZE, SELECTED_COLOR);
+        DrawRectangle(xPos, yPos, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
 
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;

@@ -6,6 +6,9 @@
 #include "combat_shape.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
+#define STR_SHAPES "shapes"
+#define STR_FRAME_COUNT "frameCount"
+#define STR_SHAPE_ACTIVE_FRAMES "_shapeActiveFrames"
 
 typedef struct EditorState {
     CombatShape *shapes;
@@ -33,7 +36,7 @@ typedef enum ChangeOptions {
 EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState state);
 cJSON *SerializeState(EditorState state);
-
+bool DeserializeState(cJSON *json, EditorState *out);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 void AddShape(EditorState *state, CombatShape shape);
