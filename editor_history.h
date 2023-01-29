@@ -14,7 +14,6 @@ typedef struct EditorState {
     CombatShape *shapes;
     int shapeCount;
     bool *_shapeActiveFrames;
-
     int frameCount;
     int shapeIdx;
     int frameIdx;
@@ -35,12 +34,13 @@ typedef enum ChangeOptions {
 
 EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState state);
-cJSON *SerializeState(EditorState state);
-bool DeserializeState(cJSON *json, EditorState *out);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 void AddShape(EditorState *state, CombatShape shape);
 EditorState EditorStateDeepCopy(EditorState state);
+cJSON *SerializeState(EditorState state);
+
+bool DeserializeState(cJSON *json, EditorState *state);
 
 EditorHistory AllocEditorHistory(EditorState *initial);
 void FreeEditorHistory(EditorHistory history);

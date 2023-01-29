@@ -12,8 +12,6 @@
 #define KEY_EXIT KEY_E
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
-#define TEST_IMAGE_PATH "Jab.png"
-#define TEST_SAVE_PATH "Jab.json"
 #define APP_NAME "Combat Animator"
 #define WINDOW_X 800
 #define WINDOW_Y 480
@@ -32,7 +30,6 @@
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
-#define FRAME_WIDTH 160
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
 #define FRAME_TIME 0.1
 
@@ -56,42 +53,90 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     DrawTriangle(leftPoint, bottomPoint, rightPoint, color);
 }
 
-int main() {
+
+char *ChangeFileExtension(const char *fileName, const char *newExt) {
+    int len = 0;
+    char c;
+    int dotIdx = -1;
+    while ((c = fileName[len])) {
+        if (c == '.') dotIdx = len;
+        len++;
+    }
+
+    int newExtLen = strlen(newExt);
+    char *newStr;
+
+    if (dotIdx == -1) {
+        newStr = malloc(sizeof(char) * (len + 1 + newExtLen));
+        memcpy(newStr, fileName, sizeof(char) * len);
+        newStr[len] = '.';
+        memcpy(newStr + len + 1, fileName, sizeof(char) * newExtLen);
+    } else {
+        newStr = malloc(sizeof(char) * (dotIdx + 1 + newExtLen)); // size of string before and including dot
+        memcpy(newStr, fileName, sizeof(char) * (dotIdx + 1));
+        memcpy(newStr + dotIdx + 1, newExt, sizeof(char) * newExtLen);
+    }
+
+    return newStr;
+}
+
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        printf("Please put the name of the png file to make an animation for as the argument to this file");
+        return EXIT_FAILURE;
+    }
+
     const CombatShape DEFAULT_HITBOX = CombatShapeRectangle(40, 40, 24, 24, HITBOX);
     const CombatShape DEFAULT_HURTBOX = CombatShapeRectangle(40, 40, 24, 24, HURTBOX);
 
     InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
 
-    Texture2D sprite = LoadTexture(TEST_IMAGE_PATH);
-
-    float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / sprite.height;
-    Vector2 spritePos = {(WINDOW_X - FRAME_WIDTH * spriteScale) / 2.0f, (WINDOW_Y - sprite.height * spriteScale) / 2.0f};
-
-    EditorState state;
-
-    FILE *file = fopen(TEST_SAVE_PATH, "r+");
-    if (!file) {
-        state = AllocEditorState(sprite.width / FRAME_WIDTH);
-    } else {
-        char buffer[1024];
-        fread(buffer, sizeof(char), 1023, file);
-        buffer[1023] = '\0';
-        cJSON *json = cJSON_Parse(buffer);
-        if (!json || !DeserializeState(json, &state))
-            state = AllocEditorState(sprite.width / FRAME_WIDTH);
-        free(json);
+    char *texturePath = argv[1];
+    Texture2D texture = LoadTexture(texturePath);
+    if (texture.id <= 0) {
+        printf("Failed to load texture\n");
+        CloseWindow();
+        return EXIT_FAILURE;
     }
 
+    // load state from file or create new state if load failed
+    char *savePath = ChangeFileExtension(texturePath, "json");
+    FILE *loadFile = fopen(savePath, "r+");
+    bool createNewSave = false;
+    EditorState state;
+    if (!loadFile) {
+        createNewSave = true;
+    } else {
+        char buffer[1024]; // todo : do without buffer
+        buffer[1023] = '\0';
+        fread(buffer, sizeof(char), 1023, loadFile);
+        cJSON *json = cJSON_Parse(buffer);
+        if (!json) {
+            createNewSave = true;
+        } else {
+            if (!DeserializeState(json, &state)) createNewSave = true;
+            cJSON_Delete(json);
+        }
+        fclose(loadFile);
+    }
+    if (createNewSave) state = AllocEditorState(1);
 
-    state.shapeIdx = 0; // temporary test code
     EditorHistory history = AllocEditorHistory(&state);
+
+    float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
+    float frameWidth = texture.width / state.frameCount;
+    Vector2 spritePos = {
+        (WINDOW_X - frameWidth * spriteScale) / 2.0f,
+        (WINDOW_Y - texture.height * spriteScale) / 2.0f
+    };
 
     typedef enum Mode {
         IDLE,
         PLAYING,
         DRAGGING_HANDLE,
-        PANNING_SPRITE
+        PANNING_SPRITE,
     } Mode;
     Mode mode = IDLE;
     float playingFrameTime = 0.0f;
@@ -126,15 +171,16 @@ int main() {
                 spritePos.y += mousePos.y - globalPanY;
             }
         } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
-            cJSON *saved = SerializeState(state);
-            if (!saved) {
+            cJSON *saveJson = SerializeState(state);
+            if (!saveJson) {
                 puts("Failed to save file for unknown reason.");
             } else {
-                char *str = cJSON_Print(saved);
-                FILE *saveFile = fopen(TEST_SAVE_PATH, "w+");
-                fwrite(str, sizeof(char), strlen(str), saveFile);
+                char *str = cJSON_Print(saveJson);
+                FILE *saveFile = fopen(savePath, "w+");
+                fputs(str, saveFile);
                 free(str);
                 fclose(saveFile);
+                cJSON_Delete(saveJson);
             }
         } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) { // undo
             mode = IDLE;
@@ -226,9 +272,9 @@ int main() {
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
         
-        Rectangle source = {FRAME_WIDTH * state.frameIdx, 0.0f, FRAME_WIDTH, sprite.height};
-        Rectangle dest = {spritePos.x, spritePos.y, FRAME_WIDTH * spriteScale, sprite.height * spriteScale};
-        DrawTexturePro(sprite, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
+        Rectangle source = {frameWidth * state.frameIdx, 0.0f, frameWidth, texture.height};
+        Rectangle dest = {spritePos.x, spritePos.y, frameWidth * spriteScale, texture.height * spriteScale};
+        DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         
         for (int i = 0; i < state.shapeCount; i++) {
             if (GetShapeActive(&state, state.frameIdx, i)) 
@@ -261,10 +307,11 @@ int main() {
 
         EndDrawing();
     }
-    
-    UnloadTexture(sprite);
+
     FreeEditorHistory(history);
     FreeEditorState(state);
+    UnloadTexture(texture);
+    free(savePath);
     CloseWindow();
     return EXIT_SUCCESS;
 }
