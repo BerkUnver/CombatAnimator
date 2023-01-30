@@ -1,19 +1,11 @@
 #include <math.h>
 #include <string.h>
-#include <stdio.h>
 #include "raylib.h"
 #include "rlgl.h"
 #include "cjson/cJSON.h"
 #include "combat_shape.h"
 
 cJSON *SerializeShape(CombatShape shape) {
-    const char *boxType;
-    switch(shape.boxType) {
-        case HITBOX: boxType = STR_HITBOX; break;
-        case HURTBOX: boxType = STR_HURTBOX ; break;
-        default: return NULL;
-    }
-
     const char *shapeType;
     cJSON *data = cJSON_CreateObject();
     switch (shape.shapeType) {
@@ -40,9 +32,27 @@ cJSON *SerializeShape(CombatShape shape) {
     }
 
     cJSON *jsonShape = cJSON_CreateObject();
-    cJSON_AddStringToObject(jsonShape,STR_SHAPE_TYPE, shapeType);
-    cJSON_AddStringToObject(jsonShape, STR_BOX_TYPE, boxType);
     cJSON_AddItemToObject(jsonShape, STR_DATA, data);
+    cJSON_AddStringToObject(jsonShape,STR_SHAPE_TYPE, shapeType);
+
+    const char *boxType;
+    switch(shape.boxType) {
+        case HITBOX:
+            boxType = STR_HITBOX;
+            cJSON_AddNumberToObject(jsonShape, STR_HITBOX_KNOCKBACK_X, shape.hitboxKnockbackX);
+            cJSON_AddNumberToObject(jsonShape, STR_HITBOX_KNOCKBACK_Y, shape.hitboxKnockbackY);
+            break;
+
+        case HURTBOX:
+            boxType = STR_HURTBOX;
+            break;
+
+        default:
+            cJSON_Delete(jsonShape);
+            return NULL;
+    }
+
+    cJSON_AddStringToObject(jsonShape, STR_BOX_TYPE, boxType);
     cJSON_AddNumberToObject(jsonShape, STR_X, shape.x);
     cJSON_AddNumberToObject(jsonShape, STR_Y, shape.y);
     return jsonShape;
@@ -71,8 +81,18 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
     cJSON *boxTypeJson = cJSON_GetObjectItem(json, STR_BOX_TYPE);
     if (!boxTypeJson || !cJSON_IsString(boxTypeJson)) return false;
     char *boxTypeStr = cJSON_GetStringValue(boxTypeJson);
-    if (strcmp(boxTypeStr, STR_HITBOX) == 0) out->boxType = HITBOX;
-    else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) out->boxType = HURTBOX;
+    if (strcmp(boxTypeStr, STR_HITBOX) == 0) {
+        cJSON *knockbackX = cJSON_GetObjectItem(json, STR_HITBOX_KNOCKBACK_X);
+        if (!knockbackX || !cJSON_IsNumber(knockbackX)) return false;
+        cJSON *knockbackY = cJSON_GetObjectItem(json, STR_HITBOX_KNOCKBACK_Y);
+        if (!knockbackY || !cJSON_IsNumber(knockbackY)) return false;
+
+        out->boxType = HITBOX;
+        out->hitboxKnockbackX = (int) cJSON_GetNumberValue(knockbackX);
+        out->hitboxKnockbackY = (int) cJSON_GetNumberValue(knockbackY);
+    } else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) {
+        out->boxType = HURTBOX;
+    }
     else return false;
 
     cJSON *data = cJSON_GetObjectItem(json, STR_DATA);

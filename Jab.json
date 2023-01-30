@@ -1,0 +1,38 @@
+{
+	"shapeActiveFrames":	[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+	"shapes":	[{
+			"data":	{
+				"rightX":	32,
+				"bottomY":	9
+			},
+			"shapeType":	"RECTANGLE",
+			"hitboxKnockbackX":	22,
+			"hitboxKnockbackY":	-5,
+			"boxType":	"HITBOX",
+			"x":	82,
+			"y":	45
+		}, {
+			"data":	{
+				"rightX":	31,
+				"bottomY":	21
+			},
+			"shapeType":	"RECTANGLE",
+			"hitboxKnockbackX":	16,
+			"hitboxKnockbackY":	-6,
+			"boxType":	"HITBOX",
+			"x":	100,
+			"y":	40
+		}, {
+			"data":	{
+				"rightX":	39,
+				"bottomY":	27
+			},
+			"shapeType":	"RECTANGLE",
+			"hitboxKnockbackX":	29,
+			"hitboxKnockbackY":	-5,
+			"boxType":	"HITBOX",
+			"x":	104,
+			"y":	39
+		}],
+	"frameCount":	16
+}

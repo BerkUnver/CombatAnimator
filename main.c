@@ -15,6 +15,7 @@
 #define APP_NAME "Combat Animator"
 #define WINDOW_X 800
 #define WINDOW_Y 480
+#define LOAD_BUFFER_SIZE (1 << 20)
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
 #define KEY_NEXT_FRAME KEY_RIGHT
@@ -36,7 +37,7 @@
 #define DEFAULT_SHAPE_X 40.0f
 #define DEFAULT_SHAPE_Y 40.0f
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
-#define DEFAULT_HITBOX_KNOCKBACK_Y -2
+#define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
 #define DEFAULT_CIRCLE_RADIUS 24.0f
 #define DEFAULT_RECTANGLE_RIGHT_X 24.0f
 #define DEFAULT_RECTANGLE_BOTTOM_Y 24.0f
@@ -126,9 +127,9 @@ int main(int argc, char **argv) {
     if (!loadFile) {
         createNewSave = true;
     } else {
-        char buffer[1024]; // todo : do without buffer
-        buffer[1023] = '\0';
-        fread(buffer, sizeof(char), 1023, loadFile);
+        char buffer[LOAD_BUFFER_SIZE]; // todo : do without buffer
+        buffer[LOAD_BUFFER_SIZE - 1] = '\0';
+        fread(buffer, sizeof(char), LOAD_BUFFER_SIZE - 1, loadFile);
         cJSON *json = cJSON_Parse(buffer);
         if (!json) {
             createNewSave = true;
@@ -335,9 +336,9 @@ int main(int argc, char **argv) {
         }
 
         DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
-        int xPos = FRAME_ROW_SIZE * state.frameIdx;
-        int yPos = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
-        DrawRectangle(xPos, yPos, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
+        int selectedX = FRAME_ROW_SIZE * state.frameIdx;
+        int selectedY = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
+        DrawRectangle(selectedX, selectedY, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
 
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
