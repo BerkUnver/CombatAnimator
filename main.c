@@ -34,10 +34,12 @@
 #define KEY_NEW_CAPSULE KEY_THREE
 
 #define DEFAULT_SHAPE_X 40.0f
-#define DEFAULT_SHAPE_Y 40.f
+#define DEFAULT_SHAPE_Y 40.0f
+#define DEFAULT_HITBOX_KNOCKBACK_X 2
+#define DEFAULT_HITBOX_KNOCKBACK_Y -2
 #define DEFAULT_CIRCLE_RADIUS 24.0f
-#define DEFAULT_RECTANGLE_WIDTH 24.0f
-#define DEFAULT_RECTANGLE_HEIGHT 24.0f
+#define DEFAULT_RECTANGLE_RIGHT_X 24.0f
+#define DEFAULT_RECTANGLE_BOTTOM_Y 24.0f
 #define DEFAULT_CAPSULE_RADIUS 24.0f
 #define DEFAULT_CAPSULE_HEIGHT 24.0f
 
@@ -54,6 +56,7 @@
 #define FRAME_RHOMBUS_RADIUS 12
 #define FRAME_RHOMBUS_UNSELECTED_COLOR (Color) {63, 63, 63, 255}
 #define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
+#define COLOR_TEXT FRAME_ROW_COLOR
 
 #define SHAPE_ROW_SIZE 32
 #define SHAPE_ICON_CIRCLE_RADIUS 12
@@ -112,6 +115,8 @@ int main(int argc, char **argv) {
         CloseWindow();
         return EXIT_FAILURE;
     }
+
+    const int fontSize = GetFontDefault().baseSize;
 
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, "json");
@@ -203,22 +208,37 @@ int main(int argc, char **argv) {
         } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
             AddFrame(&state);
             CommitState(&history, &state);
+            mode = IDLE;
 
         } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CONTROL
             CombatShape shape;
-            BoxType type = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? HURTBOX : HITBOX;
+
             bool newShapeInstanced = true;
             if (IsKeyPressed(KEY_NEW_CIRCLE)) {
-                shape = CombatShapeCircle(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_CIRCLE_RADIUS, type);
+                shape.shapeType = CIRCLE;
+                shape.data.circleRadius = DEFAULT_CIRCLE_RADIUS;
             } else if (IsKeyPressed(KEY_NEW_RECTANGLE)) {
-                shape = CombatShapeRectangle(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_RECTANGLE_WIDTH, DEFAULT_RECTANGLE_HEIGHT, type);
+                shape.shapeType = RECTANGLE;
+                shape.data.rectangle.rightX = DEFAULT_RECTANGLE_RIGHT_X;
+                shape.data.rectangle.bottomY = DEFAULT_RECTANGLE_BOTTOM_Y;
             } else if (IsKeyPressed(KEY_NEW_CAPSULE)) {
-                shape = CombatShapeCapsule(DEFAULT_SHAPE_X, DEFAULT_SHAPE_Y, DEFAULT_CAPSULE_RADIUS, DEFAULT_CAPSULE_HEIGHT, type);
+                shape.shapeType = CAPSULE;
+                shape.data.capsule.radius = DEFAULT_CAPSULE_RADIUS;
+                shape.data.capsule.height = DEFAULT_CAPSULE_HEIGHT;
             } else {
                 newShapeInstanced = false;
             }
 
             if (newShapeInstanced) {
+                shape.x = DEFAULT_SHAPE_X;
+                shape.y = DEFAULT_SHAPE_Y;
+                if (IsKeyDown(KEY_NEW_HURTBOX_MODIFIER)) {
+                    shape.boxType = HURTBOX;
+                } else {
+                    shape.boxType = HITBOX;
+                    shape.hitboxKnockbackX = DEFAULT_HITBOX_KNOCKBACK_X;
+                    shape.hitboxKnockbackY = DEFAULT_HITBOX_KNOCKBACK_Y;
+                }
                 AddShape(&state, shape);
                 state.shapeIdx = state.shapeCount - 1;
                 CommitState(&history, &state);
@@ -226,14 +246,17 @@ int main(int argc, char **argv) {
             }
         } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
             if (timelineY < mousePos.y && mousePos.y <= WINDOW_Y) {
-                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) { // toggle whether frame is active
+                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) {
                     mode = IDLE;
-                    state.frameIdx = Clamp((int) mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
+                    int oldFrameIdx = state.frameIdx;
+                    state.frameIdx = Clamp( mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
                     if (mousePos.y > hitboxRowY && state.shapeCount >= 1) {
                         state.shapeIdx = Clamp((mousePos.y - hitboxRowY) / SHAPE_ROW_SIZE, 0, state.shapeCount - 1);
-                        bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
-                        SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
-                        CommitState(&history, &state);
+                        if (oldFrameIdx == state.frameIdx) { // if frame is already selected toggle it.
+                            bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
+                            SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
+                            CommitState(&history, &state);
+                        }
                     } else {
                         state.shapeIdx = -1;
                     }
@@ -249,9 +272,9 @@ int main(int argc, char **argv) {
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
                 } else {
-                    mode = PANNING_SPRITE;
                     panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
                     panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
+                    mode = PANNING_SPRITE;
                 }
             }
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
@@ -318,21 +341,24 @@ int main(int argc, char **argv) {
 
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
-    
+
             Color frameColor = i == state.frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
             Vector2 frameCenter = {xPos, timelineY + FRAME_ROW_SIZE / 2};
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
-
+            const char *text = TextFormat("%i", i + 1);
+            int textX = frameCenter.x - MeasureText(text, fontSize) / 2.0f;
+            int textY = frameCenter.y - fontSize / 2.0f;
+            DrawText(text, textX, textY, fontSize, COLOR_TEXT);
             for (int j = 0; j < state.shapeCount; j++) {
                 Color color;
                 bool active = GetShapeActive(&state, i, j);
                 if (state.shapes[j].boxType == HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
-                else 
+                else
                     color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
                 int shapeY = hitboxRowY + SHAPE_ROW_SIZE * (j + 0.5);
                 DrawCircle(xPos, shapeY, SHAPE_ICON_CIRCLE_RADIUS, color);
-            }        
+            }
         }
 
         EndDrawing();

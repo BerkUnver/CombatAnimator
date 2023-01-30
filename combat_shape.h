@@ -41,6 +41,7 @@
 typedef enum Handle {
     NONE,
     CENTER,
+    HITBOX_KNOCKBACK,
     CIRCLE_RADIUS,
     RECTANGLE_CORNER,
     CAPSULE_HEIGHT,
@@ -72,15 +73,13 @@ typedef enum ShapeType {
 
 typedef struct CombatShape {
     BoxType boxType;
+    int hitboxKnockbackX; // defined only if boxType is HITBOX
+    int hitboxKnockbackY;
     ShapeType shapeType;
     ShapeData data;
     int x;
     int y;
 } CombatShape;
-
-CombatShape CombatShapeRectangle(int x, int y, int rightX, int bottomY, BoxType type);
-CombatShape CombatShapeCircle(int x, int y, int radius, BoxType type);
-CombatShape CombatShapeCapsule(int x, int y, int radius, int height, BoxType type);
 
 cJSON *SerializeShape(CombatShape shape);
 bool DeserializeShape(cJSON *json, CombatShape *out);
