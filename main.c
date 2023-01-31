@@ -13,8 +13,8 @@
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
 #define APP_NAME "Combat Animator"
-#define WINDOW_X 800
-#define WINDOW_Y 480
+#define DEFAULT_WINDOW_X 800
+#define DEFAULT_WINDOW_Y 480
 #define LOAD_BUFFER_SIZE (1 << 20)
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     }
     const char *texturePath = argv[1];
 
-    InitWindow(WINDOW_X, WINDOW_Y, APP_NAME);
+    InitWindow(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, APP_NAME);
     SetTargetFPS(60);
 
     Texture2D texture = LoadTexture(texturePath);
@@ -143,10 +143,10 @@ int main(int argc, char **argv) {
 
     EditorHistory history = AllocEditorHistory(&state);
 
-    float spriteScale = WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
+    float spriteScale = DEFAULT_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     Vector2 spritePos = {
-        (WINDOW_X - texture.width / state.frameCount * spriteScale) / 2.0f,
-        (WINDOW_Y - texture.height * spriteScale) / 2.0f
+        (DEFAULT_WINDOW_X - texture.width / state.frameCount * spriteScale) / 2.0f,
+        (DEFAULT_WINDOW_Y - texture.height * spriteScale) / 2.0f
     };
 
     typedef enum Mode {
@@ -165,8 +165,10 @@ int main(int argc, char **argv) {
             break;
 
         // updating these here and not after the model update causes changes to be reflected one frame late.
+        int windowX = GetScreenWidth();
+        int windowY = GetScreenHeight();
         int timelineHeight = FRAME_ROW_SIZE + SHAPE_ROW_SIZE * state.shapeCount;
-        int timelineY = WINDOW_Y - timelineHeight;
+        int timelineY = windowY - timelineHeight;
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
         Vector2 mousePos = GetMousePosition();
         
@@ -246,14 +248,15 @@ int main(int argc, char **argv) {
                 mode = IDLE;
             }
         } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
-            if (timelineY < mousePos.y && mousePos.y <= WINDOW_Y) {
+            if (timelineY < mousePos.y && mousePos.y <= windowY) {
                 if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) {
                     mode = IDLE;
                     int oldFrameIdx = state.frameIdx;
                     state.frameIdx = Clamp( mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
                     if (mousePos.y > hitboxRowY && state.shapeCount >= 1) {
+                        int oldShapeIdx = state.shapeIdx;
                         state.shapeIdx = Clamp((mousePos.y - hitboxRowY) / SHAPE_ROW_SIZE, 0, state.shapeCount - 1);
-                        if (oldFrameIdx == state.frameIdx) { // if frame is already selected toggle it.
+                        if (oldFrameIdx == state.frameIdx && oldShapeIdx == state.shapeIdx) { // if frame is already selected toggle it.
                             bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
                             SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
                             CommitState(&history, &state);
@@ -335,7 +338,7 @@ int main(int argc, char **argv) {
                 DrawCombatShape(spritePos, spriteScale, state.shapes[i], i == state.shapeIdx);
         }
 
-        DrawRectangle(0, timelineY, WINDOW_X, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
+        DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
         int selectedY = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
         DrawRectangle(selectedX, selectedY, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
