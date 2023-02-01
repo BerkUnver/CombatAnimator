@@ -7,40 +7,37 @@
 
 cJSON *SerializeShape(CombatShape shape) {
     const char *shapeType;
-    cJSON *data = cJSON_CreateObject();
+    cJSON *json = cJSON_CreateObject();
     switch (shape.shapeType) {
         case CIRCLE:
             shapeType = STR_CIRCLE;
-            cJSON_AddNumberToObject(data, STR_CIRCLE_RADIUS, shape.data.circleRadius);
+            cJSON_AddNumberToObject(json, STR_CIRCLE_RADIUS, shape.data.circleRadius);
             break;
 
         case RECTANGLE:
             shapeType = STR_RECTANGLE;
-            cJSON_AddNumberToObject(data, STR_RECTANGLE_RIGHT_X, shape.data.rectangle.rightX);
-            cJSON_AddNumberToObject(data, STR_RECTANGLE_BOTTOM_Y, shape.data.rectangle.bottomY);
+            cJSON_AddNumberToObject(json, STR_RECTANGLE_RIGHT_X, shape.data.rectangle.rightX);
+            cJSON_AddNumberToObject(json, STR_RECTANGLE_BOTTOM_Y, shape.data.rectangle.bottomY);
             break;
 
         case CAPSULE:
             shapeType = STR_CAPSULE;
-            cJSON_AddNumberToObject(data, STR_CAPSULE_RADIUS, shape.data.capsule.radius);
-            cJSON_AddNumberToObject(data, STR_CAPSULE_HEIGHT, shape.data.capsule.height);
+            cJSON_AddNumberToObject(json, STR_CAPSULE_RADIUS, shape.data.capsule.radius);
+            cJSON_AddNumberToObject(json, STR_CAPSULE_HEIGHT, shape.data.capsule.height);
             break;
 
         default:
-            cJSON_Delete(data);
+            cJSON_Delete(json);
             return NULL;
     }
-
-    cJSON *jsonShape = cJSON_CreateObject();
-    cJSON_AddItemToObject(jsonShape, STR_DATA, data);
-    cJSON_AddStringToObject(jsonShape,STR_SHAPE_TYPE, shapeType);
+    cJSON_AddStringToObject(json, STR_SHAPE_TYPE, shapeType);
 
     const char *boxType;
     switch(shape.boxType) {
         case HITBOX:
             boxType = STR_HITBOX;
-            cJSON_AddNumberToObject(jsonShape, STR_HITBOX_KNOCKBACK_X, shape.hitboxKnockbackX);
-            cJSON_AddNumberToObject(jsonShape, STR_HITBOX_KNOCKBACK_Y, shape.hitboxKnockbackY);
+            cJSON_AddNumberToObject(json, STR_HITBOX_KNOCKBACK_X, shape.hitboxKnockbackX);
+            cJSON_AddNumberToObject(json, STR_HITBOX_KNOCKBACK_Y, shape.hitboxKnockbackY);
             break;
 
         case HURTBOX:
@@ -48,14 +45,14 @@ cJSON *SerializeShape(CombatShape shape) {
             break;
 
         default:
-            cJSON_Delete(jsonShape);
+            cJSON_Delete(json);
             return NULL;
     }
 
-    cJSON_AddStringToObject(jsonShape, STR_BOX_TYPE, boxType);
-    cJSON_AddNumberToObject(jsonShape, STR_X, shape.x);
-    cJSON_AddNumberToObject(jsonShape, STR_Y, shape.y);
-    return jsonShape;
+    cJSON_AddStringToObject(json, STR_BOX_TYPE, boxType);
+    cJSON_AddNumberToObject(json, STR_X, shape.x);
+    cJSON_AddNumberToObject(json, STR_Y, shape.y);
+    return json;
 }
 
 // all boilerplate
@@ -95,28 +92,26 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
     }
     else return false;
 
-    cJSON *data = cJSON_GetObjectItem(json, STR_DATA);
-    if (!data || !cJSON_IsObject(data)) return false;
     switch (out->shapeType) {
         case CIRCLE: {
-            cJSON *radius = cJSON_GetObjectItem(data, STR_CIRCLE_RADIUS);
+            cJSON *radius = cJSON_GetObjectItem(json, STR_CIRCLE_RADIUS);
             if (!radius || !cJSON_IsNumber(radius)) return false;
             out->data.circleRadius = (int) cJSON_GetNumberValue(radius);
         } return true;
 
         case RECTANGLE: {
-            cJSON *rightX = cJSON_GetObjectItem(data, STR_RECTANGLE_RIGHT_X);
+            cJSON *rightX = cJSON_GetObjectItem(json, STR_RECTANGLE_RIGHT_X);
             if (!rightX || !cJSON_IsNumber(rightX)) return false;
-            cJSON *bottomY = cJSON_GetObjectItem(data, STR_RECTANGLE_BOTTOM_Y);
+            cJSON *bottomY = cJSON_GetObjectItem(json, STR_RECTANGLE_BOTTOM_Y);
             if (!bottomY || !cJSON_IsNumber(bottomY)) return false;
             out->data.rectangle.rightX = (int) cJSON_GetNumberValue(rightX);
             out->data.rectangle.bottomY = (int) cJSON_GetNumberValue(bottomY);
         } return true;
 
         case CAPSULE: {
-            cJSON *radius = cJSON_GetObjectItem(data, STR_CAPSULE_RADIUS);
+            cJSON *radius = cJSON_GetObjectItem(json, STR_CAPSULE_RADIUS);
             if (!radius || !cJSON_IsNumber(radius)) return false;
-            cJSON *height = cJSON_GetObjectItem(data, STR_CAPSULE_HEIGHT);
+            cJSON *height = cJSON_GetObjectItem(json, STR_CAPSULE_HEIGHT);
             if (!height || !cJSON_IsNumber(height)) return false;
             out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
             out->data.capsule.height = (int) cJSON_GetNumberValue(height);
