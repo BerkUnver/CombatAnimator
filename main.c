@@ -102,7 +102,7 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("Please put the name of the png file to make an animation for as the argument to this file");
+        puts("Please put the name of the png file to make an animation for as the argument to this application.");
         return EXIT_FAILURE;
     }
     const char *texturePath = argv[1];
