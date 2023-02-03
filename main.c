@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -182,7 +181,8 @@ int main(int argc, char **argv) {
                 CommitState(&history, &state);
                 mode = IDLE;
             } else {
-                SetCombatShapeHandle(mousePos, spritePos, spriteScale, &state.shapes[state.shapeIdx], draggingHandle); // todo : temporary
+                SetCombatShapeHandle(mousePos, spritePos, spriteScale, &state.shapes[state.shapeIdx], draggingHandle);
+                // check to see if this fails (editor is in invalid state?)
             }
         } else if (mode == PANNING_SPRITE) {
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
 
         // playing tick update (not related to model)
         if (mode == PLAYING) {
-            playingFrameTime += (int) (GetFrameTime() * 1000);
+            playingFrameTime += (int) (GetFrameTime() * FRAME_DURATION_UNIT_PER_SECOND);
             int frameDuration = state.frameDurations[state.frameIdx];
             if (playingFrameTime >= frameDuration)
             {

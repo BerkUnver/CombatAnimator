@@ -6,7 +6,8 @@
 #include "combat_shape.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
-#define DEFAULT_FRAME_DURATION 100.0f
+#define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
+#define FRAME_DURATION_DEFAULT 100.0f
 #define STR_SHAPES "shapes"
 #define STR_FRAME_DURATIONS "frameDurations"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"

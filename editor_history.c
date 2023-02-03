@@ -6,7 +6,7 @@
 
 EditorState AllocEditorState(int frames) {
     int *frameDurations = malloc(sizeof(int) * frames);
-    for (int i = 0; i < frames; i++) frameDurations[1] = DEFAULT_FRAME_DURATION;
+    for (int i = 0; i < frames; i++) frameDurations[1] = FRAME_DURATION_DEFAULT;
 
     return (EditorState) {
         .shapeCount = 0,
@@ -61,7 +61,7 @@ void AddFrame(EditorState *state) {
 
     state->frameDurations = malloc(sizeof(int) * state->frameCount);
     memcpy(state->frameDurations, oldFrameDurations, sizeof(int) * oldFrameCount);
-    state->frameDurations[oldFrameCount] = DEFAULT_FRAME_DURATION;
+    state->frameDurations[oldFrameCount] = FRAME_DURATION_DEFAULT;
 
     free(oldFrameDurations);
     free(oldFrames);
