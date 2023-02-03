@@ -48,7 +48,6 @@
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
-#define FRAME_TIME 0.1
 
 #define COLOR_BACKGROUND GRAY
 #define COLOR_SELECTED (Color) {123, 123, 123, 255}
@@ -161,7 +160,7 @@ int main(int argc, char **argv) {
         PANNING_SPRITE,
     } Mode;
     Mode mode = IDLE;
-    float playingFrameTime = 0.0f;
+    int playingFrameTime = 0;
     Handle draggingHandle = NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
 
@@ -291,7 +290,7 @@ int main(int argc, char **argv) {
                 mode = IDLE;
             } else {
                 mode = PLAYING;
-                playingFrameTime = 0.0f;
+                playingFrameTime = 0;
             }
         } else if (GetMouseWheelMove() != 0.0f) {
             float localX = (mousePos.x - spritePos.x) / spriteScale;
@@ -320,10 +319,11 @@ int main(int argc, char **argv) {
 
         // playing tick update (not related to model)
         if (mode == PLAYING) {
-            playingFrameTime += GetFrameTime();
-            if (playingFrameTime >= FRAME_TIME)
+            playingFrameTime += (int) (GetFrameTime() * 1000);
+            int frameDuration = state.frameDurations[state.frameIdx];
+            if (playingFrameTime >= frameDuration)
             {
-                playingFrameTime = fmod(playingFrameTime, FRAME_TIME);
+                playingFrameTime -= frameDuration;
                 int newFrameIdx = state.frameIdx + 1;
                 state.frameIdx = newFrameIdx >= state.frameCount ? 0 : newFrameIdx;
             }

@@ -6,14 +6,16 @@
 #include "combat_shape.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
+#define DEFAULT_FRAME_DURATION 100.0f
 #define STR_SHAPES "shapes"
-#define STR_FRAME_COUNT "frameCount"
+#define STR_FRAME_DURATIONS "frameDurations"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
 
 typedef struct EditorState {
     CombatShape *shapes;
     int shapeCount;
     bool *_shapeActiveFrames;
+    int *frameDurations;
     int frameCount;
     int shapeIdx;
     int frameIdx;

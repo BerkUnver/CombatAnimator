@@ -5,20 +5,24 @@
 #include "cjson/cJSON.h"
 
 EditorState AllocEditorState(int frames) {
-    EditorState state;
-    state.shapeCount = 0;
-    state.shapes = NULL;
-    state._shapeActiveFrames = NULL;
+    int *frameDurations = malloc(sizeof(int) * frames);
+    for (int i = 0; i < frames; i++) frameDurations[1] = DEFAULT_FRAME_DURATION;
 
-    state.frameCount = frames;
-    state.frameIdx = 0;
-    state.shapeIdx = -1;
-    return state;
+    return (EditorState) {
+        .shapeCount = 0,
+        .shapes = NULL,
+        ._shapeActiveFrames = NULL,
+        .frameDurations = frameDurations,
+        .frameCount = frames,
+        .frameIdx = 0,
+        .shapeIdx = -1
+    };
 }
 
 void FreeEditorState(EditorState *state) {
     free(state->shapes);
     free(state->_shapeActiveFrames);
+    free(state->frameDurations);
 }
 
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
@@ -44,6 +48,7 @@ void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptr
 void AddFrame(EditorState *state) {
     int oldFrameCount = state->frameCount;
     bool* oldFrames = state->_shapeActiveFrames;
+    int *oldFrameDurations = state->frameDurations;
     state->frameCount++;
     state->_shapeActiveFrames = malloc(sizeof(bool) * state->frameCount * state->shapeCount);
     int chunkSize = (int) sizeof(bool) * oldFrameCount;
@@ -53,6 +58,12 @@ void AddFrame(EditorState *state) {
         memcpy(startPtr, oldStartPtr, chunkSize);
         startPtr[state->frameCount - 1] = false; // new frame is set to false;
     }
+
+    state->frameDurations = malloc(sizeof(int) * state->frameCount);
+    memcpy(state->frameDurations, oldFrameDurations, sizeof(int) * oldFrameCount);
+    state->frameDurations[oldFrameCount] = DEFAULT_FRAME_DURATION;
+
+    free(oldFrameDurations);
     free(oldFrames);
 }
 
@@ -65,24 +76,29 @@ EditorState EditorStateDeepCopy(EditorState *state) {
     CombatShape *shapesCopy = malloc(shapesSize);
     memcpy(shapesCopy, state->shapes, shapesSize);
 
-    EditorState newState;
-    newState.shapeCount = state->shapeCount;
-    newState.frameCount = state->frameCount;
-    newState.shapes = shapesCopy;
-    newState._shapeActiveFrames = activeFramesCopy;
-    newState.frameIdx = state->frameIdx;
-    newState.shapeIdx = state->shapeIdx;
-    return newState;
+    int frameDurationsSize = sizeof(int) * state->frameCount;
+    int *frameDurationsCopy = malloc(activeFramesSize);
+    memcpy(frameDurationsCopy, state->frameDurations, frameDurationsSize);
+
+    return (EditorState) {
+        .shapeCount = state->shapeCount,
+        .frameCount = state->frameCount,
+        .shapes = shapesCopy,
+        ._shapeActiveFrames = activeFramesCopy,
+        .frameDurations = frameDurationsCopy,
+        .frameIdx = state->frameIdx,
+        .shapeIdx = state->shapeIdx
+    };
 }
 
 /// clones everything passed in, is safe.
 EditorHistory AllocEditorHistory(EditorState *initial) {
     EditorHistory history;
     history._states = malloc(sizeof(EditorState) * HISTORY_BUFFER_SIZE_INCREMENT);
+    history._states[0] = EditorStateDeepCopy(initial);
     history._statesLength = HISTORY_BUFFER_SIZE_INCREMENT;
     history._currentStateIdx = 0;
     history._mostRecentStateIdx = 0;
-    history._states[0] = EditorStateDeepCopy(initial);
     return history;
 }
 
@@ -149,48 +165,57 @@ cJSON *SerializeState(EditorState state) {
         cJSON_AddItemToArray(activeFrames, val);
     }
 
+    cJSON *frameDurations = cJSON_CreateArray();
+    for (int i = 0; i < state.frameCount; i++) {
+        cJSON_AddItemToArray(frameDurations, cJSON_CreateNumber(state.frameDurations[i]));
+    }
+
     cJSON *json = cJSON_CreateObject();
     cJSON_AddItemToObject(json, STR_SHAPE_ACTIVE_FRAMES, activeFrames);
     cJSON_AddItemToObject(json, STR_SHAPES, shapes);
-    cJSON_AddNumberToObject(json, STR_FRAME_COUNT, state.frameCount);
+    cJSON_AddItemToObject(json, STR_FRAME_DURATIONS, frameDurations);
     return json;
 }
 
 bool DeserializeState(cJSON *json, EditorState *state) {
     if (!cJSON_IsObject(json)) return false;
 
-    cJSON *frameCountJson = cJSON_GetObjectItem(json, STR_FRAME_COUNT);
-    if (!frameCountJson || !cJSON_IsNumber(frameCountJson)) return false;
-    int frameCount = (int) cJSON_GetNumberValue(frameCountJson);
-
-    cJSON *shapes = cJSON_GetObjectItem(json, STR_SHAPES);
-    if (!shapes || !cJSON_IsArray(shapes)) return false;
-
-    cJSON *activeFrames = cJSON_GetObjectItem(json, STR_SHAPE_ACTIVE_FRAMES);
-    if (!activeFrames || !cJSON_IsArray(activeFrames)) return false;
+    cJSON *frameDurationsJson = cJSON_GetObjectItem(json, STR_FRAME_DURATIONS);
+    if (!frameDurationsJson || !cJSON_IsArray(frameDurationsJson)) return false;
+    int frameCount = cJSON_GetArraySize(frameDurationsJson);
 
     *state = AllocEditorState(frameCount);
+    cJSON *frameDuration;
+    int frameIdx = 0;
+    cJSON_ArrayForEach(frameDuration, frameDurationsJson) {
+        if (!cJSON_IsNumber(frameDuration)) goto fail;
+        state->frameDurations[frameIdx] = (int) cJSON_GetNumberValue(frameDuration);
+        frameIdx++;
+    }
+
+    cJSON *shapes = cJSON_GetObjectItem(json, STR_SHAPES);
+    if (!shapes || !cJSON_IsArray(shapes)) goto fail;
     cJSON *jsonShape;
     cJSON_ArrayForEach(jsonShape, shapes) {
         CombatShape shape;
-        if (!DeserializeShape(jsonShape, &shape)) {
-            FreeEditorState(state);
-            return false;
-        }
+        if (!DeserializeShape(jsonShape, &shape)) goto fail;
         AddShape(state, shape);
     }
 
+    cJSON *activeFrames = cJSON_GetObjectItem(json, STR_SHAPE_ACTIVE_FRAMES);
+    if (!activeFrames || !cJSON_IsArray(activeFrames)) goto fail;
     int activeCount = state->shapeCount * state->frameCount; // frameCount will always be >= 1, if shapeCount = 0 then shapes is null
     cJSON *active;
     int activeIdx = 0;
     cJSON_ArrayForEach(active, activeFrames) {
-        if (!cJSON_IsNumber(active) || activeIdx >= activeCount) {
-            FreeEditorState(state);
-            return false;
-        }
-        state->_shapeActiveFrames[activeIdx] = cJSON_GetNumberValue(active) == 0 ? false : true;
+        if (!cJSON_IsNumber(active) || activeIdx >= activeCount) goto fail;
+        state->_shapeActiveFrames[activeIdx] = cJSON_GetNumberValue(active) != 0;
         activeIdx++;
     }
 
     return true;
+
+    fail:
+    FreeEditorState(state);
+    return false;
 }
