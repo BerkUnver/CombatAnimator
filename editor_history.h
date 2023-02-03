@@ -33,18 +33,18 @@ typedef enum ChangeOptions {
 } ChangeOptions;
 
 EditorState AllocEditorState(int frames);
-void FreeEditorState(EditorState state);
+void FreeEditorState(EditorState *state);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 void AddShape(EditorState *state, CombatShape shape);
 void AddFrame(EditorState *state);
-EditorState EditorStateDeepCopy(EditorState state);
+EditorState EditorStateDeepCopy(EditorState *state);
 cJSON *SerializeState(EditorState state);
 
 bool DeserializeState(cJSON *json, EditorState *state);
 
 EditorHistory AllocEditorHistory(EditorState *initial);
-void FreeEditorHistory(EditorHistory history);
+void FreeEditorHistory(EditorHistory *history);
 
 void CommitState(EditorHistory *history, EditorState *state);
 void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions option);

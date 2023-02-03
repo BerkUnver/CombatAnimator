@@ -373,8 +373,8 @@ int main(int argc, char **argv) {
         EndDrawing();
     }
 
-    FreeEditorHistory(history);
-    FreeEditorState(state);
+    FreeEditorHistory(&history);
+    FreeEditorState(&state);
     UnloadTexture(texture);
     free(savePath);
     CloseWindow();

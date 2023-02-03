@@ -4,9 +4,6 @@
 #include <string.h>
 #include "string_buffer.h"
 
-#define EXPAND_AMOUNT 1.5f
-#define INITIAL_MAXIMUM_LENGTH 11
-
 StringBuffer EmptyStringBuffer() {
     char *str = malloc(sizeof(char) * INITIAL_MAXIMUM_LENGTH);
     str[0] = '\0';

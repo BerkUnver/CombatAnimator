@@ -16,9 +16,9 @@ EditorState AllocEditorState(int frames) {
     return state;
 }
 
-void FreeEditorState(EditorState state) {
-    free(state.shapes);
-    free(state._shapeActiveFrames);
+void FreeEditorState(EditorState *state) {
+    free(state->shapes);
+    free(state->_shapeActiveFrames);
 }
 
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
@@ -56,22 +56,22 @@ void AddFrame(EditorState *state) {
     free(oldFrames);
 }
 
-EditorState EditorStateDeepCopy(EditorState state) {
-    int activeFramesSize = sizeof(bool) * state.shapeCount * state.frameCount;
+EditorState EditorStateDeepCopy(EditorState *state) {
+    int activeFramesSize = sizeof(bool) * state->shapeCount * state->frameCount;
     bool *activeFramesCopy = malloc(activeFramesSize);
-    memcpy(activeFramesCopy, state._shapeActiveFrames, activeFramesSize);
+    memcpy(activeFramesCopy, state->_shapeActiveFrames, activeFramesSize);
 
-    int shapesSize = sizeof(CombatShape) * state.shapeCount;
+    int shapesSize = sizeof(CombatShape) * state->shapeCount;
     CombatShape *shapesCopy = malloc(shapesSize);
-    memcpy(shapesCopy, state.shapes, shapesSize);
-    
+    memcpy(shapesCopy, state->shapes, shapesSize);
+
     EditorState newState;
-    newState.shapeCount = state.shapeCount;
-    newState.frameCount = state.frameCount;
+    newState.shapeCount = state->shapeCount;
+    newState.frameCount = state->frameCount;
     newState.shapes = shapesCopy;
     newState._shapeActiveFrames = activeFramesCopy;
-    newState.frameIdx = state.frameIdx;
-    newState.shapeIdx = state.shapeIdx;
+    newState.frameIdx = state->frameIdx;
+    newState.shapeIdx = state->shapeIdx;
     return newState;
 }
 
@@ -82,20 +82,20 @@ EditorHistory AllocEditorHistory(EditorState *initial) {
     history._statesLength = HISTORY_BUFFER_SIZE_INCREMENT;
     history._currentStateIdx = 0;
     history._mostRecentStateIdx = 0;
-    history._states[0] = EditorStateDeepCopy(*initial);
+    history._states[0] = EditorStateDeepCopy(initial);
     return history;
 }
 
-void FreeEditorHistory(EditorHistory history) {
-    for (int i = 0; i < history._mostRecentStateIdx; i++) {
-        FreeEditorState(history._states[i]);
+void FreeEditorHistory(EditorHistory *history) {
+    for (int i = 0; i < history->_mostRecentStateIdx; i++) {
+        FreeEditorState(&history->_states[i]);
     }
-    free(history._states);
+    free(history->_states);
 }
 
 void CommitState(EditorHistory *history, EditorState *state) {
     for (int i = history->_currentStateIdx + 1; i <= history->_mostRecentStateIdx; i++) {
-        FreeEditorState(history->_states[i]);
+        FreeEditorState(&history->_states[i]);
     }
 
     history->_currentStateIdx++;
@@ -107,7 +107,7 @@ void CommitState(EditorHistory *history, EditorState *state) {
         history->_statesLength += HISTORY_BUFFER_SIZE_INCREMENT;
     }
 
-    history->_states[history->_currentStateIdx] = EditorStateDeepCopy(*state);
+    history->_states[history->_currentStateIdx] = EditorStateDeepCopy(state);
 }
 
 /// @brief
@@ -124,8 +124,8 @@ void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions optio
     }
 
     EditorState oldState = *state;
-    *state = EditorStateDeepCopy(history->_states[history->_currentStateIdx]);
-    FreeEditorState(oldState);
+    *state = EditorStateDeepCopy(&history->_states[history->_currentStateIdx]);
+    FreeEditorState(&oldState);
 }
 
 
@@ -174,7 +174,7 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     cJSON_ArrayForEach(jsonShape, shapes) {
         CombatShape shape;
         if (!DeserializeShape(jsonShape, &shape)) {
-            FreeEditorState(*state);
+            FreeEditorState(state);
             return false;
         }
         AddShape(state, shape);
@@ -185,7 +185,7 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     int activeIdx = 0;
     cJSON_ArrayForEach(active, activeFrames) {
         if (!cJSON_IsNumber(active) || activeIdx >= activeCount) {
-            FreeEditorState(*state);
+            FreeEditorState(state);
             return false;
         }
         state->_shapeActiveFrames[activeIdx] = cJSON_GetNumberValue(active) == 0 ? false : true;
