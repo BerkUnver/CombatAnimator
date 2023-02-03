@@ -6,6 +6,7 @@
 #include "raymath.h"
 #include "combat_shape.h"
 #include "editor_history.h"
+#include "string_buffer.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
@@ -15,7 +16,6 @@
 #define APP_NAME "Combat Animator"
 #define DEFAULT_WINDOW_X 800
 #define DEFAULT_WINDOW_Y 480
-#define LOAD_BUFFER_SIZE (1 << 20)
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
 #define KEY_NEXT_FRAME KEY_RIGHT
@@ -127,17 +127,22 @@ int main(int argc, char **argv) {
     if (!loadFile) {
         createNewSave = true;
     } else {
-        char buffer[LOAD_BUFFER_SIZE]; // todo : do without buffer
-        buffer[LOAD_BUFFER_SIZE - 1] = '\0';
-        fread(buffer, sizeof(char), LOAD_BUFFER_SIZE - 1, loadFile);
-        cJSON *json = cJSON_Parse(buffer);
+        StringBuffer buffer = EmptyStringBuffer();
+        int c;
+        while ((c = fgetc(loadFile)) != EOF) {
+            AppendChar(&buffer, (char) c);
+        }
+
+        fclose(loadFile);
+        cJSON *json = cJSON_Parse(buffer.raw);
+        FreeStringBuffer(&buffer);
+
         if (!json) {
             createNewSave = true;
         } else {
             if (!DeserializeState(json, &state)) createNewSave = true;
             cJSON_Delete(json);
         }
-        fclose(loadFile);
     }
     if (createNewSave) state = AllocEditorState(1);
 
