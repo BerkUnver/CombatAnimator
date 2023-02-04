@@ -37,9 +37,14 @@ void AppendString(StringBuffer *string, const char *end){
 
 bool RemoveChar(StringBuffer *string) {
     if (string->length <= 0) return false;
-    string->raw[string->length] = '\0';
     string->length--;
+    string->raw[string->length] = '\0';
     return true;
+}
+
+void ClearStringBuffer(StringBuffer *string) {
+    string->raw[0] = '\0';
+    string->length = 0;
 }
 
 void FreeStringBuffer(StringBuffer *string) {

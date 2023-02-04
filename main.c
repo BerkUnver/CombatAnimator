@@ -33,6 +33,12 @@
 #define KEY_NEW_RECTANGLE KEY_TWO
 #define KEY_NEW_CAPSULE KEY_THREE
 
+#define FRAME_DURATION_TEXT_COLOR RAYWHITE
+#define KEY_FRAME_DURATION_EDIT KEY_D
+#define KEY_FRAME_DURATION_EDIT_MODIFIER KEY_LEFT_CONTROL
+#define KEY_FRAME_DURATION_ENTER_NEW KEY_ENTER
+#define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
+
 #define DEFAULT_SHAPE_X 40.0f
 #define DEFAULT_SHAPE_Y 40.0f
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
@@ -157,11 +163,13 @@ int main(int argc, char **argv) {
         PLAYING,
         DRAGGING_HANDLE,
         PANNING_SPRITE,
+        FRAME_DURATION_EDIT
     } Mode;
     Mode mode = IDLE;
     int playingFrameTime = 0;
     Handle draggingHandle = NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
+    StringBuffer editingFrameDurationBuffer = EmptyStringBuffer();
 
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_EXIT) && IsKeyDown(KEY_EXIT_MODIFIER))
@@ -175,8 +183,24 @@ int main(int argc, char **argv) {
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
         Vector2 mousePos = GetMousePosition();
         
-        // model update here
-        if (mode == DRAGGING_HANDLE) {
+        if (mode == FRAME_DURATION_EDIT) {
+            if (IsKeyPressed(KEY_FRAME_DURATION_ENTER_NEW)) {
+                if (editingFrameDurationBuffer.length > 0) {
+                    // guaranteed to be well-formatted because it only accepts valid characters.
+                    int val = atoi(editingFrameDurationBuffer.raw);
+                    state.frameDurations[state.frameIdx] = val;
+                    CommitState(&history, &state);
+                }
+                mode = IDLE; // if the input is empty then revert to the old input.
+            } else if (IsKeyPressed(KEY_FRAME_DURATION_DELETE)) {
+                RemoveChar(&editingFrameDurationBuffer);
+            } else {
+                int key = GetCharPressed();
+                if (key <= '9' && ((editingFrameDurationBuffer.length == 0 && '1' <= key) || '0' <= key)) {
+                    AppendChar(&editingFrameDurationBuffer, (char) key);
+                }
+            }
+        } else if (mode == DRAGGING_HANDLE) {
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
                 CommitState(&history, &state);
                 mode = IDLE;
@@ -211,6 +235,13 @@ int main(int argc, char **argv) {
             if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
 
             ChangeState(&history, &state, option);
+        } else if (IsKeyPressed(KEY_FRAME_DURATION_EDIT) && IsKeyDown(KEY_FRAME_DURATION_EDIT_MODIFIER)) {
+            int frameDurationStrlen = snprintf(NULL, 0, "%i", state.frameDurations[state.frameIdx]) + 1;
+            char *frameDurationStr = malloc(frameDurationStrlen);
+            snprintf(frameDurationStr, frameDurationStrlen, "%i", state.frameDurations[state.frameIdx]);
+            mode = FRAME_DURATION_EDIT;
+            ClearStringBuffer(&editingFrameDurationBuffer);
+            AppendString(&editingFrameDurationBuffer, frameDurationStr);
 
         } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
             AddFrame(&state);
@@ -343,6 +374,12 @@ int main(int argc, char **argv) {
                 DrawCombatShape(spritePos, spriteScale, state.shapes[i], i == state.shapeIdx);
         }
 
+        if (mode == FRAME_DURATION_EDIT) {
+            DrawText(TextFormat("Frame Duration: %s", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+        } else {
+            DrawText(TextFormat("Frame Duration: %d", state.frameDurations[state.frameIdx]), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+        }
+
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
         int selectedY = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
@@ -373,6 +410,7 @@ int main(int argc, char **argv) {
         EndDrawing();
     }
 
+    FreeStringBuffer(&editingFrameDurationBuffer);
     FreeEditorHistory(&history);
     FreeEditorState(&state);
     UnloadTexture(texture);
