@@ -376,9 +376,9 @@ int main(int argc, char **argv) {
         }
 
         if (mode == FRAME_DURATION_EDIT) {
-            DrawText(TextFormat("Frame Duration: %s", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+            DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         } else {
-            DrawText(TextFormat("Frame Duration: %d", state.frameDurations[state.frameIdx]), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+            DrawText(TextFormat("Frame Duration: %d ms", state.frameDurations[state.frameIdx]), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         }
 
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
