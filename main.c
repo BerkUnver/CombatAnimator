@@ -182,7 +182,15 @@ int main(int argc, char **argv) {
         int timelineY = windowY - timelineHeight;
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
         Vector2 mousePos = GetMousePosition();
-        
+
+         if (GetMouseWheelMove() != 0.0f) {
+            float localX = (mousePos.x - spritePos.x) / spriteScale;
+            float localY = (mousePos.y - spritePos.y) / spriteScale;
+            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCALE_SPEED : SCALE_SPEED;
+            spritePos.x = mousePos.x - localX * spriteScale;
+            spritePos.y = mousePos.y - localY * spriteScale;
+        }
+
         if (mode == FRAME_DURATION_EDIT) {
             if (IsKeyPressed(KEY_FRAME_DURATION_ENTER_NEW)) {
                 if (editingFrameDurationBuffer.length > 0) {
@@ -323,13 +331,6 @@ int main(int argc, char **argv) {
                 mode = PLAYING;
                 playingFrameTime = 0;
             }
-        } else if (GetMouseWheelMove() != 0.0f) {
-            float localX = (mousePos.x - spritePos.x) / spriteScale;
-            float localY = (mousePos.y - spritePos.y) / spriteScale;
-            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCALE_SPEED : SCALE_SPEED;
-            spritePos.x = mousePos.x - localX * spriteScale;
-            spritePos.y = mousePos.y - localY * spriteScale;
-
         } else {
             int frameDir = (IsKeyPressed(KEY_NEXT_FRAME) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_FRAME) ? 1 : 0);
             if (frameDir) {
