@@ -3,9 +3,11 @@
 #include <string.h>
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include "combat_shape.h"
 #include "editor_history.h"
 #include "string_buffer.h"
+#include "transform_2d.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 
@@ -152,11 +154,16 @@ int main(int argc, char **argv) {
 
     EditorHistory history = AllocEditorHistory(&state);
 
-    float spriteScale = DEFAULT_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
-    Vector2 spritePos = {
-        (DEFAULT_WINDOW_X - texture.width / state.frameCount * spriteScale) / 2.0f,
-        (DEFAULT_WINDOW_Y - texture.height * spriteScale) / 2.0f
-    };
+    const float startScale = DEFAULT_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
+    Transform2D transform = Transform2DIdentity();
+    transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
+
+    /*
+    transform.o = (Vector2) {
+        .x = (DEFAULT_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
+        .y = (DEFAULT_WINDOW_Y - texture.height * startScale) / 2.0f
+    };'
+    */
 
     typedef enum Mode {
         IDLE,
@@ -183,12 +190,11 @@ int main(int argc, char **argv) {
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
         Vector2 mousePos = GetMousePosition();
 
-         if (GetMouseWheelMove() != 0.0f) {
-            float localX = (mousePos.x - spritePos.x) / spriteScale;
-            float localY = (mousePos.y - spritePos.y) / spriteScale;
-            spriteScale *= GetMouseWheelMove() > 0 ? 1.0f / SCALE_SPEED : SCALE_SPEED;
-            spritePos.x = mousePos.x - localX * spriteScale;
-            spritePos.y = mousePos.y - localY * spriteScale;
+        const float mouseWheel = GetMouseWheelMove();
+        if (mouseWheel != 0.0f) {
+            float scaleSpeed = mouseWheel > 0.0f ? 1.0f / SCALE_SPEED : SCALE_SPEED;
+            Vector2 scale = {.x = scaleSpeed, .y = scaleSpeed};
+            transform = Transform2DScale(transform, scale);
         }
 
         if (mode == FRAME_DURATION_EDIT) {
@@ -213,17 +219,16 @@ int main(int argc, char **argv) {
                 CommitState(&history, &state);
                 mode = IDLE;
             } else {
-                SetCombatShapeHandle(mousePos, spritePos, spriteScale, &state.shapes[state.shapeIdx], draggingHandle);
+                Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
+                SetCombatShapeHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle);
                 // check to see if this fails (editor is in invalid state?)
             }
         } else if (mode == PANNING_SPRITE) {
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
                 mode = IDLE;
             } else {
-                float globalPanX = spritePos.x + panningSpriteLocalPos.x * spriteScale;
-                float globalPanY = spritePos.y + panningSpriteLocalPos.y * spriteScale;
-                spritePos.x += mousePos.x - globalPanX;
-                spritePos.y += mousePos.y - globalPanY;
+                Vector2 globalPan = Transform2DToGlobal(transform, panningSpriteLocalPos);
+                transform.o = Vector2Add(transform.o, Vector2Subtract(mousePos, globalPan));
             }
         } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
             cJSON *saveJson = SerializeState(state);
@@ -310,19 +315,18 @@ int main(int argc, char **argv) {
                 }
             } else {
                 if (state.shapeIdx >= 0) {
-                    draggingHandle = SelectCombatShapeHandle(mousePos, spritePos, spriteScale, state.shapes[state.shapeIdx]);
-                    // may set draggingHandle to none                  
+                    draggingHandle = SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]);
+                    // may set draggingHandle to none
                 } else {
                     draggingHandle = NONE;
                 }
 
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
-                } else {
-                    panningSpriteLocalPos.x = (mousePos.x - spritePos.x) / spriteScale;
-                    panningSpriteLocalPos.y = (mousePos.y - spritePos.y) / spriteScale;
+                } /* else {
+                    panningSpriteLocalPos = localMousePos;
                     mode = PANNING_SPRITE;
-                }
+                } */ // Disabling panning for now
             }
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
@@ -365,14 +369,20 @@ int main(int argc, char **argv) {
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
 
-        float frameWidth = texture.width / state.frameCount;
-        Rectangle source = {frameWidth * state.frameIdx, 0.0f, frameWidth, texture.height};
-        Rectangle dest = {spritePos.x, spritePos.y, frameWidth * spriteScale, texture.height * spriteScale};
-        DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
-        
+        rlPushMatrix();
+            Matrix matrix = Transform2DToMatrix(transform);
+            rlMultMatrixf((float *) &matrix);
+            float frameWidth = texture.width / state.frameCount;
+            Rectangle source = {frameWidth * state.frameIdx, 0.0f, frameWidth, texture.height};
+            Rectangle dest = {0.0f, 0.0f, frameWidth, texture.height};
+            DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
+        rlPopMatrix();
+
         for (int i = 0; i < state.shapeCount; i++) {
-            if (GetShapeActive(&state, state.frameIdx, i)) 
-                DrawCombatShape(spritePos, spriteScale, state.shapes[i], i == state.shapeIdx);
+            if (GetShapeActive(&state, state.frameIdx, i)) { 
+                DrawCombatShape(transform.o, transform.x.x, state.shapes[i], i == state.shapeIdx);
+                // todo : Getting transform scale as transform.x.x is a hack right now until I implement actual scale getter function.   
+            }
         }
 
         if (mode == FRAME_DURATION_EDIT) {

@@ -4,6 +4,7 @@
 #include "rlgl.h"
 #include "cjson/cJSON.h"
 #include "combat_shape.h"
+#include "transform_2d.h"
 
 cJSON *SerializeShape(CombatShape shape) {
     const char *shapeType;
@@ -70,9 +71,31 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
     cJSON *shapeTypeJson = cJSON_GetObjectItem(json, STR_SHAPE_TYPE);
     if (!shapeTypeJson || !cJSON_IsString(shapeTypeJson)) return false;
     char *shapeTypeStr = cJSON_GetStringValue(shapeTypeJson);
-    if (strcmp(shapeTypeStr, STR_CIRCLE) == 0) out->shapeType = CIRCLE;
-    else if (strcmp(shapeTypeStr, STR_RECTANGLE) == 0) out->shapeType = RECTANGLE;
-    else if (strcmp(shapeTypeStr, STR_CAPSULE) == 0) out->shapeType = CAPSULE;
+    if (strcmp(shapeTypeStr, STR_CIRCLE) == 0) {
+        out->shapeType = CIRCLE;
+        cJSON *radius = cJSON_GetObjectItem(json, STR_CIRCLE_RADIUS);
+        if (!radius || !cJSON_IsNumber(radius)) return false;
+        out->data.circleRadius = (int) cJSON_GetNumberValue(radius);
+
+    } else if (strcmp(shapeTypeStr, STR_RECTANGLE) == 0) {
+        out->shapeType = RECTANGLE;
+        cJSON *rightX = cJSON_GetObjectItem(json, STR_RECTANGLE_RIGHT_X);
+        if (!rightX || !cJSON_IsNumber(rightX)) return false;
+        cJSON *bottomY = cJSON_GetObjectItem(json, STR_RECTANGLE_BOTTOM_Y);
+        if (!bottomY || !cJSON_IsNumber(bottomY)) return false;
+        out->data.rectangle.rightX = (int) cJSON_GetNumberValue(rightX);
+        out->data.rectangle.bottomY = (int) cJSON_GetNumberValue(bottomY);
+
+    } else if (strcmp(shapeTypeStr, STR_CAPSULE) == 0) {
+        out->shapeType = CAPSULE;
+        cJSON *radius = cJSON_GetObjectItem(json, STR_CAPSULE_RADIUS);
+        if (!radius || !cJSON_IsNumber(radius)) return false;
+        cJSON *height = cJSON_GetObjectItem(json, STR_CAPSULE_HEIGHT);
+        if (!height || !cJSON_IsNumber(height)) return false;
+        out->data.capsule.rotation = 0.0f; // todo : remove and add proper serialization and deserialization.
+        out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
+        out->data.capsule.height = (int) cJSON_GetNumberValue(height);
+    }
     else return false;
 
     cJSON *boxTypeJson = cJSON_GetObjectItem(json, STR_BOX_TYPE);
@@ -89,36 +112,9 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
         out->hitboxKnockbackY = (int) cJSON_GetNumberValue(knockbackY);
     } else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) {
         out->boxType = HURTBOX;
-    }
-    else return false;
+    } else return false;
 
-    switch (out->shapeType) {
-        case CIRCLE: {
-            cJSON *radius = cJSON_GetObjectItem(json, STR_CIRCLE_RADIUS);
-            if (!radius || !cJSON_IsNumber(radius)) return false;
-            out->data.circleRadius = (int) cJSON_GetNumberValue(radius);
-        } return true;
-
-        case RECTANGLE: {
-            cJSON *rightX = cJSON_GetObjectItem(json, STR_RECTANGLE_RIGHT_X);
-            if (!rightX || !cJSON_IsNumber(rightX)) return false;
-            cJSON *bottomY = cJSON_GetObjectItem(json, STR_RECTANGLE_BOTTOM_Y);
-            if (!bottomY || !cJSON_IsNumber(bottomY)) return false;
-            out->data.rectangle.rightX = (int) cJSON_GetNumberValue(rightX);
-            out->data.rectangle.bottomY = (int) cJSON_GetNumberValue(bottomY);
-        } return true;
-
-        case CAPSULE: {
-            cJSON *radius = cJSON_GetObjectItem(json, STR_CAPSULE_RADIUS);
-            if (!radius || !cJSON_IsNumber(radius)) return false;
-            cJSON *height = cJSON_GetObjectItem(json, STR_CAPSULE_HEIGHT);
-            if (!height || !cJSON_IsNumber(height)) return false;
-            out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
-            out->data.capsule.height = (int) cJSON_GetNumberValue(height);
-        } return true;
-
-        default: return false; // unreachable
-    }
+    return true;
 }
 
 void DrawHandle(int x, int y, Color strokeColor) {
@@ -191,44 +187,40 @@ void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesAc
     }
 }
 
-bool IsCollidingHandle(Vector2 mousePos, float x, float y) {
-    Rectangle rect = {x - HANDLE_RADIUS, y - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
-    return CheckCollisionPointRec(mousePos, rect);
+bool IsCollidingHandle(Transform2D transform, Vector2 globalMousePos, Vector2 pos) {
+    Vector2 globalPos = Transform2DToGlobal(transform, pos);
+    Rectangle rect = {globalPos.x - HANDLE_RADIUS, globalPos.y - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
+    return CheckCollisionPointRec(globalMousePos, rect);
 }
 
-Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape) {
-    float centerGlobalX = pos.x + shape.x * scale;
-    float centerGlobalY = pos.y + shape.y * scale;
-
+Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatShape shape) {
     if (shape.boxType == HITBOX) {
-        float knockbackX = pos.x + (shape.x + shape.hitboxKnockbackX) * scale;
-        float knockbackY = pos.y + (shape.y + shape.hitboxKnockbackY) * scale;
-        if (IsCollidingHandle(mousePos, knockbackX, knockbackY)) {
+        Vector2 handlePos = {.x = shape.x + shape.hitboxKnockbackX, .y = shape.y + shape.hitboxKnockbackY};
+        if (IsCollidingHandle(transform, mousePos, handlePos)) {
             return HITBOX_KNOCKBACK;
         }
     }
 
     switch (shape.shapeType) {
         case CIRCLE: {
-            float radiusGlobalX = pos.x + (shape.x + shape.data.circleRadius) * scale;
-            if (IsCollidingHandle(mousePos, radiusGlobalX, centerGlobalY))
+            Vector2 radiusPos = {.x = shape.x + shape.data.circleRadius, .y = shape.y};
+            if (IsCollidingHandle(transform, mousePos, radiusPos))
                 return CIRCLE_RADIUS;
         } break;
 
         case RECTANGLE: {
-            float handleGlobalX = pos.x + (shape.x + shape.data.rectangle.rightX) * scale;
-            float handleGlobalY = pos.y + (shape.y + shape.data.rectangle.bottomY) * scale;
-            if (IsCollidingHandle(mousePos,handleGlobalX, handleGlobalY))
+            Vector2 handlePos = {.x = shape.x + shape.data.rectangle.rightX, .y = shape.y + shape.data.rectangle.bottomY};
+            if (IsCollidingHandle(transform, mousePos, handlePos))
                 return RECTANGLE_CORNER;
         } break;
 
         case CAPSULE: {
-            float radiusX = pos.x + (shape.x + shape.data.capsule.radius) * scale;
-            if (IsCollidingHandle(mousePos, radiusX, centerGlobalY))
+            Vector2 radiusPos = {.x = shape.x + shape.data.capsule.radius, .y = shape.y};
+            if (IsCollidingHandle(transform, mousePos, radiusPos))
                 return CAPSULE_RADIUS;
-
-            float heightY = pos.y + (shape.y + shape.data.capsule.height) * scale;
-            if (IsCollidingHandle(mousePos, centerGlobalX, heightY))
+            
+            Vector2 heightPos = {.x = shape.x, .y = shape.y + shape.data.capsule.height};
+            if (IsCollidingHandle(transform, mousePos, heightPos))
                 return CAPSULE_HEIGHT;
         } break;
 
@@ -236,30 +228,31 @@ Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, Comba
     }
 
 
-    if (IsCollidingHandle(mousePos, centerGlobalX, centerGlobalY))
+    Vector2 center = {.x = shape.x, .y = shape.y};
+    if (IsCollidingHandle(transform, mousePos, center))
         return CENTER;
     return NONE;
 }
 
 float Max(float i, float j) { return i > j ? i : j; }
 
-bool SetCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape *shape, Handle handle) {
-    float localX = (mousePos.x - pos.x) / scale;
-    float localY = (mousePos.y - pos.y) / scale;
-
-    int x = (int) roundf(Max(localX - (float) shape->x, 0.0f));
-    int y = (int) roundf(Max(localY - (float) shape->y, 0.0f));
+#include <stdio.h>
+bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
+    printf("local mouse pos: (%f, %f)\n", localMousePos.x, localMousePos.y);
+    fflush(stdout);
+    int x = (int) roundf(Max(localMousePos.x - (float) shape->x, 0.0f));
+    int y = (int) roundf(Max(localMousePos.y - (float) shape->y, 0.0f));
 
     switch (handle) {
         case CENTER:
-            shape->x = roundf(localX);
-            shape->y = roundf(localY);
+            shape->x = roundf(localMousePos.x);
+            shape->y = roundf(localMousePos.y);
             return true;
 
         case HITBOX_KNOCKBACK:
             if (shape->boxType != HITBOX) return false;
-            shape->hitboxKnockbackX = roundf(localX - shape->x);
-            shape->hitboxKnockbackY = roundf(localY - shape->y);
+            shape->hitboxKnockbackX = roundf(localMousePos.x - shape->x);
+            shape->hitboxKnockbackY = roundf(localMousePos.y - shape->y);
             return true;
 
         case CIRCLE_RADIUS:
