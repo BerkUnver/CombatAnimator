@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
 
         } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CONTROL
             CombatShape shape;
-
+            shape.transform = Transform2DIdentity(); // todo : make proper init function for combatshape
             bool newShapeInstanced = true;
             if (IsKeyPressed(KEY_NEW_CIRCLE)) {
                 shape.shapeType = CIRCLE;
@@ -283,8 +283,7 @@ int main(int argc, char **argv) {
             }
 
             if (newShapeInstanced) {
-                shape.x = DEFAULT_SHAPE_X;
-                shape.y = DEFAULT_SHAPE_Y;
+                shape.transform.o = (Vector2) {.x = DEFAULT_SHAPE_X, .y = DEFAULT_SHAPE_Y};
                 if (IsKeyDown(KEY_NEW_HURTBOX_MODIFIER)) {
                     shape.boxType = HURTBOX;
                 } else {
@@ -390,8 +389,7 @@ int main(int argc, char **argv) {
         
         for (int i = 0; i < state.shapeCount; i++) {
             if (GetShapeActive(&state, state.frameIdx, i)) { 
-                DrawCombatShape(transform.o, transform.x.x, state.shapes[i], i == state.shapeIdx);
-                // todo : Getting transform scale as transform.x.x is a hack right now until I implement actual scale getter function.   
+                DrawCombatShape(transform, state.shapes[i], i == state.shapeIdx);
             }
         }
 

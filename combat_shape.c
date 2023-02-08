@@ -1,6 +1,7 @@
 #include <math.h>
 #include <string.h>
 #include "raylib.h"
+#include "raymath.h"
 #include "rlgl.h"
 #include "cjson/cJSON.h"
 #include "combat_shape.h"
@@ -51,22 +52,23 @@ cJSON *SerializeShape(CombatShape shape) {
     }
 
     cJSON_AddStringToObject(json, STR_BOX_TYPE, boxType);
-    cJSON_AddNumberToObject(json, STR_X, shape.x);
-    cJSON_AddNumberToObject(json, STR_Y, shape.y);
+    cJSON_AddNumberToObject(json, STR_X, shape.transform.o.x);
+    cJSON_AddNumberToObject(json, STR_Y, shape.transform.o.y);
     return json;
 }
 
 // all boilerplate
 bool DeserializeShape(cJSON *json, CombatShape *out) {
     if (!cJSON_IsObject(json)) return false;
-
+    
+    out->transform = Transform2DIdentity();
     cJSON *xJson = cJSON_GetObjectItem(json, STR_X);
     if (!xJson || !cJSON_IsNumber(xJson)) return false;
-    out->x = (int) cJSON_GetNumberValue(xJson);
+    out->transform.o.x = (int) cJSON_GetNumberValue(xJson);
 
     cJSON *yJson = cJSON_GetObjectItem(json, STR_Y);
     if (!yJson || !cJSON_IsNumber(yJson)) return false;
-    out->y = (int) cJSON_GetNumberValue(yJson);
+    out->transform.o.y = (int) cJSON_GetNumberValue(yJson);
 
     cJSON *shapeTypeJson = cJSON_GetObjectItem(json, STR_SHAPE_TYPE);
     if (!shapeTypeJson || !cJSON_IsString(shapeTypeJson)) return false;
@@ -92,7 +94,6 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
         if (!radius || !cJSON_IsNumber(radius)) return false;
         cJSON *height = cJSON_GetObjectItem(json, STR_CAPSULE_HEIGHT);
         if (!height || !cJSON_IsNumber(height)) return false;
-        out->data.capsule.rotation = 0.0f; // todo : remove and add proper serialization and deserialization.
         out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
         out->data.capsule.height = (int) cJSON_GetNumberValue(height);
     }
@@ -117,12 +118,12 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
     return true;
 }
 
-void DrawHandle(int x, int y, Color strokeColor) {
-    DrawCircle(x, y, HANDLE_RADIUS, strokeColor);
-    DrawCircle(x, y, HANDLE_INTERIOR_RADIUS, HANDLE_INTERIOR_COLOR);
+void DrawHandle(Vector2 pos, Color strokeColor) {
+    DrawCircle(pos.x, pos.y, HANDLE_RADIUS, strokeColor);
+    DrawCircle(pos.x, pos.y, HANDLE_INTERIOR_RADIUS, HANDLE_INTERIOR_COLOR);
 }
 
-void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive) {
+void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActive) {
     Color color;
     Color outlineColor;
     if (shape.boxType == HURTBOX) {
@@ -133,57 +134,67 @@ void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesAc
         outlineColor = HITBOX_OUTLINE_COLOR;
     }
 
-    float x = pos.x + shape.x * scale;
-    float y = pos.y + shape.y * scale;
+    Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
 
     switch (shape.shapeType) {
         case CIRCLE: {
-            float r = shape.data.circleRadius * scale;
-            DrawCircle(x, y, r, color);
+            Vector2 radiusVector = {.x = shape.data.circleRadius, .y = 0.0f};
+            Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);
+            float radius = Vector2Length(radiusPos);
+            DrawCircle(globalPos.x, globalPos.y, radius, color);
+            
             if (!handlesActive) break;
-            DrawCircleLines(x, y, r, outlineColor);
-            DrawHandle(x, y, outlineColor);
-            DrawHandle(x + r, y, outlineColor);
+            DrawCircleLines(globalPos.x, globalPos.y, radius, outlineColor);
+            DrawHandle(globalPos, outlineColor);
+            DrawHandle(Vector2Add(globalPos, radiusPos), outlineColor);
         } break;
 
         case RECTANGLE: {
-            float rightX = shape.data.rectangle.rightX * scale;
-            float bottomY = shape.data.rectangle.bottomY * scale;
-            float rectX = x - rightX;
-            float rectY = y - bottomY;
-            float width = rightX * 2;
-            float height = bottomY * 2;
-            DrawRectangle(rectX, rectY, width, height, color);
+            Vector2 localHandlePos = {.x = shape.data.rectangle.rightX, .y = shape.data.rectangle.bottomY};
+            Vector2 extents = Transform2DBasisXFormInv(transform, localHandlePos);
+            Vector2 size = Vector2Scale(extents, 2.0f);
+            Vector2 pos = Transform2DToGlobal(transform, Vector2Subtract(shape.transform.o, localHandlePos));
+            Rectangle rect = {.x = pos.x, .y = pos.y, .width = size.x, .height = size.y};
+            DrawRectangleRec(rect, color);
+
             if (!handlesActive) break;
-            DrawRectangleLines(rectX, rectY, width, height, outlineColor);
-            DrawHandle(x, y, outlineColor);
-            DrawHandle(x + rightX, y + bottomY, outlineColor);
+            DrawRectangleLinesEx(rect, 0.0f, outlineColor);
+            DrawHandle(globalPos, outlineColor);
+            DrawHandle(Vector2Add(globalPos, extents), outlineColor);
         } break;
 
         case CAPSULE: {
-            float globalHeight = shape.data.capsule.height * scale;
-            float globalRadius = shape.data.capsule.radius * scale;
-            float rectX = x - globalRadius;
-            float rectY = y - globalHeight - globalRadius;
-            float width = globalRadius * 2;
-            float height = (globalHeight + globalRadius) * 2;
-            Rectangle rect = {rectX, rectY, width, height};
+            Vector2 height = {.x = 0.0f, .y = shape.data.capsule.height};
+            Vector2 globalHeight = Transform2DBasisXFormInv(transform, height);
+            float globalHeightMag = Vector2Length(globalHeight);
+
+            Vector2 radius = {.x = shape.data.capsule.radius, .y = 0.0f};
+            Vector2 globalRadius = Transform2DBasisXFormInv(transform, radius);
+            float globalRadiusMag = Vector2Length(globalRadius);
+
+            Rectangle rect = {
+                .x = globalPos.x - globalRadiusMag, 
+                .y = globalPos.y - globalHeightMag - globalRadiusMag,
+                .width = globalRadiusMag * 2.0f, 
+                .height = (globalHeightMag + globalRadiusMag) * 2.0f
+            };
             DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
+            
             if (!handlesActive) break;
             DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
-            DrawHandle(x, y, outlineColor);
-            DrawHandle(x + globalRadius, y, outlineColor);
-            DrawHandle(x, y + globalHeight, outlineColor);
+            DrawHandle(globalPos, outlineColor);
+            DrawHandle(Vector2Add(globalRadius, globalPos), outlineColor);
+            DrawHandle(Vector2Add(globalHeight, globalPos), outlineColor);
         } break;
 
         default: break;
     }
 
     if (shape.boxType == HITBOX) {
-        int knockbackX = pos.x + (shape.x + shape.hitboxKnockbackX) * scale;
-        int knockbackY = pos.y + (shape.y + shape.hitboxKnockbackY) * scale;
-        DrawLine(x, y, knockbackX, knockbackY, outlineColor);
-        if (handlesActive) DrawHandle(knockbackX, knockbackY, outlineColor);
+        Vector2 localKnockback = {.x = shape.hitboxKnockbackX, .y = shape.hitboxKnockbackY};
+        Vector2 knockback = Transform2DToGlobal(transform, Vector2Add(shape.transform.o, localKnockback));
+        DrawLine(globalPos.x, globalPos.y, knockback.x, knockback.y, outlineColor);
+        if (handlesActive) DrawHandle(knockback, outlineColor);
     }
 }
 
@@ -195,7 +206,9 @@ bool IsCollidingHandle(Transform2D transform, Vector2 globalMousePos, Vector2 po
 
 Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatShape shape) {
     if (shape.boxType == HITBOX) {
-        Vector2 handlePos = {.x = shape.x + shape.hitboxKnockbackX, .y = shape.y + shape.hitboxKnockbackY};
+        Vector2 handlePos = shape.transform.o;
+        handlePos.x += shape.hitboxKnockbackX;
+        handlePos.y += shape.hitboxKnockbackY;
         if (IsCollidingHandle(transform, mousePos, handlePos)) {
             return HITBOX_KNOCKBACK;
         }
@@ -203,23 +216,28 @@ Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatSh
 
     switch (shape.shapeType) {
         case CIRCLE: {
-            Vector2 radiusPos = {.x = shape.x + shape.data.circleRadius, .y = shape.y};
+            Vector2 radiusPos = shape.transform.o;
+            radiusPos.x += shape.data.circleRadius;
             if (IsCollidingHandle(transform, mousePos, radiusPos))
                 return CIRCLE_RADIUS;
         } break;
 
         case RECTANGLE: {
-            Vector2 handlePos = {.x = shape.x + shape.data.rectangle.rightX, .y = shape.y + shape.data.rectangle.bottomY};
+            Vector2 handlePos = shape.transform.o;
+            handlePos.x += shape.data.rectangle.rightX;
+            handlePos.y += shape.data.rectangle.bottomY;
             if (IsCollidingHandle(transform, mousePos, handlePos))
                 return RECTANGLE_CORNER;
         } break;
 
         case CAPSULE: {
-            Vector2 radiusPos = {.x = shape.x + shape.data.capsule.radius, .y = shape.y};
+            Vector2 radiusPos = shape.transform.o;
+            radiusPos.x += shape.data.capsule.radius;
             if (IsCollidingHandle(transform, mousePos, radiusPos))
                 return CAPSULE_RADIUS;
             
-            Vector2 heightPos = {.x = shape.x, .y = shape.y + shape.data.capsule.height};
+            Vector2 heightPos = shape.transform.o;
+            heightPos.y += shape.data.capsule.height;
             if (IsCollidingHandle(transform, mousePos, heightPos))
                 return CAPSULE_HEIGHT;
         } break;
@@ -228,49 +246,55 @@ Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatSh
     }
 
 
-    Vector2 center = {.x = shape.x, .y = shape.y};
-    if (IsCollidingHandle(transform, mousePos, center))
+    if (IsCollidingHandle(transform, mousePos, shape.transform.o))
         return CENTER;
     return NONE;
 }
 
 float Max(float i, float j) { return i > j ? i : j; }
 
+Vector2 Vector2Round(Vector2 vec) {
+    return (Vector2) {.x = roundf(vec.x), .y = roundf(vec.y)};
+}
+
+Vector2 Vector2Max(Vector2 vec, float max) {
+    return (Vector2) {.x = Max(vec.x, max), .y = Max(vec.y, max)};
+}
+
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
-    int x = (int) roundf(Max(localMousePos.x - (float) shape->x, 0.0f));
-    int y = (int) roundf(Max(localMousePos.y - (float) shape->y, 0.0f));
+    Vector2 handlePos = Vector2Round(Vector2Max(Vector2Subtract(localMousePos, shape->transform.o), 0.0f));
 
     switch (handle) {
         case CENTER:
-            shape->x = roundf(localMousePos.x);
-            shape->y = roundf(localMousePos.y);
+            shape->transform.o = Vector2Round(localMousePos);
             return true;
 
         case HITBOX_KNOCKBACK:
             if (shape->boxType != HITBOX) return false;
-            shape->hitboxKnockbackX = roundf(localMousePos.x - shape->x);
-            shape->hitboxKnockbackY = roundf(localMousePos.y - shape->y);
+            Vector2 knockback = Vector2Subtract(localMousePos, shape->transform.o);
+            shape->hitboxKnockbackX = knockback.x;
+            shape->hitboxKnockbackY = knockback.y;
             return true;
 
         case CIRCLE_RADIUS:
             if (shape->shapeType != CIRCLE) return false;
-            shape->data.circleRadius = x;
+            shape->data.circleRadius = handlePos.x;
             return true;
 
         case RECTANGLE_CORNER:
             if (shape->shapeType != RECTANGLE) return false;
-            shape->data.rectangle.rightX = x;
-            shape->data.rectangle.bottomY = y;
+            shape->data.rectangle.rightX = handlePos.x;
+            shape->data.rectangle.bottomY = handlePos.y;
             return true;
 
         case CAPSULE_RADIUS:
             if (shape->shapeType != CAPSULE) return false;
-            shape->data.capsule.radius = x;
+            shape->data.capsule.radius = handlePos.x;
             return true;
 
         case CAPSULE_HEIGHT:
             if (shape->shapeType != CAPSULE) return false;
-            shape->data.capsule.radius = y;
+            shape->data.capsule.height = handlePos.y;
             return true;
 
         default:
