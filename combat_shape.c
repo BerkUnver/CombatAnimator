@@ -236,10 +236,7 @@ Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatSh
 
 float Max(float i, float j) { return i > j ? i : j; }
 
-#include <stdio.h>
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
-    printf("local mouse pos: (%f, %f)\n", localMousePos.x, localMousePos.y);
-    fflush(stdout);
     int x = (int) roundf(Max(localMousePos.x - (float) shape->x, 0.0f));
     int y = (int) roundf(Max(localMousePos.y - (float) shape->y, 0.0f));
 

@@ -158,12 +158,12 @@ int main(int argc, char **argv) {
     Transform2D transform = Transform2DIdentity();
     transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
 
-    /*
+    
     transform.o = (Vector2) {
         .x = (DEFAULT_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
         .y = (DEFAULT_WINDOW_Y - texture.height * startScale) / 2.0f
-    };'
-    */
+    };
+    
 
     typedef enum Mode {
         IDLE,
@@ -369,15 +369,23 @@ int main(int argc, char **argv) {
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
 
-        rlPushMatrix();
-            Matrix matrix = Transform2DToMatrix(transform);
-            rlMultMatrixf((float *) &matrix);
-            float frameWidth = texture.width / state.frameCount;
-            Rectangle source = {frameWidth * state.frameIdx, 0.0f, frameWidth, texture.height};
-            Rectangle dest = {0.0f, 0.0f, frameWidth, texture.height};
-            DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
-        rlPopMatrix();
+        // draw the texture. This is a giant hack because I can't figure out how to get raylib to translate it correctly.
+        float frameWidth = texture.width / state.frameCount;
+        Rectangle source = {
+            .x = frameWidth * state.frameIdx, 
+            .y = 0.0f, 
+            .width = frameWidth, 
+            .height = texture.height
+        };
+        Rectangle dest = {
+            .x = transform.o.x,
+            .y = transform.o.y,
+            .width = frameWidth * transform.x.x,
+            .height = texture.height * transform.x.x
+        };
+        DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
 
+        
         for (int i = 0; i < state.shapeCount; i++) {
             if (GetShapeActive(&state, state.frameIdx, i)) { 
                 DrawCombatShape(transform.o, transform.x.x, state.shapes[i], i == state.shapeIdx);
