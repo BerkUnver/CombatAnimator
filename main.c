@@ -192,9 +192,11 @@ int main(int argc, char **argv) {
 
         const float mouseWheel = GetMouseWheelMove();
         if (mouseWheel != 0.0f) {
+            Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
             float scaleSpeed = mouseWheel > 0.0f ? 1.0f / SCALE_SPEED : SCALE_SPEED;
             Vector2 scale = {.x = scaleSpeed, .y = scaleSpeed};
             transform = Transform2DScale(transform, scale);
+            transform.o = Vector2Subtract(mousePos, Transform2DBasisXFormInv(transform, localMousePos));
         }
 
         if (mode == FRAME_DURATION_EDIT) {
@@ -323,10 +325,10 @@ int main(int argc, char **argv) {
 
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
-                } /* else {
-                    panningSpriteLocalPos = localMousePos;
+                } else {
+                    panningSpriteLocalPos = Transform2DToLocal(transform,mousePos);
                     mode = PANNING_SPRITE;
-                } */ // Disabling panning for now
+                }
             }
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
