@@ -158,30 +158,37 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             DrawRectangleRec(rect, color);
 
             if (!handlesActive) break;
-            DrawRectangleLinesEx(rect, 0.0f, outlineColor);
+            DrawRectangleLinesEx(rect, 1.0f, outlineColor);
             DrawHandle(globalPos, outlineColor);
             DrawHandle(Vector2Add(globalPos, extents), outlineColor);
         } break;
 
         case CAPSULE: {
-            Vector2 height = {.x = 0.0f, .y = shape.data.capsule.height};
-            Vector2 globalHeight = Transform2DBasisXFormInv(transform, height);
-            float globalHeightMag = Vector2Length(globalHeight);
-
-            Vector2 radius = {.x = shape.data.capsule.radius, .y = 0.0f};
-            Vector2 globalRadius = Transform2DBasisXFormInv(transform, radius);
-            float globalRadiusMag = Vector2Length(globalRadius);
-
+            rlPushMatrix();
+            rlTranslatef(transform.o.x, transform.o.y, 0.0f);
+            rlScalef(transform.x.x, transform.y.y, 1.0f);
+            rlPushMatrix();
+            rlTranslatef(shape.transform.o.x, shape.transform.o.y, 0.0f);
+            rlRotatef(atan2(transform.x.y, transform.y.y), 1.0f, 1.0f, 0.0f);
+            float extentsY = shape.data.capsule.radius + shape.data.capsule.height;
             Rectangle rect = {
-                .x = globalPos.x - globalRadiusMag, 
-                .y = globalPos.y - globalHeightMag - globalRadiusMag,
-                .width = globalRadiusMag * 2.0f, 
-                .height = (globalHeightMag + globalRadiusMag) * 2.0f
+                .x = -shape.data.capsule.radius,
+                .y = -extentsY,
+                .width = shape.data.capsule.radius * 2.0f,
+                .height = extentsY * 2.0f
             };
             DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
-            
+
+            if (handlesActive) DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
+            rlPopMatrix();
+            rlPopMatrix();
             if (!handlesActive) break;
-            DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
+
+            Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
+            Vector2 radius = {shape.data.capsule.radius, 0.0f};
+            Vector2 height = {shape.data.capsule.height, 0.0f};
+            Vector2 globalRadius = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, radius));
+            Vector2 globalHeight = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height));
             DrawHandle(globalPos, outlineColor);
             DrawHandle(Vector2Add(globalRadius, globalPos), outlineColor);
             DrawHandle(Vector2Add(globalHeight, globalPos), outlineColor);

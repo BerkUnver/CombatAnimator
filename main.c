@@ -15,8 +15,8 @@
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
 #define APP_NAME "Combat Animator"
-#define DEFAULT_WINDOW_X 800
-#define DEFAULT_WINDOW_Y 480
+#define DEFAULT_SPRITE_WINDOW_X 800
+#define DEFAULT_SPRITE_WINDOW_Y 400
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
 #define KEY_NEXT_FRAME KEY_RIGHT
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     }
     const char *texturePath = argv[1];
 
-    InitWindow(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, APP_NAME);
+    InitWindow(1, 1, APP_NAME);
     SetTargetFPS(60);
 
     Texture2D texture = LoadTexture(texturePath);
@@ -154,14 +154,15 @@ int main(int argc, char **argv) {
 
     EditorHistory history = AllocEditorHistory(&state);
 
-    const float startScale = DEFAULT_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
+    const float startScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     Transform2D transform = Transform2DIdentity();
     transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
-
+    const int guiInitialHeight = state.shapeCount * FRAME_ROW_SIZE + FRAME_ROW_SIZE;
+    SetWindowSize(DEFAULT_SPRITE_WINDOW_X, DEFAULT_SPRITE_WINDOW_Y + guiInitialHeight);
     
     transform.o = (Vector2) {
-        .x = (DEFAULT_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
-        .y = (DEFAULT_WINDOW_Y - texture.height * startScale) / 2.0f
+        .x = (DEFAULT_SPRITE_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
+        .y = (DEFAULT_SPRITE_WINDOW_Y - texture.height * startScale) / 2.0f
     };
     
 
@@ -370,7 +371,10 @@ int main(int argc, char **argv) {
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
 
-        // draw the texture. This is a giant hack because I can't figure out how to get raylib to translate it correctly.
+        // draw texture
+        rlPushMatrix();
+        rlTranslatef(transform.o.x, transform.o.y, 0.0f);
+        rlScalef(transform.x.x, transform.y.y, 1.0f); // can't scale it normally, will do it like this.
         float frameWidth = texture.width / state.frameCount;
         Rectangle source = {
             .x = frameWidth * state.frameIdx, 
@@ -379,14 +383,14 @@ int main(int argc, char **argv) {
             .height = texture.height
         };
         Rectangle dest = {
-            .x = transform.o.x,
-            .y = transform.o.y,
-            .width = frameWidth * transform.x.x,
-            .height = texture.height * transform.x.x
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = frameWidth,
+            .height = texture.height
         };
         DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
+        rlPopMatrix();
 
-        
         for (int i = 0; i < state.shapeCount; i++) {
             if (GetShapeActive(&state, state.frameIdx, i)) { 
                 DrawCombatShape(transform, state.shapes[i], i == state.shapeIdx);
