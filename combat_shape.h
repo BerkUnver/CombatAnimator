@@ -2,7 +2,6 @@
 #define COMBAT_SHAPE
 #include "raylib.h"
 #include "cjson/cJSON.h"
-#include "transform_2d.h"
 
 #define COMBAT_SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
@@ -35,7 +34,6 @@
 #define STR_RECTANGLE_BOTTOM_Y "rectangleBottomY"
 #define STR_CAPSULE_RADIUS "capsuleRadius"
 #define STR_CAPSULE_HEIGHT "capsuleHeight"
-#define STR_CAPSULE_ROTATION "capsuleRotation"
 #define STR_SHAPE_TYPE "shapeType"
 #define STR_BOX_TYPE "boxType"
 #define STR_X "x"
@@ -65,7 +63,6 @@ typedef union ShapeData {
     struct {
         int radius;
         int height;
-	    float rotation;
     } capsule;
 } ShapeData;
 
@@ -81,14 +78,15 @@ typedef struct CombatShape {
     int hitboxKnockbackY;
     ShapeType shapeType;
     ShapeData data;
-    Transform2D transform;
+    int x;
+    int y;
 } CombatShape;
 
 cJSON *SerializeShape(CombatShape shape);
 bool DeserializeShape(cJSON *json, CombatShape *out);
 
-void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActive);
-Handle SelectCombatShapeHandle(Transform2D transform, Vector2 globalMousePos, CombatShape shape);
-bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle);
+void DrawCombatShape(Vector2 pos, float scale, CombatShape shape, bool handlesActive);
+Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape);
+bool SetCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape *shape, Handle handle);
 
 #endif
