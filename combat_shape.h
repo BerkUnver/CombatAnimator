@@ -63,6 +63,7 @@ typedef union ShapeData {
     struct {
         int radius;
         int height;
+        float rotation;
     } capsule;
 } ShapeData;
 

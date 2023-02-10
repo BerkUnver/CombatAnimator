@@ -14,7 +14,7 @@
 
 #define APP_NAME "Combat Animator"
 #define DEFAULT_WINDOW_X 800
-#define DEFAULT_WINDOW_Y 480
+#define DEFAULT_SPRITE_WINDOW_Y 480
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
 #define KEY_NEXT_FRAME KEY_RIGHT
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     }
     const char *texturePath = argv[1];
 
-    InitWindow(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, APP_NAME);
+    InitWindow(1, 1, APP_NAME);
     SetTargetFPS(60);
 
     Texture2D texture = LoadTexture(texturePath);
@@ -149,13 +149,19 @@ int main(int argc, char **argv) {
         }
     }
     if (createNewSave) state = AllocEditorState(1);
-
     EditorHistory history = AllocEditorHistory(&state);
 
-    float spriteScale = DEFAULT_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
+    const int initialGuiHeight = FRAME_ROW_SIZE + SHAPE_ROW_SIZE * state.shapeCount;
+    SetWindowSize(DEFAULT_WINDOW_X, DEFAULT_SPRITE_WINDOW_Y + initialGuiHeight);
+    
+    // Doesn't work on WSL as far as I can tell.
+    // const int initialWindowX = (GetRenderWidth() + GetScreenWidth()) / 2;
+    // SetWindowPosition(initialWindowX, 0);
+
+    float spriteScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     Vector2 spritePos = {
         (DEFAULT_WINDOW_X - texture.width / state.frameCount * spriteScale) / 2.0f,
-        (DEFAULT_WINDOW_Y - texture.height * spriteScale) / 2.0f
+        (DEFAULT_SPRITE_WINDOW_Y - texture.height * spriteScale) / 2.0f
     };
 
     typedef enum Mode {
