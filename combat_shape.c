@@ -174,15 +174,15 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             rlPushMatrix();
             rlTransform2DXForm(shape.transform);
             float extentsY = shape.data.capsule.radius + shape.data.capsule.height;
-            Rectangle rect = {
+            Rectangle capsule = {
                 .x = -shape.data.capsule.radius,
                 .y = -extentsY,
                 .width = shape.data.capsule.radius * 2.0f,
                 .height = extentsY * 2.0f
             };
-            DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
+            DrawRectangleRounded(capsule, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
 
-            if (handlesActive) DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
+            if (handlesActive) DrawRectangleRoundedLines(capsule, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
             rlPopMatrix();
             rlPopMatrix();
             if (!handlesActive) break;
@@ -190,11 +190,26 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
             Vector2 radius = {shape.data.capsule.radius, 0.0f};
             Vector2 height = {0.0f, shape.data.capsule.height};
-            Vector2 globalRadius = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, radius));
-            Vector2 globalHeight = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height));
+            Vector2 rotationHandle = {0.0f, -shape.data.capsule.height};
+            
+            // not sure why I am using basis xform inv here
+            Vector2 globalRadius = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, radius)));
+            Vector2 globalHeight = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height)));
+            Vector2 globalRotation = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, rotationHandle)));
+
             DrawHandle(globalPos, outlineColor);
-            DrawHandle(Vector2Add(globalRadius, globalPos), outlineColor);
-            DrawHandle(Vector2Add(globalHeight, globalPos), outlineColor);
+            DrawHandle(globalRadius, outlineColor);
+            DrawHandle(globalHeight, outlineColor);
+            DrawHandle(globalRotation, outlineColor);
+            /*
+            DrawCircle(globalRotation.x, globalRotation.y, HANDLE_RADIUS, outlineColor);
+            Rectangle rect;
+            rect.x = globalRotation.x - HANDLE_INTERIOR_RADIUS / 2.0f;
+            rect.y = globalRotation.y - HANDLE_INTERIOR_RADIUS / 2.0f;
+            rect.width = HANDLE_INTERIOR_RADIUS;
+            rect.height = HANDLE_INTERIOR_RADIUS;
+            DrawRectangleRec(rect, HANDLE_INTERIOR_COLOR);
+            */
         } break;
 
         default: break;
@@ -208,56 +223,49 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
     }
 }
 
-bool IsCollidingHandle(Transform2D transform, Vector2 globalMousePos, Vector2 pos) {
-    Vector2 globalPos = Transform2DToGlobal(transform, pos);
-    Rectangle rect = {globalPos.x - HANDLE_RADIUS, globalPos.y - HANDLE_RADIUS, HANDLE_RADIUS * 2.0f, HANDLE_RADIUS * 2.0f};
+bool IsCollidingHandle(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localHandlePos) {
+    Vector2 globalHandlePos = Transform2DToGlobal(globalTransform, localHandlePos);
+    Rectangle rect = {
+        .x = globalHandlePos.x - HANDLE_RADIUS,
+        .y = globalHandlePos.y - HANDLE_RADIUS,
+        .height = 2.0f * HANDLE_RADIUS,
+        .width = 2.0f * HANDLE_RADIUS
+    };
     return CheckCollisionPointRec(globalMousePos, rect);
 }
 
 Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatShape shape) {
     if (shape.boxType == HITBOX) {
-        Vector2 handlePos = shape.transform.o;
-        handlePos.x += shape.hitboxKnockbackX;
-        handlePos.y += shape.hitboxKnockbackY;
-        if (IsCollidingHandle(transform, mousePos, handlePos)) {
-            return HITBOX_KNOCKBACK;
-        }
+        Vector2 knockbackPos = {shape.transform.o.x + shape.hitboxKnockbackX, shape.transform.o.y + shape.hitboxKnockbackY};
+        if (IsCollidingHandle(transform, mousePos, knockbackPos)) return HITBOX_KNOCKBACK;
     }
 
     switch (shape.shapeType) {
         case CIRCLE: {
-            Vector2 radiusPos = shape.transform.o;
-            radiusPos.x += shape.data.circleRadius;
-            if (IsCollidingHandle(transform, mousePos, radiusPos))
-                return CIRCLE_RADIUS;
+            Vector2 radiusPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.circleRadius, 0.0f});
+            if (IsCollidingHandle(transform, mousePos, radiusPos)) return CIRCLE_RADIUS;
         } break;
-
+        
         case RECTANGLE: {
-            Vector2 handlePos = shape.transform.o;
-            handlePos.x += shape.data.rectangle.rightX;
-            handlePos.y += shape.data.rectangle.bottomY;
-            if (IsCollidingHandle(transform, mousePos, handlePos))
-                return RECTANGLE_CORNER;
+            Vector2 cornerPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.rectangle.rightX, shape.data.rectangle.bottomY});
+            if (IsCollidingHandle(transform, mousePos, cornerPos)) return RECTANGLE_CORNER;
         } break;
 
         case CAPSULE: {
-            Vector2 radiusPos = shape.transform.o;
-            radiusPos.x += shape.data.capsule.radius;
-            if (IsCollidingHandle(transform, mousePos, radiusPos))
-                return CAPSULE_RADIUS;
-            
-            Vector2 heightPos = shape.transform.o;
-            heightPos.y += shape.data.capsule.height;
-            if (IsCollidingHandle(transform, mousePos, heightPos))
-                return CAPSULE_HEIGHT;
+            Vector2 radiusPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.capsule.radius, 0.0f});
+            if (IsCollidingHandle(transform, mousePos, radiusPos)) return CAPSULE_RADIUS;
+
+            Vector2 heightPos = Transform2DToGlobal(shape.transform, (Vector2) {0.0f, shape.data.capsule.height});
+            if (IsCollidingHandle(transform, mousePos, heightPos)) return CAPSULE_HEIGHT;
+
+            Vector2 rotationPos = Transform2DToGlobal(shape.transform, (Vector2) {0.0f, -shape.data.capsule.height});
+            if (IsCollidingHandle(transform, mousePos, rotationPos)) return CAPSULE_ROTATION;
         } break;
 
         default: break;
     }
 
-
-    if (IsCollidingHandle(transform, mousePos, shape.transform.o))
-        return CENTER;
+    if (IsCollidingHandle(transform, mousePos, shape.transform.o)) return CENTER;
     return NONE;
 }
 
@@ -272,7 +280,8 @@ Vector2 Vector2Max(Vector2 vec, float max) {
 }
 
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
-    Vector2 handlePos = Vector2Round(Vector2Max(Vector2Subtract(localMousePos, shape->transform.o), 0.0f));
+    Vector2 offset = Vector2Subtract(localMousePos, shape->transform.o);
+    Vector2 handlePos = Vector2Round(Vector2Max(offset, 0.0f));
 
     switch (handle) {
         case CENTER:
@@ -281,7 +290,7 @@ bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle hand
 
         case HITBOX_KNOCKBACK:
             if (shape->boxType != HITBOX) return false;
-            Vector2 knockback = Vector2Subtract(localMousePos, shape->transform.o);
+            Vector2 knockback = Vector2Round(offset);
             shape->hitboxKnockbackX = knockback.x;
             shape->hitboxKnockbackY = knockback.y;
             return true;
@@ -306,7 +315,12 @@ bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle hand
             if (shape->shapeType != CAPSULE) return false;
             shape->data.capsule.height = handlePos.y;
             return true;
-
+        
+        case CAPSULE_ROTATION:
+            if (shape->shapeType != CAPSULE) return false;
+            float rotation = atan2(offset.y, offset.x) + PI / 2.0f;
+            shape->transform = Transform2DRotate(shape->transform, rotation);
+        
         default:
             return false;
     }

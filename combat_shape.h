@@ -48,7 +48,8 @@ typedef enum Handle {
     CIRCLE_RADIUS,
     RECTANGLE_CORNER,
     CAPSULE_HEIGHT,
-    CAPSULE_RADIUS
+    CAPSULE_RADIUS,
+    CAPSULE_ROTATION
 } Handle;
 
 typedef enum BoxType {

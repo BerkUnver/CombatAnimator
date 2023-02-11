@@ -62,6 +62,16 @@
 			"boxType":	"HURTBOX",
 			"x":	90,
 			"y":	48
+		}, {
+			"capsuleRadius":	24,
+			"capsuleHeight":	24,
+			"capsuleRotation":	0,
+			"shapeType":	"CAPSULE",
+			"hitboxKnockbackX":	2,
+			"hitboxKnockbackY":	-2,
+			"boxType":	"HITBOX",
+			"x":	40,
+			"y":	40
 		}],
 	"frameDurations":	[100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
 }
