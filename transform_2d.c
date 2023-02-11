@@ -30,12 +30,16 @@ Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector) {
 }
 
 
-Transform2D Transform2DRotate(float rot) {
+Transform2D Transform2DRotate(Transform2D transform, float rot) {
     return (Transform2D) {
-        .o = {.x = 0, .y = 0},
+        .o = transform.o,
         .x = {.x = cosf(rot), .y = sinf(rot)},
         .y = {.x = -sinf(rot), .y = cosf(rot)}
     };
+}
+
+float Transform2DGetRotation(Transform2D transform) {
+    return atan2(transform.x.y, transform.y.x);
 }
 
 Transform2D Transform2DSetScale(Transform2D transform, Vector2 scale) {

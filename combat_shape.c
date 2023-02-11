@@ -26,6 +26,7 @@ cJSON *SerializeShape(CombatShape shape) {
             shapeType = STR_CAPSULE;
             cJSON_AddNumberToObject(json, STR_CAPSULE_RADIUS, shape.data.capsule.radius);
             cJSON_AddNumberToObject(json, STR_CAPSULE_HEIGHT, shape.data.capsule.height);
+            cJSON_AddNumberToObject(json, STR_CAPSULE_ROTATION, Transform2DGetRotation(shape.transform));
             break;
 
         default:
@@ -94,8 +95,12 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
         if (!radius || !cJSON_IsNumber(radius)) return false;
         cJSON *height = cJSON_GetObjectItem(json, STR_CAPSULE_HEIGHT);
         if (!height || !cJSON_IsNumber(height)) return false;
+        cJSON *rotation = cJSON_GetObjectItem(json, STR_CAPSULE_ROTATION);
+        if (!rotation || !cJSON_IsNumber(rotation)) return false;
+
         out->data.capsule.radius = (int) cJSON_GetNumberValue(radius);
         out->data.capsule.height = (int) cJSON_GetNumberValue(height);
+        out->transform = Transform2DRotate(out->transform, (float) cJSON_GetNumberValue(rotation));
     }
     else return false;
 
