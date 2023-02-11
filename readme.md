@@ -21,6 +21,7 @@ Saves are written to a .json file with the same name as the image file.
 |      New circle       |          Ctrl + 1          |
 |      New square       |          Ctrl + 2          |
 |     New rectangle     |          Ctrl + 3          |
+|      Remove shape     |      Ctrl + Backspace      |
 |      New hurtbox      |   Shape Shortcut + Shift   |
 |  Edit frame duration  | Ctrl + D, Enter to confirm |
 | Move through timeline |         Arrow Keys         |

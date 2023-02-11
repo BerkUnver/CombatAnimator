@@ -39,7 +39,9 @@ EditorState AllocEditorState(int frames);
 void FreeEditorState(EditorState *state);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
+
 void AddShape(EditorState *state, CombatShape shape);
+bool RemoveShape(EditorState *state, int idx);
 void AddFrame(EditorState *state);
 EditorState EditorStateDeepCopy(EditorState *state);
 cJSON *SerializeState(EditorState state);

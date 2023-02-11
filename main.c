@@ -29,6 +29,9 @@
 #define KEY_NEW_FRAME KEY_N
 #define KEY_NEW_FRAME_MODIFIER KEY_LEFT_ALT
 
+#define KEY_REMOVE_SHAPE KEY_BACKSPACE
+#define KEY_REMOVE_SHAPE_MODIFIER KEY_LEFT_CONTROL
+
 #define KEY_NEW_SHAPE_MODIFIER KEY_LEFT_CONTROL
 #define KEY_NEW_HURTBOX_MODIFIER KEY_LEFT_SHIFT
 #define KEY_NEW_CIRCLE KEY_ONE
@@ -263,8 +266,14 @@ int main(int argc, char **argv) {
             AddFrame(&state);
             CommitState(&history, &state);
             mode = IDLE;
-
-        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CONTROL
+        
+        } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER)) {
+            if (state.shapeIdx != -1) {
+                RemoveShape(&state, state.shapeIdx);
+                CommitState(&history, &state);
+            }
+        
+        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_COL
             CombatShape shape;
             shape.transform = Transform2DIdentity(); // todo : make proper init function for combatshape
             bool newShapeInstanced = true;

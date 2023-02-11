@@ -45,6 +45,22 @@ void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptr
     }
 }
 
+bool RemoveShape(EditorState *state, int idx) {
+    if (idx < 0 || idx >= state->shapeCount) return false;
+    
+    for (int shapeIdx = idx + 1; shapeIdx < state->shapeCount; shapeIdx++) {
+        int newShapeIdx = idx - 1;
+        state->shapes[newShapeIdx] = state->shapes[shapeIdx];
+
+        for (int frameIdx = 0; frameIdx < state->frameCount; frameIdx++) {
+            state->_shapeActiveFrames[state->frameCount * newShapeIdx + frameIdx] = state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx];
+        }
+    }
+    state->shapeCount--;
+    if (state->shapeIdx >= state->shapeCount) state->shapeIdx = state->shapeCount - 1;
+    return true;
+}
+
 void AddFrame(EditorState *state) {
     int oldFrameCount = state->frameCount;
     bool *oldFrames = state->_shapeActiveFrames;
