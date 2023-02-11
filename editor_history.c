@@ -47,7 +47,7 @@ void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptr
 
 void AddFrame(EditorState *state) {
     int oldFrameCount = state->frameCount;
-    bool* oldFrames = state->_shapeActiveFrames;
+    bool *oldFrames = state->_shapeActiveFrames;
     int *oldFrameDurations = state->frameDurations;
     state->frameCount++;
     state->_shapeActiveFrames = malloc(sizeof(bool) * state->frameCount * state->shapeCount);
