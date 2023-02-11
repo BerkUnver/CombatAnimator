@@ -373,8 +373,7 @@ int main(int argc, char **argv) {
 
         // draw texture
         rlPushMatrix();
-        rlTranslatef(transform.o.x, transform.o.y, 0.0f);
-        rlScalef(transform.x.x, transform.y.y, 1.0f); // can't scale it normally, will do it like this.
+        rlTransform2DXForm(transform);
         float frameWidth = texture.width / state.frameCount;
         Rectangle source = {
             .x = frameWidth * state.frameIdx, 
@@ -391,6 +390,7 @@ int main(int argc, char **argv) {
         DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         rlPopMatrix();
 
+        // draw combat shapes
         for (int i = 0; i < state.shapeCount; i++) {
             if (GetShapeActive(&state, state.frameIdx, i)) { 
                 DrawCombatShape(transform, state.shapes[i], i == state.shapeIdx);
@@ -403,6 +403,7 @@ int main(int argc, char **argv) {
             DrawText(TextFormat("Frame Duration: %d ms", state.frameDurations[state.frameIdx]), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         }
 
+        // draw timeline
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
         int selectedY = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;

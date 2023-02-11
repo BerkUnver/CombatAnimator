@@ -1,6 +1,7 @@
 #include <math.h>
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include "transform_2d.h"
 
 Transform2D Transform2DIdentity() {
@@ -11,12 +12,16 @@ Transform2D Transform2DIdentity() {
     };
 }
 
+Vector2 Transform2DBasisXForm(Transform2D transform, Vector2 vector) {
+    Vector2 result;
+    result.x = (vector.x * transform.y.y - vector.y * transform.y.x) / (transform.x.x * transform.y.y - transform.x.y * transform.y.x);
+    result.y = (vector.y - transform.x.y * result.x) / transform.y.y;
+    return result;
+}
+
 Vector2 Transform2DToLocal(Transform2D transform, Vector2 vector) {
     Vector2 base = Vector2Subtract(vector, transform.o);
-    Vector2 result;
-    result.x = (base.x * transform.y.y - base.y * transform.y.x) / (transform.x.x * transform.y.y - transform.x.y * transform.y.x);
-    result.y = (base.y - transform.x.y * result.x) / transform.y.y;
-    return result;
+    return Transform2DBasisXForm(transform, base);
 }
 
 Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector) {
@@ -54,6 +59,8 @@ Vector2 Transform2DBasisXFormInv(Transform2D transform, Vector2 vector) {
 }
 
 Matrix Transform2DToMatrix(Transform2D transform) {
+    Vector2 pos = Transform2DBasisXForm(transform, transform.o);
+    // rlgl matrix stores position after transform is calculated, we store it before. Must convert between the two.
     return (Matrix) {
         .m0 = transform.x.x,
         .m1 = transform.x.y,
@@ -70,9 +77,15 @@ Matrix Transform2DToMatrix(Transform2D transform) {
         .m10 = 1.0f,
         .m11 = 0.0f,
         
-        .m12 = transform.o.x,
-        .m13 = transform.o.y,
+        .m12 = pos.x,
+        .m13 = pos.y,
         .m14 = 0.0f,
         .m15 = 1.0f
     };
+}
+
+void rlTransform2DXForm(Transform2D transform) {
+    Matrix matrix = Transform2DToMatrix(transform);  
+    rlMultMatrixf((float *) &matrix);
+    rlTranslatef(matrix.m12, matrix.m13, 0.0f);
 }

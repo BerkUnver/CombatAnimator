@@ -165,11 +165,9 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
 
         case CAPSULE: {
             rlPushMatrix();
-            rlTranslatef(transform.o.x, transform.o.y, 0.0f);
-            rlScalef(transform.x.x, transform.y.y, 1.0f);
+            rlTransform2DXForm(transform);
             rlPushMatrix();
-            rlTranslatef(shape.transform.o.x, shape.transform.o.y, 0.0f);
-            rlRotatef(atan2(transform.x.y, transform.y.y), 1.0f, 1.0f, 0.0f);
+            rlTransform2DXForm(shape.transform);
             float extentsY = shape.data.capsule.radius + shape.data.capsule.height;
             Rectangle rect = {
                 .x = -shape.data.capsule.radius,
@@ -186,7 +184,7 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
 
             Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
             Vector2 radius = {shape.data.capsule.radius, 0.0f};
-            Vector2 height = {shape.data.capsule.height, 0.0f};
+            Vector2 height = {0.0f, shape.data.capsule.height};
             Vector2 globalRadius = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, radius));
             Vector2 globalHeight = Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height));
             DrawHandle(globalPos, outlineColor);

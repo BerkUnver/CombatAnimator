@@ -10,11 +10,17 @@ typedef struct Transform2D {
 } Transform2D;
 
 Transform2D Transform2DIdentity();
+
+Vector2 Transform2DBasisXForm(Transform2D transform, Vector2 vector);
 Vector2 Transform2DToLocal(Transform2D transform, Vector2 vector);
+
+Vector2 Transform2DBasisXFormInv(Transform2D transform, Vector2 vector);
 Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector);
+
 Transform2D Transform2DSetScale(Transform2D transform, Vector2 scale);
 Transform2D Transform2DScale(Transform2D transform, Vector2 scale);
-Vector2 Transform2DBasisXFormInv(Transform2D transform, Vector2 vector);
+
 Matrix Transform2DToMatrix(Transform2D transform);
+void rlTransform2DXForm(Transform2D transform);
 
 #endif
