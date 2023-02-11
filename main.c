@@ -14,7 +14,7 @@
 
 #define APP_NAME "Combat Animator"
 #define DEFAULT_WINDOW_X 800
-#define DEFAULT_SPRITE_WINDOW_Y 480
+#define DEFAULT_SPRITE_WINDOW_Y 320
 #define KEY_PLAY_ANIMATION KEY_ENTER
 #define KEY_PREVIOUS_FRAME KEY_LEFT
 #define KEY_NEXT_FRAME KEY_RIGHT
@@ -277,6 +277,7 @@ int main(int argc, char **argv) {
                 shape.shapeType = CAPSULE;
                 shape.data.capsule.radius = DEFAULT_CAPSULE_RADIUS;
                 shape.data.capsule.height = DEFAULT_CAPSULE_HEIGHT;
+                shape.data.capsule.rotation = 0.0f;
             } else {
                 newShapeInstanced = false;
             }

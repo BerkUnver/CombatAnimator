@@ -197,9 +197,6 @@ bool IsCollidingHandle(Vector2 mousePos, float x, float y) {
 }
 
 Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, CombatShape shape) {
-    float centerGlobalX = pos.x + shape.x * scale;
-    float centerGlobalY = pos.y + shape.y * scale;
-
     if (shape.boxType == HITBOX) {
         float knockbackX = pos.x + (shape.x + shape.hitboxKnockbackX) * scale;
         float knockbackY = pos.y + (shape.y + shape.hitboxKnockbackY) * scale;
@@ -223,12 +220,17 @@ Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, Comba
         } break;
 
         case CAPSULE: {
-            float radiusX = pos.x + (shape.x + shape.data.capsule.radius) * scale;
-            if (IsCollidingHandle(mousePos, radiusX, centerGlobalY))
-                return CAPSULE_RADIUS;
+            float sinRotation = sinf(shape.data.capsule.rotation);
+            float cosRotation = cosf(shape.data.capsule.rotation);
 
-            float heightY = pos.y + (shape.y + shape.data.capsule.height) * scale;
-            if (IsCollidingHandle(mousePos, centerGlobalX, heightY))
+            float radiusX = pos.x + (shape.x + cosRotation * shape.data.capsule.radius) * scale;
+            float radiusY = pos.y + (shape.y + sinRotation * shape.data.capsule.height) * scale;
+            if (IsCollidingHandle(mousePos, radiusX, radiusY))
+                return CAPSULE_RADIUS;
+            
+            float heightX = pos.x + (shape.x + sinRotation * shape.data.capsule.height) * scale;
+            float heightY = pos.y + (shape.y + cosRotation * shape.data.capsule.height) * scale;
+            if (IsCollidingHandle(mousePos, heightX, heightY))
                 return CAPSULE_HEIGHT;
         } break;
 
@@ -236,6 +238,8 @@ Handle SelectCombatShapeHandle(Vector2 mousePos, Vector2 pos, float scale, Comba
     }
 
 
+    float centerGlobalX = pos.x + shape.x * scale;
+    float centerGlobalY = pos.y + shape.y * scale;
     if (IsCollidingHandle(mousePos, centerGlobalX, centerGlobalY))
         return CENTER;
     return NONE;
