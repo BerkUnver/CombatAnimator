@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "editor_history.h"
 #include "combat_shape.h"
@@ -38,11 +39,9 @@ void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptr
     state->shapeCount++;
     state->shapes = realloc(state->shapes, sizeof(CombatShape) * state->shapeCount);
     state->shapes[state->shapeCount - 1] = shape;
-    state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->shapeCount * state->frameCount);
     int newMax = state->shapeCount * state->frameCount;
-    for (int i = oldMax; i < newMax; i++) { // init all new hitboxes to false
-        state->_shapeActiveFrames[i] = false;
-    }
+    state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * newMax);
+    memset(state->_shapeActiveFrames + oldMax, false, (newMax - oldMax) * sizeof(bool));
 }
 
 bool RemoveShape(EditorState *state, int idx) {
@@ -62,25 +61,18 @@ bool RemoveShape(EditorState *state, int idx) {
 }
 
 void AddFrame(EditorState *state) {
-    int oldFrameCount = state->frameCount;
-    bool *oldFrames = state->_shapeActiveFrames;
-    int *oldFrameDurations = state->frameDurations;
     state->frameCount++;
-    state->_shapeActiveFrames = malloc(sizeof(bool) * state->frameCount * state->shapeCount);
-    int chunkSize = (int) sizeof(bool) * oldFrameCount;
-    for (int shapeIdx = 0; shapeIdx < state->shapeCount; shapeIdx++) {
-        bool *startPtr = state->_shapeActiveFrames + shapeIdx * state->frameCount;
-        bool *oldStartPtr = oldFrames + shapeIdx * oldFrameCount;
-        memcpy(startPtr, oldStartPtr, chunkSize);
-        startPtr[state->frameCount - 1] = false; // new frame is set to false;
+    
+    state->frameDurations = realloc(state->frameDurations, sizeof(float) * state->frameCount);
+    state->frameDurations[state->frameCount - 1] = FRAME_DURATION_DEFAULT;
+
+    state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->frameCount * state->shapeCount);
+    for (int chunkIdx = state->shapeCount - 1; chunkIdx >= 0; chunkIdx--) {
+        state->_shapeActiveFrames[chunkIdx * state->frameCount + state->frameCount - 1] = false;
+        for (int i = state->frameCount - 2; i >= 0; i--) {
+            state->_shapeActiveFrames[chunkIdx * state->frameCount + i] = state->_shapeActiveFrames[chunkIdx * state->frameCount + i - chunkIdx];
+        }
     }
-
-    state->frameDurations = malloc(sizeof(int) * state->frameCount);
-    memcpy(state->frameDurations, oldFrameDurations, sizeof(int) * oldFrameCount);
-    state->frameDurations[oldFrameCount] = FRAME_DURATION_DEFAULT;
-
-    free(oldFrameDurations);
-    free(oldFrames);
 }
 
 EditorState EditorStateDeepCopy(EditorState *state) {

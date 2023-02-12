@@ -11,4 +11,4 @@ clean:
 all: run
 
 build: ${FILES}
-	gcc ${FILES} -o ${APP} -Wall -Werror -std=c99 -Wno-missing-braces -lraylib -lcjson -lGL -lm -lpthread -ldl -lrt -lX11
+	gcc ${FILES} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -lraylib -lcjson -lGL -lm -lpthread -ldl -lrt -lX11

@@ -406,6 +406,7 @@ int main(int argc, char **argv) {
             }
         }
 
+        // draw frame duration text
         if (mode == FRAME_DURATION_EDIT) {
             DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         } else {
