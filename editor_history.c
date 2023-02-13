@@ -61,9 +61,8 @@ bool RemoveShape(EditorState *state, int idx) {
 }
 
 void AddFrame(EditorState *state) {
-    state->frameCount++;
-    
-    state->frameDurations = realloc(state->frameDurations, sizeof(float) * state->frameCount);
+    state->frameCount++; 
+    state->frameDurations = realloc(state->frameDurations, sizeof(int) * state->frameCount);
     state->frameDurations[state->frameCount - 1] = FRAME_DURATION_DEFAULT;
 
     state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->frameCount * state->shapeCount);
@@ -85,7 +84,7 @@ EditorState EditorStateDeepCopy(EditorState *state) {
     memcpy(shapesCopy, state->shapes, shapesSize);
 
     int frameDurationsSize = sizeof(int) * state->frameCount;
-    int *frameDurationsCopy = malloc(activeFramesSize);
+    int *frameDurationsCopy = malloc(frameDurationsSize);
     memcpy(frameDurationsCopy, state->frameDurations, frameDurationsSize);
 
     return (EditorState) {
