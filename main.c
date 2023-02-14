@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
                 if (editingFrameDurationBuffer.length > 0) {
                     // guaranteed to be well-formatted because it only accepts valid characters.
                     int val = atoi(editingFrameDurationBuffer.raw);
-                    state.frameDurations[state.frameIdx] = val;
+                    state.frames[state.frameIdx].duration = val;
                     CommitState(&history, &state);
                 }
                 mode = IDLE; // if the input is empty then revert to the old input.
@@ -255,9 +255,10 @@ int main(int argc, char **argv) {
 
             ChangeState(&history, &state, option);
         } else if (IsKeyPressed(KEY_FRAME_DURATION_EDIT) && IsKeyDown(KEY_FRAME_DURATION_EDIT_MODIFIER)) {
-            int frameDurationStrlen = snprintf(NULL, 0, "%i", state.frameDurations[state.frameIdx]) + 1;
+            int frameDurationStrlen = snprintf(NULL, 0, "%i", state.frames[state.frameIdx].duration) + 1;
+
             char *frameDurationStr = malloc(frameDurationStrlen);
-            snprintf(frameDurationStr, frameDurationStrlen, "%i", state.frameDurations[state.frameIdx]);
+            snprintf(frameDurationStr, frameDurationStrlen, "%i", state.frames[state.frameIdx].duration);
             mode = FRAME_DURATION_EDIT;
             ClearStringBuffer(&editingFrameDurationBuffer);
             AppendString(&editingFrameDurationBuffer, frameDurationStr);
@@ -367,7 +368,7 @@ int main(int argc, char **argv) {
         // playing tick update (not related to model)
         if (mode == PLAYING) {
             playingFrameTime += (int) (GetFrameTime() * FRAME_DURATION_UNIT_PER_SECOND);
-            int frameDuration = state.frameDurations[state.frameIdx];
+            int frameDuration = state.frames[state.frameIdx].duration;
             if (playingFrameTime >= frameDuration)
             {
                 playingFrameTime -= frameDuration;
@@ -410,7 +411,7 @@ int main(int argc, char **argv) {
         if (mode == FRAME_DURATION_EDIT) {
             DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         } else {
-            DrawText(TextFormat("Frame Duration: %d ms", state.frameDurations[state.frameIdx]), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+            DrawText(TextFormat("Frame Duration: %d ms", state.frames[state.frameIdx].duration), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
         }
 
         // draw timeline

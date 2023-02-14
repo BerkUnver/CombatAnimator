@@ -140,11 +140,12 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
         outlineColor = HITBOX_OUTLINE_COLOR;
     }
     rlPushMatrix();
-    rlTransform2DXForm(transform);
-    
+    rlTransform2DXForm(transform);    
     // todo: The following is a hack to account for Transform2DToMatrix being broken.
     // We translate and later rotate the matrix instead. 
     rlTranslatef(shape.transform.o.x, shape.transform.o.y, 0.0f); 
+
+    if (shape.boxType == HITBOX) DrawLine(0, 0, shape.hitboxKnockbackX, shape.hitboxKnockbackY, outlineColor);
     
     switch (shape.shapeType) {
         case CIRCLE:
@@ -184,7 +185,6 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
         default: break;
     }
 
-    if (shape.boxType == HITBOX) DrawLine(0, 0, shape.hitboxKnockbackX, shape.hitboxKnockbackY, outlineColor);
     rlPopMatrix();
     
     if (!handlesActive) return;

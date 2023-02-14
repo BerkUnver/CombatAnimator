@@ -5,16 +5,21 @@
 #include "combat_shape.h"
 #include "cjson/cJSON.h"
 
-EditorState AllocEditorState(int frames) {
-    int *frameDurations = malloc(sizeof(int) * frames);
-    for (int i = 0; i < frames; i++) frameDurations[i] = FRAME_DURATION_DEFAULT;
+EditorState AllocEditorState(int frameCount) {
+    FrameInfo *frames = malloc(sizeof(FrameInfo) * frameCount);
+    for (int i = 0; i < frameCount; i++) {
+        frames[0] = (FrameInfo) {
+            .duration = FRAME_DURATION_DEFAULT, 
+            .canCancel = false
+        };
+    }
 
     return (EditorState) {
         .shapeCount = 0,
         .shapes = NULL,
         ._shapeActiveFrames = NULL,
-        .frameDurations = frameDurations,
-        .frameCount = frames,
+        .frames = frames,
+        .frameCount = frameCount,
         .frameIdx = 0,
         .shapeIdx = -1
     };
@@ -23,7 +28,7 @@ EditorState AllocEditorState(int frames) {
 void FreeEditorState(EditorState *state) {
     free(state->shapes);
     free(state->_shapeActiveFrames);
-    free(state->frameDurations);
+    free(state->frames);
 }
 
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
@@ -62,9 +67,8 @@ bool RemoveShape(EditorState *state, int idx) {
 
 void AddFrame(EditorState *state) {
     state->frameCount++; 
-    state->frameDurations = realloc(state->frameDurations, sizeof(int) * state->frameCount);
-    state->frameDurations[state->frameCount - 1] = FRAME_DURATION_DEFAULT;
-
+    state->frames = realloc(state->frames, sizeof(FrameInfo) * state->frameCount);
+    state->frames[state->frameCount - 1] = (FrameInfo) {.duration = FRAME_DURATION_DEFAULT, .canCancel = false};
     state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->frameCount * state->shapeCount);
     for (int chunkIdx = state->shapeCount - 1; chunkIdx >= 0; chunkIdx--) {
         state->_shapeActiveFrames[chunkIdx * state->frameCount + state->frameCount - 1] = false;
@@ -83,16 +87,16 @@ EditorState EditorStateDeepCopy(EditorState *state) {
     CombatShape *shapesCopy = malloc(shapesSize);
     memcpy(shapesCopy, state->shapes, shapesSize);
 
-    int frameDurationsSize = sizeof(int) * state->frameCount;
-    int *frameDurationsCopy = malloc(frameDurationsSize);
-    memcpy(frameDurationsCopy, state->frameDurations, frameDurationsSize);
+    int framesSize = sizeof(FrameInfo) * state->frameCount;
+    FrameInfo *framesCopy = malloc(framesSize);
+    memcpy(framesCopy, state->frames, framesSize);
 
     return (EditorState) {
         .shapeCount = state->shapeCount,
         .frameCount = state->frameCount,
         .shapes = shapesCopy,
         ._shapeActiveFrames = activeFramesCopy,
-        .frameDurations = frameDurationsCopy,
+        .frames = framesCopy,
         .frameIdx = state->frameIdx,
 
         .shapeIdx = state->shapeIdx
@@ -175,7 +179,7 @@ cJSON *SerializeState(EditorState state) {
 
     cJSON *frameDurations = cJSON_CreateArray();
     for (int i = 0; i < state.frameCount; i++) {
-        cJSON_AddItemToArray(frameDurations, cJSON_CreateNumber(state.frameDurations[i]));
+        cJSON_AddItemToArray(frameDurations, cJSON_CreateNumber(state.frames[i].duration));
     }
 
     cJSON *json = cJSON_CreateObject();
@@ -197,7 +201,7 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     int frameIdx = 0;
     cJSON_ArrayForEach(frameDuration, frameDurationsJson) {
         if (!cJSON_IsNumber(frameDuration)) goto fail;
-        state->frameDurations[frameIdx] = (int) cJSON_GetNumberValue(frameDuration);
+        state->frames[frameIdx].duration = (int) cJSON_GetNumberValue(frameDuration);
         frameIdx++;
     }
 

@@ -7,21 +7,25 @@
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
-#define FRAME_DURATION_DEFAULT 100.0f
+#define FRAME_DURATION_DEFAULT 100
 #define STR_SHAPES "shapes"
 #define STR_FRAME_DURATIONS "frameDurations"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
+
+typedef struct FrameInfo {
+    int duration;
+    bool canCancel;
+} FrameInfo;
 
 typedef struct EditorState {
     CombatShape *shapes;
     int shapeCount;
     bool *_shapeActiveFrames;
-    int *frameDurations;
+    FrameInfo *frames;
     int frameCount;
     int shapeIdx;
     int frameIdx;
 } EditorState;
-
 
 typedef struct EditorHistory {
     EditorState *_states;
@@ -35,7 +39,7 @@ typedef enum ChangeOptions {
     REDO
 } ChangeOptions;
 
-EditorState AllocEditorState(int frames);
+EditorState AllocEditorState(int frameCount);
 void FreeEditorState(EditorState *state);
 bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
 void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
