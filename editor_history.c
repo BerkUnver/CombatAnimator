@@ -94,6 +94,7 @@ EditorState EditorStateDeepCopy(EditorState *state) {
         ._shapeActiveFrames = activeFramesCopy,
         .frameDurations = frameDurationsCopy,
         .frameIdx = state->frameIdx,
+
         .shapeIdx = state->shapeIdx
     };
 }

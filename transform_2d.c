@@ -39,7 +39,7 @@ Transform2D Transform2DRotate(Transform2D transform, float rot) {
 }
 
 float Transform2DGetRotation(Transform2D transform) {
-    return atan2(transform.x.y, transform.y.x);
+    return atan2(transform.x.y, transform.x.x);
 }
 
 Transform2D Transform2DSetScale(Transform2D transform, Vector2 scale) {
@@ -67,11 +67,11 @@ Matrix Transform2DToMatrix(Transform2D transform) {
     // rlgl matrix stores position after transform is calculated, we store it before. Must convert between the two.
     return (Matrix) {
         .m0 = transform.x.x,
-        .m1 = transform.x.y,
+        .m1 = transform.y.x,
         .m2 = 0.0f,
         .m3 = 0.0f,
 
-        .m4 = transform.y.x,
+        .m4 = transform.x.y,
         .m5 = transform.y.y,
         .m6 = 0.0f,
         .m7 = 0.0f,

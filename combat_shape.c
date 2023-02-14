@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include "raylib.h"
 #include "raymath.h"
@@ -138,56 +139,65 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
         color = HITBOX_COLOR;
         outlineColor = HITBOX_OUTLINE_COLOR;
     }
+    rlPushMatrix();
+    rlTransform2DXForm(transform);
+    
+    // todo: The following is a hack to account for Transform2DToMatrix being broken.
+    // We translate and later rotate the matrix instead. 
+    rlTranslatef(shape.transform.o.x, shape.transform.o.y, 0.0f); 
+    
+    switch (shape.shapeType) {
+        case CIRCLE:
+            DrawCircle(0, 0, shape.data.circleRadius, color);
+            if (handlesActive) DrawCircleLines(0, 0, shape.data.circleRadius, outlineColor);
+            break;
+        case RECTANGLE: {
+            int x = -shape.data.rectangle.rightX;
+            int y = -shape.data.rectangle.bottomY;
+            int width = 2 * shape.data.rectangle.rightX;
+            int height = 2 * shape.data.rectangle.bottomY;
+            DrawRectangle(x, y, width, height, color);
+            if (handlesActive) DrawRectangleLines(x, y, width, height, outlineColor);
+        } break;
+        case CAPSULE: {
+            float rotation = Transform2DGetRotation(shape.transform) * 180.0f / PI;
+            printf("Rotation(degrees): %f\n", rotation);
+            fflush(stdout);
+            rlRotatef(rotation, 0.0f, 0.0f, 1.0f);
+            Rectangle rect = {
+                .x = -shape.data.capsule.radius,
+                .y = -shape.data.capsule.radius - shape.data.capsule.height,
+                .width = shape.data.capsule.radius * 2.0f,
+                .height = (shape.data.capsule.radius + shape.data.capsule.height) * 2.0f
+            };
+            DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
+            if (handlesActive) DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
+        } break;
+        default: break;
+    }
 
+    if (shape.boxType == HITBOX) DrawLine(0, 0, shape.hitboxKnockbackX, shape.hitboxKnockbackY, outlineColor);
+    rlPopMatrix();
+    
+    if (!handlesActive) return;
+    
     Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
-
+    DrawHandle(globalPos, outlineColor);
+    
     switch (shape.shapeType) {
         case CIRCLE: {
             Vector2 radiusVector = {.x = shape.data.circleRadius, .y = 0.0f};
-            Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);
-            float radius = Vector2Length(radiusPos);
-            DrawCircle(globalPos.x, globalPos.y, radius, color);
-            
-            if (!handlesActive) break;
-            DrawCircleLines(globalPos.x, globalPos.y, radius, outlineColor);
-            DrawHandle(globalPos, outlineColor);
+            Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);        
             DrawHandle(Vector2Add(globalPos, radiusPos), outlineColor);
         } break;
 
         case RECTANGLE: {
             Vector2 localHandlePos = {.x = shape.data.rectangle.rightX, .y = shape.data.rectangle.bottomY};
             Vector2 extents = Transform2DBasisXFormInv(transform, localHandlePos);
-            Vector2 size = Vector2Scale(extents, 2.0f);
-            Vector2 pos = Transform2DToGlobal(transform, Vector2Subtract(shape.transform.o, localHandlePos));
-            Rectangle rect = {.x = pos.x, .y = pos.y, .width = size.x, .height = size.y};
-            DrawRectangleRec(rect, color);
-
-            if (!handlesActive) break;
-            DrawRectangleLinesEx(rect, 1.0f, outlineColor);
-            DrawHandle(globalPos, outlineColor);
             DrawHandle(Vector2Add(globalPos, extents), outlineColor);
         } break;
 
         case CAPSULE: {
-            rlPushMatrix();
-            rlTransform2DXForm(transform);
-            rlPushMatrix();
-            rlTransform2DXForm(shape.transform);
-            float extentsY = shape.data.capsule.radius + shape.data.capsule.height;
-            Rectangle capsule = {
-                .x = -shape.data.capsule.radius,
-                .y = -extentsY,
-                .width = shape.data.capsule.radius * 2.0f,
-                .height = extentsY * 2.0f
-            };
-            DrawRectangleRounded(capsule, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
-
-            if (handlesActive) DrawRectangleRoundedLines(capsule, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
-            rlPopMatrix();
-            rlPopMatrix();
-            if (!handlesActive) break;
-
-            Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
             Vector2 radius = {shape.data.capsule.radius, 0.0f};
             Vector2 height = {0.0f, shape.data.capsule.height};
             Vector2 rotationHandle = {0.0f, -shape.data.capsule.height};
@@ -197,29 +207,10 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             Vector2 globalHeight = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height)));
             Vector2 globalRotation = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, rotationHandle)));
 
-            DrawHandle(globalPos, outlineColor);
             DrawHandle(globalRadius, outlineColor);
             DrawHandle(globalHeight, outlineColor);
             DrawHandle(globalRotation, outlineColor);
-            /*
-            DrawCircle(globalRotation.x, globalRotation.y, HANDLE_RADIUS, outlineColor);
-            Rectangle rect;
-            rect.x = globalRotation.x - HANDLE_INTERIOR_RADIUS / 2.0f;
-            rect.y = globalRotation.y - HANDLE_INTERIOR_RADIUS / 2.0f;
-            rect.width = HANDLE_INTERIOR_RADIUS;
-            rect.height = HANDLE_INTERIOR_RADIUS;
-            DrawRectangleRec(rect, HANDLE_INTERIOR_COLOR);
-            */
         } break;
-
-        default: break;
-    }
-
-    if (shape.boxType == HITBOX) {
-        Vector2 localKnockback = {.x = shape.hitboxKnockbackX, .y = shape.hitboxKnockbackY};
-        Vector2 knockback = Transform2DToGlobal(transform, Vector2Add(shape.transform.o, localKnockback));
-        DrawLine(globalPos.x, globalPos.y, knockback.x, knockback.y, outlineColor);
-        if (handlesActive) DrawHandle(knockback, outlineColor);
     }
 }
 
@@ -280,8 +271,8 @@ Vector2 Vector2Max(Vector2 vec, float max) {
 }
 
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
+    Vector2 handlePos = Vector2Round(Vector2Max(Transform2DToLocal(shape->transform, localMousePos), 0.0f));
     Vector2 offset = Vector2Subtract(localMousePos, shape->transform.o);
-    Vector2 handlePos = Vector2Round(Vector2Max(offset, 0.0f));
 
     switch (handle) {
         case CENTER:
