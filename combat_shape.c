@@ -151,18 +151,25 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             DrawCircle(0, 0, shape.data.circleRadius, color);
             if (handlesActive) DrawCircleLines(0, 0, shape.data.circleRadius, outlineColor);
             break;
+        
         case RECTANGLE: {
             int x = -shape.data.rectangle.rightX;
             int y = -shape.data.rectangle.bottomY;
             int width = 2 * shape.data.rectangle.rightX;
             int height = 2 * shape.data.rectangle.bottomY;
             DrawRectangle(x, y, width, height, color);
-            if (handlesActive) DrawRectangleLines(x, y, width, height, outlineColor);
+            if (!handlesActive) break;
+            // have to draw it manually instead of DrawRectangleLines because the lines scale with the transform.
+            int xWidth = x + width;
+            int yHeight = y + height;
+            DrawLine(x, y, xWidth, y, outlineColor);
+            DrawLine(xWidth, y, xWidth, yHeight, outlineColor);
+            DrawLine(xWidth, yHeight, x, yHeight, outlineColor);
+            DrawLine(x, yHeight, x, y, outlineColor);
         } break;
+        
         case CAPSULE: {
             float rotation = Transform2DGetRotation(shape.transform) * 180.0f / PI;
-            printf("Rotation(degrees): %f\n", rotation);
-            fflush(stdout);
             rlRotatef(rotation, 0.0f, 0.0f, 1.0f);
             Rectangle rect = {
                 .x = -shape.data.capsule.radius,
@@ -173,6 +180,7 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             DrawRectangleRounded(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, color);
             if (handlesActive) DrawRectangleRoundedLines(rect, 1.0f, COMBAT_SHAPE_SEGMENTS, 0.0f, outlineColor);
         } break;
+        
         default: break;
     }
 
@@ -180,10 +188,9 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
     rlPopMatrix();
     
     if (!handlesActive) return;
-    
+
     Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
     DrawHandle(globalPos, outlineColor);
-    
     switch (shape.shapeType) {
         case CIRCLE: {
             Vector2 radiusVector = {.x = shape.data.circleRadius, .y = 0.0f};
@@ -202,7 +209,6 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             Vector2 height = {0.0f, shape.data.capsule.height};
             Vector2 rotationHandle = {0.0f, -shape.data.capsule.height};
             
-            // not sure why I am using basis xform inv here
             Vector2 globalRadius = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, radius)));
             Vector2 globalHeight = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height)));
             Vector2 globalRotation = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, rotationHandle)));
@@ -212,6 +218,10 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             DrawHandle(globalRotation, outlineColor);
         } break;
     }
+
+    if (shape.boxType != HITBOX) return;
+    Vector2 globalKnockback = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, (Vector2) {shape.hitboxKnockbackX, shape.hitboxKnockbackY}));
+    DrawHandle(globalKnockback, outlineColor);
 }
 
 bool IsCollidingHandle(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localHandlePos) {
