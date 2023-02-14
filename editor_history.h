@@ -7,7 +7,7 @@
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
-#define FRAME_DURATION_DEFAULT 100
+#define FRAME_INFO_DEFAULT (FrameInfo) {.duration = 100, .canCancel = false}
 #define STR_SHAPES "shapes"
 #define STR_FRAME_DURATIONS "frameDurations"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"

@@ -7,12 +7,7 @@
 
 EditorState AllocEditorState(int frameCount) {
     FrameInfo *frames = malloc(sizeof(FrameInfo) * frameCount);
-    for (int i = 0; i < frameCount; i++) {
-        frames[0] = (FrameInfo) {
-            .duration = FRAME_DURATION_DEFAULT, 
-            .canCancel = false
-        };
-    }
+    for (int i = 0; i < frameCount; i++) frames[i] = FRAME_INFO_DEFAULT;
 
     return (EditorState) {
         .shapeCount = 0,
@@ -68,7 +63,7 @@ bool RemoveShape(EditorState *state, int idx) {
 void AddFrame(EditorState *state) {
     state->frameCount++; 
     state->frames = realloc(state->frames, sizeof(FrameInfo) * state->frameCount);
-    state->frames[state->frameCount - 1] = (FrameInfo) {.duration = FRAME_DURATION_DEFAULT, .canCancel = false};
+    state->frames[state->frameCount - 1] = FRAME_INFO_DEFAULT;
     state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->frameCount * state->shapeCount);
     for (int chunkIdx = state->shapeCount - 1; chunkIdx >= 0; chunkIdx--) {
         state->_shapeActiveFrames[chunkIdx * state->frameCount + state->frameCount - 1] = false;
