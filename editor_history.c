@@ -34,7 +34,7 @@ void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active)
     state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = active;
 }
 
-void AddShape(EditorState *state, CombatShape shape) { // Should work on nullptrs
+void AddShape(EditorState *state, CombatShape shape) {
     int oldMax = state->shapeCount * state->frameCount;
     state->shapeCount++;
     state->shapes = realloc(state->shapes, sizeof(CombatShape) * state->shapeCount);
@@ -48,7 +48,7 @@ bool RemoveShape(EditorState *state, int idx) {
     if (idx < 0 || idx >= state->shapeCount) return false;
     
     for (int shapeIdx = idx + 1; shapeIdx < state->shapeCount; shapeIdx++) {
-        int newShapeIdx = idx - 1;
+        int newShapeIdx = shapeIdx - 1;
         state->shapes[newShapeIdx] = state->shapes[shapeIdx];
 
         for (int frameIdx = 0; frameIdx < state->frameCount; frameIdx++) {
