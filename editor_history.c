@@ -172,15 +172,22 @@ cJSON *SerializeState(EditorState state) {
         cJSON_AddItemToArray(activeFrames, val);
     }
 
-    cJSON *frameDurations = cJSON_CreateArray();
+    cJSON *frames = cJSON_CreateArray();
     for (int i = 0; i < state.frameCount; i++) {
-        cJSON_AddItemToArray(frameDurations, cJSON_CreateNumber(state.frames[i].duration));
+        cJSON *frame = cJSON_CreateObject();
+        FrameInfo frameInfo = state.frames[i];
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_DURATION, frameInfo.duration);
+        cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
+        cJSON_AddItemToArray(frames, frame);
     }
 
     cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, STR_MAGIC, STR_MAGIC_VALUE);
+    cJSON_AddNumberToObject(json, STR_VERSION, VERSION_NUMBER);
+
     cJSON_AddItemToObject(json, STR_SHAPE_ACTIVE_FRAMES, activeFrames);
     cJSON_AddItemToObject(json, STR_SHAPES, shapes);
-    cJSON_AddItemToObject(json, STR_FRAME_DURATIONS, frameDurations);
+    cJSON_AddItemToObject(json, STR_FRAMES, frames);
     return json;
 }
 

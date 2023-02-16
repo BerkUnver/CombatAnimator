@@ -1,4 +1,6 @@
 {
+	"magic":	"CombatAnimator",
+	"version":	1,
 	"shapeActiveFrames":	[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
 	"shapes":	[{
 			"rectangleRightX":	32,
@@ -63,5 +65,53 @@
 			"x":	90,
 			"y":	48
 		}],
-	"frameDurations":	[100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+	"frames":	[{
+			"duration":	100,
+			"canCancel":	true
+		}, {
+			"duration":	100,
+			"canCancel":	true
+		}, {
+			"duration":	100,
+			"canCancel":	true
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	false
+		}, {
+			"duration":	100,
+			"canCancel":	true
+		}, {
+			"duration":	100,
+			"canCancel":	true
+		}, {
+			"duration":	100,
+			"canCancel":	true
+		}]
 }

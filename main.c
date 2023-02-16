@@ -108,12 +108,16 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
     return newStr;
 }
 
-
 int main(int argc, char **argv) {
     if (argc < 2) {
         puts("Please put the name of the png file to make an animation for as the argument to this application.");
         return EXIT_FAILURE;
     }
+
+    if (strcmp(argv[1], "-u") == 0) { // first argument is to recursively update all files in the given folder.    
+        return EXIT_SUCCESS;
+    }
+
     const char *texturePath = argv[1];
 
     InitWindow(1, 1, APP_NAME);

@@ -9,8 +9,16 @@
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
 #define FRAME_INFO_DEFAULT (FrameInfo) {.duration = 100, .canCancel = false}
 #define STR_SHAPES "shapes"
+#define STR_FRAMES "frames"
 #define STR_FRAME_DURATIONS "frameDurations"
+#define STR_FRAME_INFO_DURATION "duration"
+#define STR_FRAME_INFO_CAN_CANCEL "canCancel"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
+
+#define STR_MAGIC "magic"
+#define STR_MAGIC_VALUE "CombatAnimator"
+#define STR_VERSION "version"
+#define VERSION_NUMBER 1
 
 typedef struct FrameInfo {
     int duration;
