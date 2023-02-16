@@ -25,3 +25,4 @@ Saves are written to a .json file with the same name as the image file.
 |      New hurtbox      |   Shape Shortcut + Shift   |
 |  Edit frame duration  | Ctrl + D, Enter to confirm |
 | Move through timeline |         Arrow Keys         |
+| Toggle selected value |          Space Bar         |

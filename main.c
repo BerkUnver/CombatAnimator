@@ -43,7 +43,7 @@
 #define KEY_FRAME_DURATION_EDIT_MODIFIER KEY_LEFT_CONTROL
 #define KEY_FRAME_DURATION_ENTER_NEW KEY_ENTER
 #define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
-
+#define KEY_FRAME_TOGGLE KEY_SPACE
 #define DEFAULT_SHAPE_X 40.0f
 #define DEFAULT_SHAPE_Y 40.0f
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
@@ -64,9 +64,9 @@
 #define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
-#define FRAME_RHOMBUS_UNSELECTED_COLOR (Color) {63, 63, 63, 255}
-#define FRAME_RHOMBUS_SELECTED_COLOR RAYWHITE
-#define COLOR_TEXT FRAME_ROW_COLOR
+#define FRAME_RHOMBUS_CANNOT_CANCEL_COLOR (Color) {63, 63, 63, 255}
+#define FRAME_RHOMBUS_CAN_CANCEL_COLOR RAYWHITE
+#define FRAME_ROW_TEXT_COLOR FRAME_ROW_COLOR
 
 #define SHAPE_ROW_SIZE 32
 #define SHAPE_ICON_CIRCLE_RADIUS 12
@@ -262,17 +262,26 @@ int main(int argc, char **argv) {
             mode = FRAME_DURATION_EDIT;
             ClearStringBuffer(&editingFrameDurationBuffer);
             AppendString(&editingFrameDurationBuffer, frameDurationStr);
-
+        
         } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
             AddFrame(&state);
+            state.frameIdx = state.frameCount - 1;
             CommitState(&history, &state);
             mode = IDLE;
         
-        } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER)) {
-            if (state.shapeIdx != -1) {
-                RemoveShape(&state, state.shapeIdx);
-                CommitState(&history, &state);
+        } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
+            RemoveShape(&state, state.shapeIdx);
+            CommitState(&history, &state);
+            mode = IDLE; 
+        
+        } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
+            if (state.shapeIdx < 0) {
+                state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
+            } else {
+                bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
+                SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
             }
+            CommitState(&history, &state);
         
         } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_COL
             CombatShape shape;
@@ -307,39 +316,8 @@ int main(int argc, char **argv) {
                 CommitState(&history, &state);
                 mode = IDLE;
             }
-        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
-            if (timelineY < mousePos.y && mousePos.y <= windowY) {
-                if (0.0f <= mousePos.x && mousePos.x < FRAME_ROW_SIZE * state.frameCount) {
-                    mode = IDLE;
-                    int oldFrameIdx = state.frameIdx;
-                    state.frameIdx = Clamp( mousePos.x / FRAME_ROW_SIZE, 0, state.frameCount - 1); // clamp just to be safe
-                    if (mousePos.y > hitboxRowY && state.shapeCount >= 1) {
-                        int oldShapeIdx = state.shapeIdx;
-                        state.shapeIdx = Clamp((mousePos.y - hitboxRowY) / SHAPE_ROW_SIZE, 0, state.shapeCount - 1);
-                        if (oldFrameIdx == state.frameIdx && oldShapeIdx == state.shapeIdx) { // if frame is already selected toggle it.
-                            bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
-                            SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
-                            CommitState(&history, &state);
-                        }
-                    } else {
-                        state.shapeIdx = -1;
-                    }
-                }
-            } else {
-                if (state.shapeIdx >= 0) {
-                    draggingHandle = SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]);
-                    // may set draggingHandle to none
-                } else {
-                    draggingHandle = NONE;
-                }
 
-                if (draggingHandle != NONE) {
-                    mode = DRAGGING_HANDLE;
-                } else {
-                    panningSpriteLocalPos = Transform2DToLocal(transform,mousePos);
-                    mode = PANNING_SPRITE;
-                }
-            }
+
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
                 mode = IDLE;
@@ -423,13 +401,14 @@ int main(int argc, char **argv) {
         for (int i = 0; i < state.frameCount; i++) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
 
-            Color frameColor = i == state.frameIdx ? FRAME_RHOMBUS_SELECTED_COLOR : FRAME_RHOMBUS_UNSELECTED_COLOR;
+            Color frameColor = state.frames[i].canCancel ? FRAME_RHOMBUS_CAN_CANCEL_COLOR : FRAME_RHOMBUS_CANNOT_CANCEL_COLOR;
             Vector2 frameCenter = {xPos, timelineY + FRAME_ROW_SIZE / 2};
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
+            
             const char *text = TextFormat("%i", i + 1);
             int textX = frameCenter.x - MeasureText(text, fontSize) / 2.0f;
             int textY = frameCenter.y - fontSize / 2.0f;
-            DrawText(text, textX, textY, fontSize, COLOR_TEXT);
+            DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
             for (int j = 0; j < state.shapeCount; j++) {
                 Color color;
                 bool active = GetShapeActive(&state, i, j);
