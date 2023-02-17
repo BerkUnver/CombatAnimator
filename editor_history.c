@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "editor_history.h"
-#include "combat_shape.h"
 #include "cjson/cJSON.h"
+#include "combat_shape.h"
+#include "string_buffer.h"
+#include "editor_history.h"
 
 EditorState AllocEditorState(int frameCount) {
     FrameInfo *frames = malloc(sizeof(FrameInfo) * frameCount);
@@ -262,4 +263,41 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     fail:
     FreeEditorState(state);
     return false;
+}
+
+bool EditorStateReadFromFile(EditorState *state, const char *path) {
+    FILE *file = fopen(path, "r+");
+    if (!file) return false;
+    StringBuffer buffer = EmptyStringBuffer();
+    int c;
+    while ((c = fgetc(file)) != EOF) {
+        AppendChar(&buffer, (char) c);
+    }
+
+    fclose(file);
+    cJSON *json = cJSON_Parse(buffer.raw);
+    FreeStringBuffer(&buffer);
+
+    if (!json) return false;
+    
+    bool success = DeserializeState(json, state);
+    cJSON_Delete(json);
+    return success;
+}
+
+bool EditorStateWriteToFile(EditorState *state, const char *path) {
+    cJSON *json = SerializeState(*state);
+    if (!json) return false;
+    
+    char *str = cJSON_Print(json);
+    FILE *saveFile = fopen(path, "w+");
+    if (!saveFile) {
+        cJSON_Delete(json);
+        return false;
+    }
+    fputs(str, saveFile);
+    free(str);
+    fclose(saveFile);
+    cJSON_Delete(json);
+    return true;
 }

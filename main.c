@@ -1,3 +1,5 @@
+#include <dirent.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,6 +16,7 @@
 #define KEY_EXIT KEY_E
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
+#define FLAG_UPDATE "-u"
 #define APP_NAME "Combat Animator"
 #define DEFAULT_SPRITE_WINDOW_X 800
 #define DEFAULT_SPRITE_WINDOW_Y 400
@@ -108,13 +111,55 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
     return newStr;
 }
 
+
+void Update(const char *path) {
+    
+    DIR *dir = opendir(path);
+    if (!dir) {
+        printf("Failed to open directory at %s\n", path);
+        return;
+    }
+
+    struct dirent *directoryEntry;
+    while ((directoryEntry = readdir(dir))) {
+        // it would be very bad if this didn't work
+        if (strcmp(directoryEntry->d_name, ".") == 0 || strcmp(directoryEntry->d_name, "..") == 0) continue;
+        StringBuffer fullPath = EmptyStringBuffer();
+        AppendString(&fullPath, path);
+        AppendChar(&fullPath, '/');
+        AppendString(&fullPath, directoryEntry->d_name);
+
+        struct stat fileStat;
+        
+        if (stat(fullPath.raw, &fileStat) != 0) {
+            printf("Failed to obtain information about the file at %s. Skipping.\n", fullPath.raw);
+        // no symlink support
+        } else if (S_ISDIR(fileStat.st_mode)) {
+            Update(fullPath.raw);
+        } else if (S_ISREG(fileStat.st_mode)) {
+            EditorState state;
+            if (EditorStateReadFromFile(&state, fullPath.raw)) {
+                cJSON *json = SerializeState(state);
+                EditorStateWriteToFile(&state, fullPath.raw);
+                cJSON_Delete(json);
+                FreeEditorState(&state);
+            } else {
+                printf("Failed to read a valid editor state from the file at %s. Skipping.\n", fullPath.raw);
+            }
+        }
+        FreeStringBuffer(&fullPath);
+    }
+    closedir(dir);
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         puts("Please put the name of the png file to make an animation for as the argument to this application.");
         return EXIT_FAILURE;
     }
 
-    if (strcmp(argv[1], "-u") == 0) { // first argument is to recursively update all files in the given folder.    
+    if (strcmp(argv[1], FLAG_UPDATE) == 0) { // first argument is to recursively update all files in the given folder.    
+        Update(".");
         return EXIT_SUCCESS;
     }
 
@@ -134,30 +179,8 @@ int main(int argc, char **argv) {
 
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, "json");
-    FILE *loadFile = fopen(savePath, "r+");
-    bool createNewSave = false;
     EditorState state;
-    if (!loadFile) {
-        createNewSave = true;
-    } else {
-        StringBuffer buffer = EmptyStringBuffer();
-        int c;
-        while ((c = fgetc(loadFile)) != EOF) {
-            AppendChar(&buffer, (char) c);
-        }
-
-        fclose(loadFile);
-        cJSON *json = cJSON_Parse(buffer.raw);
-        FreeStringBuffer(&buffer);
-
-        if (!json) {
-            createNewSave = true;
-        } else {
-            if (!DeserializeState(json, &state)) createNewSave = true;
-            cJSON_Delete(json);
-        }
-    }
-    if (createNewSave) state = AllocEditorState(1);
+    if (!EditorStateReadFromFile(&state, savePath)) state = AllocEditorState(1);
 
     EditorHistory history = AllocEditorHistory(&state);
 
@@ -241,16 +264,8 @@ int main(int argc, char **argv) {
                 transform.o = Vector2Add(transform.o, Vector2Subtract(mousePos, globalPan));
             }
         } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
-            cJSON *saveJson = SerializeState(state);
-            if (!saveJson) {
+            if (!EditorStateWriteToFile(&state, savePath)) {
                 puts("Failed to save file for unknown reason.");
-            } else {
-                char *str = cJSON_Print(saveJson);
-                FILE *saveFile = fopen(savePath, "w+");
-                fputs(str, saveFile);
-                free(str);
-                fclose(saveFile);
-                cJSON_Delete(saveJson);
             }
         } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) { // undo
             mode = IDLE;
@@ -287,7 +302,7 @@ int main(int argc, char **argv) {
             }
             CommitState(&history, &state);
         
-        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_COL
+        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
             CombatShape shape;
             shape.transform = Transform2DIdentity(); // todo : make proper init function for combatshape
             bool newShapeInstanced = true;
