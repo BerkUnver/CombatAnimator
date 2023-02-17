@@ -16,6 +16,7 @@
 #define KEY_EXIT KEY_E
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
+#define FILE_EXTENSION "json"
 #define FLAG_UPDATE "-u"
 #define APP_NAME "Combat Animator"
 #define DEFAULT_SPRITE_WINDOW_X 800
@@ -120,31 +121,37 @@ void Update(const char *path) {
         return;
     }
 
-    struct dirent *directoryEntry;
+    struct dirent *directoryEntry; // works because this is only accessed before recursive update call.
+    // This is stored in static memory so it gets overwritten when readdir is called again.
+    
     while ((directoryEntry = readdir(dir))) {
         // it would be very bad if this didn't work
         if (strcmp(directoryEntry->d_name, ".") == 0 || strcmp(directoryEntry->d_name, "..") == 0) continue;
+
         StringBuffer fullPath = EmptyStringBuffer();
         AppendString(&fullPath, path);
         AppendChar(&fullPath, '/');
         AppendString(&fullPath, directoryEntry->d_name);
 
         struct stat fileStat;
-        
         if (stat(fullPath.raw, &fileStat) != 0) {
             printf("Failed to obtain information about the file at %s. Skipping.\n", fullPath.raw);
         // no symlink support
         } else if (S_ISDIR(fileStat.st_mode)) {
             Update(fullPath.raw);
         } else if (S_ISREG(fileStat.st_mode)) {
-            EditorState state;
-            if (EditorStateReadFromFile(&state, fullPath.raw)) {
-                cJSON *json = SerializeState(state);
-                EditorStateWriteToFile(&state, fullPath.raw);
-                cJSON_Delete(json);
-                FreeEditorState(&state);
-            } else {
-                printf("Failed to read a valid editor state from the file at %s. Skipping.\n", fullPath.raw);
+            char *dot = strrchr(directoryEntry->d_name, '.');            
+            if (dot && strcmp(dot, "."FILE_EXTENSION) == 0) {
+                EditorState state;
+                if (EditorStateReadFromFile(&state, fullPath.raw)) {
+                    cJSON *json = SerializeState(state);
+                    EditorStateWriteToFile(&state, fullPath.raw);
+                    cJSON_Delete(json);
+                    FreeEditorState(&state);
+                    printf("Successfully updated the combat animation file at %s.\n", fullPath.raw);
+                } else {
+                    printf("Failed to read a valid combat animation from the file at %s. Skipping.\n", fullPath.raw);
+                }
             }
         }
         FreeStringBuffer(&fullPath);
@@ -178,7 +185,7 @@ int main(int argc, char **argv) {
     const int fontSize = GetFontDefault().baseSize;
 
     // load state from file or create new state if load failed
-    char *savePath = ChangeFileExtension(texturePath, "json");
+    char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
     EditorState state;
     if (!EditorStateReadFromFile(&state, savePath)) state = AllocEditorState(1);
 
