@@ -85,7 +85,6 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     DrawTriangle(leftPoint, bottomPoint, rightPoint, color);
 }
 
-
 char *ChangeFileExtension(const char *fileName, const char *newExt) {
     int len = 0;
     char c;

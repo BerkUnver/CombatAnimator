@@ -111,7 +111,7 @@ EditorHistory AllocEditorHistory(EditorState *initial) {
 }
 
 void FreeEditorHistory(EditorHistory *history) {
-    for (int i = 0; i < history->_mostRecentStateIdx; i++) {
+    for (int i = 0; i <= history->_mostRecentStateIdx; i++) {
         FreeEditorState(&history->_states[i]);
     }
     free(history->_states);
@@ -126,7 +126,7 @@ void CommitState(EditorHistory *history, EditorState *state) {
     history->_mostRecentStateIdx = history->_currentStateIdx;
     
     if (history->_currentStateIdx >= history->_statesLength) {
-        // bool array pointers are copied over so it works.
+        // array pointers are copied over so it works.
         history->_states = realloc(history->_states, sizeof(EditorState) * (history->_statesLength + HISTORY_BUFFER_SIZE_INCREMENT)); 
         history->_statesLength += HISTORY_BUFFER_SIZE_INCREMENT;
     }
