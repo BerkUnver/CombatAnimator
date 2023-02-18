@@ -88,6 +88,9 @@ typedef struct CombatShape {
 cJSON *SerializeShape(CombatShape shape);
 bool DeserializeShape(cJSON *json, CombatShape *out);
 
+bool IsCollidingHandle(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
+void DrawHandle(Vector2 pos, Color strokeColor);
+
 void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActive);
 Handle SelectCombatShapeHandle(Transform2D transform, Vector2 globalMousePos, CombatShape shape);
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle);

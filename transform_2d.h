@@ -3,11 +3,17 @@
 
 #include "raylib.h"
 
+#define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
+
 typedef struct Transform2D {
     Vector2 o;
     Vector2 x;
     Vector2 y;
 } Transform2D;
+
+float Max(float i, float j);
+Vector2 Vector2Round(Vector2 vec);
+Vector2 Vector2Max(Vector2 vec, float max);
 
 Transform2D Transform2DIdentity();
 

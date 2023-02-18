@@ -270,15 +270,7 @@ Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatSh
     return NONE;
 }
 
-float Max(float i, float j) { return i > j ? i : j; }
 
-Vector2 Vector2Round(Vector2 vec) {
-    return (Vector2) {.x = roundf(vec.x), .y = roundf(vec.y)};
-}
-
-Vector2 Vector2Max(Vector2 vec, float max) {
-    return (Vector2) {.x = Max(vec.x, max), .y = Max(vec.y, max)};
-}
 
 bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
     Vector2 handlePos = Vector2Round(Vector2Max(Transform2DToLocal(shape->transform, localMousePos), 0.0f));

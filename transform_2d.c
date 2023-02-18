@@ -4,6 +4,17 @@
 #include "rlgl.h"
 #include "transform_2d.h"
 
+
+float Max(float i, float j) { return i > j ? i : j; }
+
+Vector2 Vector2Round(Vector2 vec) {
+    return (Vector2) {.x = roundf(vec.x), .y = roundf(vec.y)};
+}
+
+Vector2 Vector2Max(Vector2 vec, float max) {
+    return (Vector2) {.x = Max(vec.x, max), .y = Max(vec.y, max)};
+}
+
 Transform2D Transform2DIdentity() {
     return (Transform2D) {
         .o = {.x = 0, .y = 0},

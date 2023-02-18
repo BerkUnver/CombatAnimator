@@ -11,8 +11,6 @@
 #include "string_buffer.h"
 #include "transform_2d.h"
 
-#define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
-
 #define KEY_EXIT KEY_E
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
@@ -42,12 +40,13 @@
 #define KEY_NEW_RECTANGLE KEY_TWO
 #define KEY_NEW_CAPSULE KEY_THREE
 
-#define FRAME_DURATION_TEXT_COLOR RAYWHITE
+#define COLOR_FRAME_DURATION_TEXT RAYWHITE
 #define KEY_FRAME_DURATION_EDIT KEY_D
 #define KEY_FRAME_DURATION_EDIT_MODIFIER KEY_LEFT_CONTROL
 #define KEY_FRAME_DURATION_ENTER_NEW KEY_ENTER
 #define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
 #define KEY_FRAME_TOGGLE KEY_SPACE
+#define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
 #define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
 #define DEFAULT_CIRCLE_RADIUS 24.0f
@@ -204,6 +203,7 @@ int main(int argc, char **argv) {
         IDLE,
         PLAYING,
         DRAGGING_HANDLE,
+        DRAGGING_FRAME_INFO_POS,
         PANNING_SPRITE,
         FRAME_DURATION_EDIT
     } Mode;
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
             transform = Transform2DScale(transform, scale);
             transform.o = Vector2Subtract(mousePos, Transform2DBasisXFormInv(transform, localMousePos));
         }
-
+        
         if (mode == FRAME_DURATION_EDIT) {
             if (IsKeyPressed(KEY_FRAME_DURATION_ENTER_NEW)) {
                 if (editingFrameDurationBuffer.length > 0) {
@@ -260,6 +260,14 @@ int main(int argc, char **argv) {
                 SetCombatShapeHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle);
                 // check to see if this fails (editor is in invalid state?)
             }
+        } else if (mode == DRAGGING_FRAME_INFO_POS) { // code is similar to above, think about how to consolidate.
+            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
+                CommitState(&history, &state);
+                mode = IDLE;
+            } else {
+                Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
+                state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
+            }
         } else if (mode == PANNING_SPRITE) {
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
                 mode = IDLE;
@@ -271,7 +279,7 @@ int main(int argc, char **argv) {
             if (!EditorStateWriteToFile(&state, savePath)) {
                 puts("Failed to save file for unknown reason.");
             }
-        } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) { // undo
+        } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
             mode = IDLE;
             ChangeOptions option = UNDO;
             if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
@@ -344,13 +352,17 @@ int main(int argc, char **argv) {
                 CommitState(&history, &state);
                 mode = IDLE;
             }
-        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
-            draggingHandle = state.shapeIdx >= 0 ? SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]) : NONE;
-            if (draggingHandle != NONE) {
-                mode = DRAGGING_HANDLE;
+        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
+            if (IsCollidingHandle(transform, mousePos, state.frames[state.frameIdx].pos)) {
+                mode = DRAGGING_FRAME_INFO_POS;
             } else {
-                panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
-                mode = PANNING_SPRITE;
+                draggingHandle = state.shapeIdx >= 0 ? SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]) : NONE;
+                if (draggingHandle != NONE) {
+                    mode = DRAGGING_HANDLE;
+                } else {
+                    panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
+                    mode = PANNING_SPRITE;
+                }
             }
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
@@ -418,12 +430,16 @@ int main(int argc, char **argv) {
                 DrawCombatShape(transform, state.shapes[i], i == state.shapeIdx);
             }
         }
+        
+        // draw frame pos handle
+        Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
+        DrawHandle(globalFramePos, COLOR_FRAME_POS_HANDLE);
 
         // draw frame duration text
         if (mode == FRAME_DURATION_EDIT) {
-            DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+            DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, COLOR_FRAME_DURATION_TEXT);
         } else {
-            DrawText(TextFormat("Frame Duration: %d ms", state.frames[state.frameIdx].duration), 0, 0, fontSize, FRAME_DURATION_TEXT_COLOR);
+            DrawText(TextFormat("Frame Duration: %d ms", state.frames[state.frameIdx].duration), 0, 0, fontSize, COLOR_FRAME_DURATION_TEXT);
         }
 
         // draw timeline

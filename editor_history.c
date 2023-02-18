@@ -179,6 +179,8 @@ cJSON *SerializeState(EditorState state) {
         FrameInfo frameInfo = state.frames[i];
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_DURATION, frameInfo.duration);
         cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_Y, frameInfo.pos.y);
         cJSON_AddItemToArray(frames, frame);
     }
 
@@ -211,12 +213,13 @@ bool DeserializeState(cJSON *json, EditorState *state) {
             frameIdx++;
         }
     } else {
+        if (!cJSON_IsNumber(version)) return false;
+        int version_number = cJSON_GetNumberValue(version);
+        if (version_number <= 0 || version_number > VERSION_NUMBER) return false;
+
         cJSON *magic = cJSON_GetObjectItem(json, STR_MAGIC);
         if (!magic || !cJSON_IsString(magic) || strcmp(cJSON_GetStringValue(magic), STR_MAGIC_VALUE) != 0) return false;
         
-        cJSON *version = cJSON_GetObjectItem(json, STR_VERSION); // only one version right now.
-        if (!version || !cJSON_IsNumber(version) || (int) cJSON_GetNumberValue(version) != VERSION_NUMBER) return false;
-
         cJSON *frames = cJSON_GetObjectItem(json, STR_FRAMES);
         if (!frames || !cJSON_IsArray(frames)) return false;
         int frameCount = cJSON_GetArraySize(frames);
@@ -226,14 +229,23 @@ bool DeserializeState(cJSON *json, EditorState *state) {
         int frameIdx = 0;
         cJSON_ArrayForEach(frame, frames) {
             if (!cJSON_IsObject(frame)) goto fail;
+
             cJSON *duration = cJSON_GetObjectItem(frame, STR_FRAME_INFO_DURATION);
-            if (!duration || !cJSON_IsNumber(duration)) goto fail;
+            if (!duration || !cJSON_IsNumber(duration)) goto fail; 
+            state->frames[frameIdx].duration = cJSON_GetNumberValue(duration);
+            
             cJSON *canCancel = cJSON_GetObjectItem(frame, STR_FRAME_INFO_CAN_CANCEL);
             if (!canCancel || !cJSON_IsBool(canCancel)) goto fail;
-            state->frames[frameIdx] = (FrameInfo) {
-                .duration = cJSON_GetNumberValue(duration), 
-                .canCancel = cJSON_IsTrue(canCancel)
-            };
+            state->frames[frameIdx].canCancel = cJSON_IsTrue(canCancel);
+
+            if (version_number > 1) {
+                cJSON *x = cJSON_GetObjectItem(frame, STR_FRAME_INFO_X);
+                if (!x || !cJSON_IsNumber(x)) goto fail;
+                cJSON *y = cJSON_GetObjectItem(frame, STR_FRAME_INFO_Y);
+                if (!y || !cJSON_IsNumber(y)) goto fail;
+                state->frames[frameIdx].pos = (Vector2) {.x = cJSON_GetNumberValue(x), .y = cJSON_GetNumberValue(y)};
+            }
+
             frameIdx++;
         }
     }
