@@ -48,8 +48,6 @@
 #define KEY_FRAME_DURATION_ENTER_NEW KEY_ENTER
 #define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
 #define KEY_FRAME_TOGGLE KEY_SPACE
-#define DEFAULT_SHAPE_X 40.0f
-#define DEFAULT_SHAPE_Y 40.0f
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
 #define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
 #define DEFAULT_CIRCLE_RADIUS 24.0f
@@ -306,6 +304,7 @@ int main(int argc, char **argv) {
                 bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
                 SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
             }
+            mode = IDLE;
             CommitState(&history, &state);
         
         } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
@@ -328,7 +327,11 @@ int main(int argc, char **argv) {
             }
 
             if (newShapeInstanced) {
-                shape.transform.o = (Vector2) {.x = DEFAULT_SHAPE_X, .y = DEFAULT_SHAPE_Y};
+                shape.transform.o = (Vector2) { // spawn shape at center of frame.
+                    .x = (float) texture.width / (float) (state.frameCount * 2), 
+                    .y = (float) texture.height / 2.0f
+                };
+
                 if (IsKeyDown(KEY_NEW_HURTBOX_MODIFIER)) {
                     shape.boxType = HURTBOX;
                 } else {
@@ -341,8 +344,14 @@ int main(int argc, char **argv) {
                 CommitState(&history, &state);
                 mode = IDLE;
             }
-
-
+        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
+            draggingHandle = state.shapeIdx >= 0 ? SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]) : NONE;
+            if (draggingHandle != NONE) {
+                mode = DRAGGING_HANDLE;
+            } else {
+                panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
+                mode = PANNING_SPRITE;
+            }
         } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
             if (mode == PLAYING) {
                 mode = IDLE;
