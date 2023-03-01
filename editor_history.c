@@ -64,7 +64,7 @@ bool RemoveShape(EditorState *state, int idx) {
 void AddFrame(EditorState *state) {
     state->frameCount++; 
     state->frames = realloc(state->frames, sizeof(FrameInfo) * state->frameCount);
-    state->frames[state->frameCount - 1] = FRAME_INFO_DEFAULT;
+    state->frames[state->frameCount - 1] = state->frames[state->frameCount - 2];
     state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * state->frameCount * state->shapeCount);
     for (int chunkIdx = state->shapeCount - 1; chunkIdx >= 0; chunkIdx--) {
         state->_shapeActiveFrames[chunkIdx * state->frameCount + state->frameCount - 1] = false;

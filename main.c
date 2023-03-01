@@ -83,31 +83,25 @@ void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
 }
 
 char *ChangeFileExtension(const char *fileName, const char *newExt) {
-    int len = 0;
-    char c;
-    int dotIdx = -1;
-    while ((c = fileName[len])) {
-        if (c == '.') dotIdx = len;
-        len++;
-    }
-
+    char *dotIdx = strrchr(fileName, '.');
     int newExtLen = strlen(newExt);
+
     char *newStr;
-
-    if (dotIdx == -1) {
-        newStr = malloc(sizeof(char) * (len + 1 + newExtLen));
-        memcpy(newStr, fileName, sizeof(char) * len);
-        newStr[len] = '.';
-        memcpy(newStr + len + 1, fileName, sizeof(char) * newExtLen);
+    if (!dotIdx) { 
+        int fileNameLen = strlen(fileName);
+        newStr = malloc(sizeof(char) * (fileNameLen + 1 + newExtLen + 1));
+        memcpy(newStr, fileName, sizeof(char) * fileNameLen);
+        newStr[fileNameLen] = '.';
+        strcpy(newStr + fileNameLen + 1, newExt);
     } else {
-        newStr = malloc(sizeof(char) * (dotIdx + 1 + newExtLen)); // size of string before and including dot
-        memcpy(newStr, fileName, sizeof(char) * (dotIdx + 1));
-        memcpy(newStr + dotIdx + 1, newExt, sizeof(char) * newExtLen);
+        int fileBaseLen = (int) (((unsigned long) dotIdx - (unsigned long) fileName) / sizeof(char) + 1);
+        newStr = malloc(sizeof(char) * (fileBaseLen + 1 + newExtLen + 1));
+        memcpy(newStr, fileName, sizeof(char) * fileBaseLen);
+        strcpy(newStr + fileBaseLen, newExt);
     }
-
     return newStr;
-}
 
+}
 
 void Update(const char *path) {
     
