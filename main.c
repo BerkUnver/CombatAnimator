@@ -47,6 +47,7 @@
 #define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
 #define KEY_FRAME_TOGGLE KEY_SPACE
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
+#define COLOR_FRAME_POS_HANDLE_PREVIOUS (Color) {161, 78, 0, 255}
 #define DEFAULT_HITBOX_KNOCKBACK_X 2
 #define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
 #define DEFAULT_CIRCLE_RADIUS 24.0f
@@ -426,6 +427,10 @@ int main(int argc, char **argv) {
         }
         
         // draw frame pos handle
+        if (state.frameIdx > 0) {
+            Vector2 globalFramePosPrevious = Transform2DToGlobal(transform, state.frames[state.frameIdx - 1].pos);
+            DrawCircle(globalFramePosPrevious.x, globalFramePosPrevious.y, HANDLE_RADIUS, COLOR_FRAME_POS_HANDLE_PREVIOUS);  
+        }
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
         DrawHandle(globalFramePos, COLOR_FRAME_POS_HANDLE);
 
