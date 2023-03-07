@@ -17,6 +17,7 @@ Saves are written to a .json file with the same name as the image file.
 |          Pan          |     Left Mouse Button      |
 |         Zoom          |        Mouse Wheel         |
 |       Add frame       |          Alt + N           |
+|     Remove frame      |       Alt + Backspace      |
 |    Play animation     |           Enter            |
 |      New circle       |          Ctrl + 1          |
 |      New square       |          Ctrl + 2          |

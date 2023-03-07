@@ -74,6 +74,17 @@ void AddFrame(EditorState *state) {
     }
 }
 
+bool RemoveFrame(EditorState *state, int idx) {
+    if (idx < 0 || idx >= state->frameCount || state->frameCount == 1) return false;
+    int activeLen = state->frameCount * state->shapeCount;
+    for (int i = 0; i < activeLen; i++) {
+        int shift = (i + state->frameCount - 1 - idx) / state->frameCount; // get the index to move to
+        state->_shapeActiveFrames[i - shift] = state->_shapeActiveFrames[i];
+    }
+    state->frameCount--;
+    return true;
+}
+
 EditorState EditorStateDeepCopy(EditorState *state) {
     int activeFramesSize = sizeof(bool) * state->shapeCount * state->frameCount;
     bool *activeFramesCopy = malloc(activeFramesSize);

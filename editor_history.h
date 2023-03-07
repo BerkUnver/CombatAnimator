@@ -62,6 +62,7 @@ void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled
 void AddShape(EditorState *state, CombatShape shape);
 bool RemoveShape(EditorState *state, int idx);
 void AddFrame(EditorState *state);
+bool RemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
 cJSON *SerializeState(EditorState state);
 bool DeserializeState(cJSON *json, EditorState *state);

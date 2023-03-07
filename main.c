@@ -28,8 +28,12 @@
 #define KEY_UNDO KEY_Z
 #define KEY_UNDO_MODIFIER KEY_LEFT_CONTROL
 #define KEY_REDO_MODIFIER KEY_LEFT_SHIFT
+
 #define KEY_NEW_FRAME KEY_N
 #define KEY_NEW_FRAME_MODIFIER KEY_LEFT_ALT
+
+#define KEY_REMOVE_FRAME KEY_BACKSPACE
+#define KEY_REMOVE_FRAME_MODIFIER KEY_LEFT_ALT
 
 #define KEY_REMOVE_SHAPE KEY_BACKSPACE
 #define KEY_REMOVE_SHAPE_MODIFIER KEY_LEFT_CONTROL
@@ -295,6 +299,12 @@ int main(int argc, char **argv) {
             CommitState(&history, &state);
             mode = IDLE;
         
+        } else if (IsKeyPressed(KEY_REMOVE_FRAME) && IsKeyDown(KEY_REMOVE_FRAME_MODIFIER) && state.frameCount > 1) {
+            RemoveFrame(&state, state.frameIdx);
+            if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
+            CommitState(&history, &state);
+            mode = IDLE;
+
         } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
             RemoveShape(&state, state.shapeIdx);
             CommitState(&history, &state);
