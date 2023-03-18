@@ -179,7 +179,8 @@ int main(int argc, char **argv) {
         CloseWindow();
         return EXIT_FAILURE;
     }
-
+   
+    GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(RAYWHITE));
     GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
     const int fontSize = GetFontDefault().baseSize;
 
@@ -449,7 +450,7 @@ int main(int argc, char **argv) {
         if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].boxType == HITBOX) {
             Rectangle rectDamageLabel = rectFrameDurationLabel;
             rectDamageLabel.y += rectDamageLabel.height;
-            GuiLabel(rectDamageLabel, "Damage");
+            GuiLabel(rectDamageLabel, "Hitbox Damage");
             
             Rectangle rectDamageValue = rectDamageLabel;
             rectDamageValue.x += rectDamageValue.width;
@@ -460,7 +461,7 @@ int main(int argc, char **argv) {
 
             Rectangle rectStunLabel = rectDamageLabel;
             rectStunLabel.y += rectStunLabel.height;
-            GuiLabel(rectStunLabel, "Stun (ms)");
+            GuiLabel(rectStunLabel, "Hitbox Stun (ms)");
             
             Rectangle rectStunValue = rectStunLabel;
             rectStunValue.x += rectStunValue.width;
