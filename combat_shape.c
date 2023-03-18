@@ -8,7 +8,7 @@
 #include "combat_shape.h"
 #include "transform_2d.h"
 
-cJSON *SerializeShape(CombatShape shape) {
+cJSON *CombatShapeSerialize(CombatShape shape) {
     const char *shapeType;
     cJSON *json = cJSON_CreateObject();
     switch (shape.shapeType) {
@@ -60,7 +60,7 @@ cJSON *SerializeShape(CombatShape shape) {
 }
 
 // all boilerplate
-bool DeserializeShape(cJSON *json, CombatShape *out) {
+bool CombatShapeDeserialize(cJSON *json, CombatShape *out) {
     if (!cJSON_IsObject(json)) return false;
     
     out->transform = Transform2DIdentity();
@@ -124,12 +124,12 @@ bool DeserializeShape(cJSON *json, CombatShape *out) {
     return true;
 }
 
-void DrawHandle(Vector2 pos, Color strokeColor) {
+void HandleDraw(Vector2 pos, Color strokeColor) {
     DrawCircle(pos.x, pos.y, HANDLE_RADIUS, strokeColor);
     DrawCircle(pos.x, pos.y, HANDLE_INTERIOR_RADIUS, HANDLE_INTERIOR_COLOR);
 }
 
-void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActive) {
+void CombatShapeDraw(Transform2D transform, CombatShape shape, bool handlesActive) {
     Color color;
     Color outlineColor;
     if (shape.boxType == HURTBOX) {
@@ -190,18 +190,18 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
     if (!handlesActive) return;
 
     Vector2 globalPos = Transform2DToGlobal(transform, shape.transform.o);
-    DrawHandle(globalPos, outlineColor);
+    HandleDraw(globalPos, outlineColor);
     switch (shape.shapeType) {
         case CIRCLE: {
             Vector2 radiusVector = {.x = shape.data.circleRadius, .y = 0.0f};
-            Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);        
-            DrawHandle(Vector2Add(globalPos, radiusPos), outlineColor);
+            Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);
+            HandleDraw(Vector2Add(globalPos, radiusPos), outlineColor);
         } break;
 
         case RECTANGLE: {
             Vector2 localHandlePos = {.x = shape.data.rectangle.rightX, .y = shape.data.rectangle.bottomY};
             Vector2 extents = Transform2DBasisXFormInv(transform, localHandlePos);
-            DrawHandle(Vector2Add(globalPos, extents), outlineColor);
+            HandleDraw(Vector2Add(globalPos, extents), outlineColor);
         } break;
 
         case CAPSULE: {
@@ -213,19 +213,19 @@ void DrawCombatShape(Transform2D transform, CombatShape shape, bool handlesActiv
             Vector2 globalHeight = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, height)));
             Vector2 globalRotation = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(shape.transform, rotationHandle)));
 
-            DrawHandle(globalRadius, outlineColor);
-            DrawHandle(globalHeight, outlineColor);
-            DrawHandle(globalRotation, outlineColor);
+            HandleDraw(globalRadius, outlineColor);
+            HandleDraw(globalHeight, outlineColor);
+            HandleDraw(globalRotation, outlineColor);
         } break;
     }
 
     if (shape.boxType != HITBOX) return;
     Vector2 globalKnockback = Vector2Add(globalPos, Transform2DBasisXFormInv(transform, (Vector2) {shape.hitboxKnockbackX, shape.hitboxKnockbackY}));
-    DrawHandle(globalKnockback, outlineColor);
+    HandleDraw(globalKnockback, outlineColor);
 }
 
-bool IsCollidingHandle(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localHandlePos) {
-    Vector2 globalHandlePos = Transform2DToGlobal(globalTransform, localHandlePos);
+bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos) {
+    Vector2 globalHandlePos = Transform2DToGlobal(globalTransform, localPos);
     Rectangle rect = {
         .x = globalHandlePos.x - HANDLE_RADIUS,
         .y = globalHandlePos.y - HANDLE_RADIUS,
@@ -235,44 +235,44 @@ bool IsCollidingHandle(Transform2D globalTransform, Vector2 globalMousePos, Vect
     return CheckCollisionPointRec(globalMousePos, rect);
 }
 
-Handle SelectCombatShapeHandle(Transform2D transform, Vector2 mousePos, CombatShape shape) {
+Handle CombatShapeSelectHandle(Transform2D transform, Vector2 globalMousePos, CombatShape shape) {
     if (shape.boxType == HITBOX) {
         Vector2 knockbackPos = {shape.transform.o.x + shape.hitboxKnockbackX, shape.transform.o.y + shape.hitboxKnockbackY};
-        if (IsCollidingHandle(transform, mousePos, knockbackPos)) return HITBOX_KNOCKBACK;
+        if (HandleIsColliding(transform, globalMousePos, knockbackPos)) return HITBOX_KNOCKBACK;
     }
 
     switch (shape.shapeType) {
         case CIRCLE: {
             Vector2 radiusPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.circleRadius, 0.0f});
-            if (IsCollidingHandle(transform, mousePos, radiusPos)) return CIRCLE_RADIUS;
+            if (HandleIsColliding(transform, globalMousePos, radiusPos)) return CIRCLE_RADIUS;
         } break;
         
         case RECTANGLE: {
             Vector2 cornerPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.rectangle.rightX, shape.data.rectangle.bottomY});
-            if (IsCollidingHandle(transform, mousePos, cornerPos)) return RECTANGLE_CORNER;
+            if (HandleIsColliding(transform, globalMousePos, cornerPos)) return RECTANGLE_CORNER;
         } break;
 
         case CAPSULE: {
             Vector2 radiusPos = Transform2DToGlobal(shape.transform, (Vector2) {shape.data.capsule.radius, 0.0f});
-            if (IsCollidingHandle(transform, mousePos, radiusPos)) return CAPSULE_RADIUS;
+            if (HandleIsColliding(transform, globalMousePos, radiusPos)) return CAPSULE_RADIUS;
 
             Vector2 heightPos = Transform2DToGlobal(shape.transform, (Vector2) {0.0f, shape.data.capsule.height});
-            if (IsCollidingHandle(transform, mousePos, heightPos)) return CAPSULE_HEIGHT;
+            if (HandleIsColliding(transform, globalMousePos, heightPos)) return CAPSULE_HEIGHT;
 
             Vector2 rotationPos = Transform2DToGlobal(shape.transform, (Vector2) {0.0f, -shape.data.capsule.height});
-            if (IsCollidingHandle(transform, mousePos, rotationPos)) return CAPSULE_ROTATION;
+            if (HandleIsColliding(transform, globalMousePos, rotationPos)) return CAPSULE_ROTATION;
         } break;
 
         default: break;
     }
 
-    if (IsCollidingHandle(transform, mousePos, shape.transform.o)) return CENTER;
+    if (HandleIsColliding(transform, globalMousePos, shape.transform.o)) return CENTER;
     return NONE;
 }
 
 
 
-bool SetCombatShapeHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
+bool CombatShapeSetHandle(Vector2 localMousePos, CombatShape *shape, Handle handle) {
     Vector2 handlePos = Vector2Round(Vector2Max(Transform2DToLocal(shape->transform, localMousePos), 0.0f));
     Vector2 offset = Vector2Subtract(localMousePos, shape->transform.o);
 

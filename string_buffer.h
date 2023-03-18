@@ -12,11 +12,11 @@ typedef struct StringBuffer {
     char *raw;
 } StringBuffer;
 
-StringBuffer EmptyStringBuffer();
-void AppendChar(StringBuffer *string, char chr);
-void AppendString(StringBuffer *string, const char *end);
-bool RemoveChar(StringBuffer *string);
-void ClearStringBuffer(StringBuffer *string);
-void FreeStringBuffer(StringBuffer *string);
+StringBuffer StringBufferNew();
+void StringBufferAddChar(StringBuffer *string, char chr);
+void StringBufferAddString(StringBuffer *string, const char *end);
+bool StringBufferRemoveChar(StringBuffer *string);
+void StringBufferClear(StringBuffer *string);
+void StringBufferFree(StringBuffer *string);
 
 #endif

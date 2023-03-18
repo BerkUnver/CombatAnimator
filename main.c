@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -108,7 +110,7 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
 
 }
 
-void Update(const char *path) {
+void RecursiveUpdate(const char *path) {
     
     DIR *dir = opendir(path);
     if (!dir) {
@@ -123,33 +125,33 @@ void Update(const char *path) {
         // it would be very bad if this didn't work
         if (strcmp(directoryEntry->d_name, ".") == 0 || strcmp(directoryEntry->d_name, "..") == 0) continue;
 
-        StringBuffer fullPath = EmptyStringBuffer();
-        AppendString(&fullPath, path);
-        AppendChar(&fullPath, '/');
-        AppendString(&fullPath, directoryEntry->d_name);
+        StringBuffer fullPath = StringBufferNew();
+        StringBufferAddString(&fullPath, path);
+        StringBufferAddChar(&fullPath, '/');
+        StringBufferAddString(&fullPath, directoryEntry->d_name);
 
         struct stat fileStat;
         if (stat(fullPath.raw, &fileStat) != 0) {
             printf("Failed to obtain information about the file at %s. Skipping.\n", fullPath.raw);
         // no symlink support
         } else if (S_ISDIR(fileStat.st_mode)) {
-            Update(fullPath.raw);
+            RecursiveUpdate(fullPath.raw);
         } else if (S_ISREG(fileStat.st_mode)) {
             char *dot = strrchr(directoryEntry->d_name, '.');            
             if (dot && strcmp(dot, "."FILE_EXTENSION) == 0) {
                 EditorState state;
                 if (EditorStateReadFromFile(&state, fullPath.raw)) {
-                    cJSON *json = SerializeState(state);
+                    cJSON *json = EditorStateSerialize(state);
                     EditorStateWriteToFile(&state, fullPath.raw);
                     cJSON_Delete(json);
-                    FreeEditorState(&state);
+                    EditorStateFree(&state);
                     printf("Successfully updated the combat animation file at %s.\n", fullPath.raw);
                 } else {
                     printf("Failed to read a valid combat animation from the file at %s. Skipping.\n", fullPath.raw);
                 }
             }
         }
-        FreeStringBuffer(&fullPath);
+        StringBufferFree(&fullPath);
     }
     closedir(dir);
 }
@@ -161,7 +163,7 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], FLAG_UPDATE) == 0) { // first argument is to recursively update all files in the given folder.    
-        Update(".");
+        RecursiveUpdate(".");
         return EXIT_SUCCESS;
     }
 
@@ -182,9 +184,9 @@ int main(int argc, char **argv) {
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
     EditorState state;
-    if (!EditorStateReadFromFile(&state, savePath)) state = AllocEditorState(1);
+    if (!EditorStateReadFromFile(&state, savePath)) state = EditorStateNew(1);
 
-    EditorHistory history = AllocEditorHistory(&state);
+    EditorHistory history = EditorHistoryNew(&state);
 
     const float startScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     Transform2D transform = Transform2DIdentity();
@@ -210,7 +212,7 @@ int main(int argc, char **argv) {
     int playingFrameTime = 0;
     Handle draggingHandle = NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
-    StringBuffer editingFrameDurationBuffer = EmptyStringBuffer();
+    StringBuffer editingFrameDurationBuffer = StringBufferNew();
 
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_EXIT) && IsKeyDown(KEY_EXIT_MODIFIER))
@@ -239,29 +241,29 @@ int main(int argc, char **argv) {
                     // guaranteed to be well-formatted because it only accepts valid characters.
                     int val = atoi(editingFrameDurationBuffer.raw);
                     state.frames[state.frameIdx].duration = val;
-                    CommitState(&history, &state);
+                    EditorHistoryCommitState(&history, &state);
                 }
                 mode = IDLE; // if the input is empty then revert to the old input.
             } else if (IsKeyPressed(KEY_FRAME_DURATION_DELETE)) {
-                RemoveChar(&editingFrameDurationBuffer);
+                StringBufferRemoveChar(&editingFrameDurationBuffer);
             } else {
                 int key = GetCharPressed();
                 if (key <= '9' && ((editingFrameDurationBuffer.length == 0 && '1' <= key) || '0' <= key)) {
-                    AppendChar(&editingFrameDurationBuffer, (char) key);
+                    StringBufferAddChar(&editingFrameDurationBuffer, (char) key);
                 }
             }
         } else if (mode == DRAGGING_HANDLE) {
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                CommitState(&history, &state);
+                EditorHistoryCommitState(&history, &state);
                 mode = IDLE;
             } else {
                 Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                SetCombatShapeHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle);
+                CombatShapeSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle);
                 // check to see if this fails (editor is in invalid state?)
             }
         } else if (mode == DRAGGING_FRAME_INFO_POS) { // code is similar to above, think about how to consolidate.
             if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                CommitState(&history, &state);
+                EditorHistoryCommitState(&history, &state);
                 mode = IDLE;
             } else {
                 Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
@@ -283,42 +285,42 @@ int main(int argc, char **argv) {
             ChangeOptions option = UNDO;
             if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
 
-            ChangeState(&history, &state, option);
+            EditorHistoryChangeState(&history, &state, option);
         } else if (IsKeyPressed(KEY_FRAME_DURATION_EDIT) && IsKeyDown(KEY_FRAME_DURATION_EDIT_MODIFIER)) {
             int frameDurationStrlen = snprintf(NULL, 0, "%i", state.frames[state.frameIdx].duration) + 1;
 
             char *frameDurationStr = malloc(frameDurationStrlen);
             snprintf(frameDurationStr, frameDurationStrlen, "%i", state.frames[state.frameIdx].duration);
             mode = FRAME_DURATION_EDIT;
-            ClearStringBuffer(&editingFrameDurationBuffer);
-            AppendString(&editingFrameDurationBuffer, frameDurationStr);
+            StringBufferClear(&editingFrameDurationBuffer);
+            StringBufferAddString(&editingFrameDurationBuffer, frameDurationStr);
         
         } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
-            AddFrame(&state);
+            EditorStateAddFrame(&state);
             state.frameIdx = state.frameCount - 1;
-            CommitState(&history, &state);
+            EditorHistoryCommitState(&history, &state);
             mode = IDLE;
         
         } else if (IsKeyPressed(KEY_REMOVE_FRAME) && IsKeyDown(KEY_REMOVE_FRAME_MODIFIER) && state.frameCount > 1) {
-            RemoveFrame(&state, state.frameIdx);
+            EditorStateRemoveFrame(&state, state.frameIdx);
             if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
-            CommitState(&history, &state);
+            EditorHistoryCommitState(&history, &state);
             mode = IDLE;
 
         } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
-            RemoveShape(&state, state.shapeIdx);
-            CommitState(&history, &state);
+            EditorStateRemoveShape(&state, state.shapeIdx);
+            EditorHistoryCommitState(&history, &state);
             mode = IDLE; 
         
         } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
             if (state.shapeIdx < 0) {
                 state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
             } else {
-                bool active = !GetShapeActive(&state, state.frameIdx, state.shapeIdx);
-                SetShapeActive(&state, state.frameIdx, state.shapeIdx, active);
+                bool active = !EditorStateShapeActiveGet(&state, state.frameIdx, state.shapeIdx);
+                EditorStateShapeActiveSet(&state, state.frameIdx, state.shapeIdx, active);
             }
             mode = IDLE;
-            CommitState(&history, &state);
+            EditorHistoryCommitState(&history, &state);
         
         } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
             CombatShape shape;
@@ -352,16 +354,17 @@ int main(int argc, char **argv) {
                     shape.hitboxKnockbackX = DEFAULT_HITBOX_KNOCKBACK_X;
                     shape.hitboxKnockbackY = DEFAULT_HITBOX_KNOCKBACK_Y;
                 }
-                AddShape(&state, shape);
+                EditorStateAddShape(&state, shape);
                 state.shapeIdx = state.shapeCount - 1;
-                CommitState(&history, &state);
+                EditorHistoryCommitState(&history, &state);
                 mode = IDLE;
             }
         } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
-            if (IsCollidingHandle(transform, mousePos, state.frames[state.frameIdx].pos)) {
+            if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                 mode = DRAGGING_FRAME_INFO_POS;
             } else {
-                draggingHandle = state.shapeIdx >= 0 ? SelectCombatShapeHandle(transform, mousePos, state.shapes[state.shapeIdx]) : NONE;
+                draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
+                                                                               state.shapes[state.shapeIdx]) : NONE;
                 if (draggingHandle != NONE) {
                     mode = DRAGGING_HANDLE;
                 } else {
@@ -431,8 +434,8 @@ int main(int argc, char **argv) {
 
         // draw combat shapes
         for (int i = 0; i < state.shapeCount; i++) {
-            if (GetShapeActive(&state, state.frameIdx, i)) { 
-                DrawCombatShape(transform, state.shapes[i], i == state.shapeIdx);
+            if (EditorStateShapeActiveGet(&state, state.frameIdx, i)) {
+                CombatShapeDraw(transform, state.shapes[i], i == state.shapeIdx);
             }
         }
         
@@ -442,7 +445,7 @@ int main(int argc, char **argv) {
             DrawCircle(globalFramePosPrevious.x, globalFramePosPrevious.y, HANDLE_RADIUS, COLOR_FRAME_POS_HANDLE_PREVIOUS);  
         }
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
-        DrawHandle(globalFramePos, COLOR_FRAME_POS_HANDLE);
+        HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
 
         // draw frame duration text
         if (mode == FRAME_DURATION_EDIT) {
@@ -450,7 +453,7 @@ int main(int argc, char **argv) {
         } else {
             DrawText(TextFormat("Frame Duration: %d ms", state.frames[state.frameIdx].duration), 0, 0, fontSize, COLOR_FRAME_DURATION_TEXT);
         }
-
+        
         // draw timeline
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
@@ -470,7 +473,7 @@ int main(int argc, char **argv) {
             DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
             for (int j = 0; j < state.shapeCount; j++) {
                 Color color;
-                bool active = GetShapeActive(&state, i, j);
+                bool active = EditorStateShapeActiveGet(&state, i, j);
                 if (state.shapes[j].boxType == HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
                 else
@@ -483,9 +486,9 @@ int main(int argc, char **argv) {
         EndDrawing();
     }
 
-    FreeStringBuffer(&editingFrameDurationBuffer);
-    FreeEditorHistory(&history);
-    FreeEditorState(&state);
+    StringBufferFree(&editingFrameDurationBuffer);
+    EditorHistoryFree(&history);
+    EditorStateFree(&state);
     UnloadTexture(texture);
     free(savePath);
     CloseWindow();

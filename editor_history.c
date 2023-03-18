@@ -6,7 +6,7 @@
 #include "string_buffer.h"
 #include "editor_history.h"
 
-EditorState AllocEditorState(int frameCount) {
+EditorState EditorStateNew(int frameCount) {
     FrameInfo *frames = malloc(sizeof(FrameInfo) * frameCount);
     for (int i = 0; i < frameCount; i++) frames[i] = FRAME_INFO_DEFAULT;
 
@@ -21,21 +21,21 @@ EditorState AllocEditorState(int frameCount) {
     };
 }
 
-void FreeEditorState(EditorState *state) {
+void EditorStateFree(EditorState *state) {
     free(state->shapes);
     free(state->_shapeActiveFrames);
     free(state->frames);
 }
 
-bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx) {
+bool EditorStateShapeActiveGet(EditorState *state, int frameIdx, int shapeIdx) {
     return state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx];
 }
 
-void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool active) {
-    state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = active;
+void EditorStateShapeActiveSet(EditorState *state, int frameIdx, int shapeIdx, bool enabled) {
+    state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = enabled;
 }
 
-void AddShape(EditorState *state, CombatShape shape) {
+void EditorStateAddShape(EditorState *state, CombatShape shape) {
     int oldMax = state->shapeCount * state->frameCount;
     state->shapeCount++;
     state->shapes = realloc(state->shapes, sizeof(CombatShape) * state->shapeCount);
@@ -45,7 +45,7 @@ void AddShape(EditorState *state, CombatShape shape) {
     memset(state->_shapeActiveFrames + oldMax, false, (newMax - oldMax) * sizeof(bool));
 }
 
-bool RemoveShape(EditorState *state, int idx) {
+bool EditorStateRemoveShape(EditorState *state, int idx) {
     if (idx < 0 || idx >= state->shapeCount) return false;
     
     for (int shapeIdx = idx + 1; shapeIdx < state->shapeCount; shapeIdx++) {
@@ -61,7 +61,7 @@ bool RemoveShape(EditorState *state, int idx) {
     return true;
 }
 
-void AddFrame(EditorState *state) {
+void EditorStateAddFrame(EditorState *state) {
     state->frameCount++; 
     state->frames = realloc(state->frames, sizeof(FrameInfo) * state->frameCount);
     state->frames[state->frameCount - 1] = state->frames[state->frameCount - 2];
@@ -74,7 +74,7 @@ void AddFrame(EditorState *state) {
     }
 }
 
-bool RemoveFrame(EditorState *state, int idx) {
+bool EditorStateRemoveFrame(EditorState *state, int idx) {
     if (idx < 0 || idx >= state->frameCount || state->frameCount == 1) return false;
     int activeLen = state->frameCount * state->shapeCount;
     for (int i = 0; i < activeLen; i++) {
@@ -111,7 +111,7 @@ EditorState EditorStateDeepCopy(EditorState *state) {
 }
 
 /// clones everything passed in, is safe.
-EditorHistory AllocEditorHistory(EditorState *initial) {
+EditorHistory EditorHistoryNew(EditorState *initial) {
     EditorHistory history;
     history._states = malloc(sizeof(EditorState) * HISTORY_BUFFER_SIZE_INCREMENT);
     history._states[0] = EditorStateDeepCopy(initial);
@@ -121,16 +121,16 @@ EditorHistory AllocEditorHistory(EditorState *initial) {
     return history;
 }
 
-void FreeEditorHistory(EditorHistory *history) {
+void EditorHistoryFree(EditorHistory *history) {
     for (int i = 0; i <= history->_mostRecentStateIdx; i++) {
-        FreeEditorState(&history->_states[i]);
+        EditorStateFree(&history->_states[i]);
     }
     free(history->_states);
 }
 
-void CommitState(EditorHistory *history, EditorState *state) {
+void EditorHistoryCommitState(EditorHistory *history, EditorState *state) {
     for (int i = history->_currentStateIdx + 1; i <= history->_mostRecentStateIdx; i++) {
-        FreeEditorState(&history->_states[i]);
+        EditorStateFree(&history->_states[i]);
     }
 
     history->_currentStateIdx++;
@@ -149,7 +149,7 @@ void CommitState(EditorHistory *history, EditorState *state) {
 /// @param history 
 /// @param state Replaced with the state changed to. All cleanup is done automatically. 
 /// @param option 
-void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions option) {
+void EditorHistoryChangeState(EditorHistory *history, EditorState *state, ChangeOptions option) {
     if (option == UNDO){
         if (history->_currentStateIdx <= 0) return;
         history->_currentStateIdx--;
@@ -160,16 +160,16 @@ void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions optio
 
     EditorState oldState = *state;
     *state = EditorStateDeepCopy(&history->_states[history->_currentStateIdx]);
-    FreeEditorState(&oldState);
+    EditorStateFree(&oldState);
 }
 
 
 
-cJSON *SerializeState(EditorState state) {
+cJSON *EditorStateSerialize(EditorState state) {
     cJSON *shapes = cJSON_CreateArray();
 
     for (int i = 0; i < state.shapeCount; i++) { // should not enter if state.shapes is null cause count is also 0
-        cJSON *shape = SerializeShape(state.shapes[i]);
+        cJSON *shape = CombatShapeSerialize(state.shapes[i]);
         if (!shape) {
             cJSON_Delete(shapes);
             return NULL;
@@ -205,7 +205,7 @@ cJSON *SerializeState(EditorState state) {
     return json;
 }
 
-bool DeserializeState(cJSON *json, EditorState *state) {
+bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     if (!cJSON_IsObject(json)) return false;
     
     cJSON *version = cJSON_GetObjectItem(json, STR_VERSION);
@@ -214,7 +214,7 @@ bool DeserializeState(cJSON *json, EditorState *state) {
         if (!frameDurations || !cJSON_IsArray(frameDurations)) return false;
         int frameCount = cJSON_GetArraySize(frameDurations);
         if (frameCount <= 0) return false;
-        *state = AllocEditorState(frameCount);
+        *state = EditorStateNew(frameCount);
         
         cJSON *frameDuration;
         int frameIdx = 0;
@@ -234,7 +234,7 @@ bool DeserializeState(cJSON *json, EditorState *state) {
         cJSON *frames = cJSON_GetObjectItem(json, STR_FRAMES);
         if (!frames || !cJSON_IsArray(frames)) return false;
         int frameCount = cJSON_GetArraySize(frames);
-        *state = AllocEditorState(frameCount);
+        *state = EditorStateNew(frameCount);
 
         cJSON *frame;
         int frameIdx = 0;
@@ -266,8 +266,8 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     cJSON *jsonShape;
     cJSON_ArrayForEach(jsonShape, shapes) {
         CombatShape shape;
-        if (!DeserializeShape(jsonShape, &shape)) goto fail;
-        AddShape(state, shape);
+        if (!CombatShapeDeserialize(jsonShape, &shape)) goto fail;
+        EditorStateAddShape(state, shape);
     }
 
     cJSON *activeFrames = cJSON_GetObjectItem(json, STR_SHAPE_ACTIVE_FRAMES);
@@ -284,32 +284,32 @@ bool DeserializeState(cJSON *json, EditorState *state) {
     return true;
 
     fail:
-    FreeEditorState(state);
+    EditorStateFree(state);
     return false;
 }
 
 bool EditorStateReadFromFile(EditorState *state, const char *path) {
     FILE *file = fopen(path, "r+");
     if (!file) return false;
-    StringBuffer buffer = EmptyStringBuffer();
+    StringBuffer buffer = StringBufferNew();
     int c;
     while ((c = fgetc(file)) != EOF) {
-        AppendChar(&buffer, (char) c);
+        StringBufferAddChar(&buffer, (char) c);
     }
 
     fclose(file);
     cJSON *json = cJSON_Parse(buffer.raw);
-    FreeStringBuffer(&buffer);
+    StringBufferFree(&buffer);
 
     if (!json) return false;
     
-    bool success = DeserializeState(json, state);
+    bool success = EditorStateDeserialize(json, state);
     cJSON_Delete(json);
     return success;
 }
 
 bool EditorStateWriteToFile(EditorState *state, const char *path) {
-    cJSON *json = SerializeState(*state);
+    cJSON *json = EditorStateSerialize(*state);
     if (!json) return false;
     
     char *str = cJSON_Print(json);

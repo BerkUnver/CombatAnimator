@@ -1,5 +1,5 @@
 APP = cac
-FILES = main.c combat_shape.h combat_shape.c editor_history.h editor_history.c string_buffer.h string_buffer.c transform_2d.h transform_2d.c
+FILES = main.c combat_shape.c editor_history.c string_buffer.c transform_2d.c
 
 run:
 	make build

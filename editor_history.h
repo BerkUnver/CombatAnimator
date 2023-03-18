@@ -53,26 +53,26 @@ typedef enum ChangeOptions {
     REDO
 } ChangeOptions;
 
-EditorState AllocEditorState(int frameCount);
-void FreeEditorState(EditorState *state);
-bool GetShapeActive(EditorState *state, int frameIdx, int shapeIdx);
-void SetShapeActive(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
+EditorState EditorStateNew(int frameCount);
+void EditorStateFree(EditorState *state);
+bool EditorStateShapeActiveGet(EditorState *state, int frameIdx, int shapeIdx);
+void EditorStateShapeActiveSet(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 
 
-void AddShape(EditorState *state, CombatShape shape);
-bool RemoveShape(EditorState *state, int idx);
-void AddFrame(EditorState *state);
-bool RemoveFrame(EditorState *state, int idx);
+void EditorStateAddShape(EditorState *state, CombatShape shape);
+bool EditorStateRemoveShape(EditorState *state, int idx);
+void EditorStateAddFrame(EditorState *state);
+bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
-cJSON *SerializeState(EditorState state);
-bool DeserializeState(cJSON *json, EditorState *state);
+cJSON *EditorStateSerialize(EditorState state);
+bool EditorStateDeserialize(cJSON *json, EditorState *state);
 bool EditorStateReadFromFile(EditorState *state, const char *path);
 bool EditorStateWriteToFile(EditorState *state, const char *path);
 
-EditorHistory AllocEditorHistory(EditorState *initial);
-void FreeEditorHistory(EditorHistory *history);
+EditorHistory EditorHistoryNew(EditorState *initial);
+void EditorHistoryFree(EditorHistory *history);
 
-void CommitState(EditorHistory *history, EditorState *state);
-void ChangeState(EditorHistory *history, EditorState *state, ChangeOptions option);
+void EditorHistoryCommitState(EditorHistory *history, EditorState *state);
+void EditorHistoryChangeState(EditorHistory *history, EditorState *state, ChangeOptions option);
 
 #endif
