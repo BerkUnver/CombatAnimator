@@ -1,13 +1,11 @@
 {
 	"magic":	"CombatAnimator",
-	"version":	3,
+	"version":	1,
 	"shapeActiveFrames":	[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
 	"shapes":	[{
 			"rectangleRightX":	32,
 			"rectangleBottomY":	9,
 			"shapeType":	"RECTANGLE",
-			"hitboxStun":	1000,
-			"hitboxDamage":	0,
 			"hitboxKnockbackX":	22,
 			"hitboxKnockbackY":	-5,
 			"boxType":	"HITBOX",
@@ -17,8 +15,6 @@
 			"rectangleRightX":	31,
 			"rectangleBottomY":	21,
 			"shapeType":	"RECTANGLE",
-			"hitboxStun":	1000,
-			"hitboxDamage":	0,
 			"hitboxKnockbackX":	16,
 			"hitboxKnockbackY":	-6,
 			"boxType":	"HITBOX",
@@ -28,8 +24,6 @@
 			"rectangleRightX":	39,
 			"rectangleBottomY":	27,
 			"shapeType":	"RECTANGLE",
-			"hitboxStun":	1000,
-			"hitboxDamage":	0,
 			"hitboxKnockbackX":	29,
 			"hitboxKnockbackY":	-5,
 			"boxType":	"HITBOX",
@@ -73,83 +67,51 @@
 		}],
 	"frames":	[{
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}, {
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}, {
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	false,
-			"x":	80,
-			"y":	64
+			"canCancel":	false
 		}, {
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}, {
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}, {
 			"duration":	100,
-			"canCancel":	true,
-			"x":	80,
-			"y":	64
+			"canCancel":	true
 		}]
 }

@@ -35,6 +35,8 @@
 #define DEFAULT_CAPSULE_HEIGHT 24.0f
 
 #define STR_HITBOX "HITBOX"
+#define STR_HITBOX_STUN "hitboxStun"
+#define STR_HITBOX_DAMAGE "hitboxDamage"
 #define STR_HITBOX_KNOCKBACK_X "hitboxKnockbackX"
 #define STR_HITBOX_KNOCKBACK_Y "hitboxKnockbackY"
 #define STR_HURTBOX "HURTBOX"
@@ -101,7 +103,7 @@ typedef struct CombatShape {
 CombatShape CombatShapeNew(ShapeType shapeType, BoxType boxType);
 
 cJSON *CombatShapeSerialize(CombatShape shape);
-bool CombatShapeDeserialize(cJSON *json, CombatShape *out);
+bool CombatShapeDeserialize(cJSON *json, int version, CombatShape *out);
 
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);

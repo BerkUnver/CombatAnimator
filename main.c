@@ -20,6 +20,7 @@
 
 #define FILE_EXTENSION "json"
 #define FLAG_UPDATE "-u"
+#define FLAG_TEST "-t"
 #define APP_NAME "Combat Animator"
 #define DEFAULT_SPRITE_WINDOW_X 800
 #define DEFAULT_SPRITE_WINDOW_Y 400
@@ -131,7 +132,7 @@ void RecursiveUpdate(const char *path) {
             if (dot && strcmp(dot, "."FILE_EXTENSION) == 0) {
                 EditorState state;
                 if (EditorStateReadFromFile(&state, fullPath.raw)) {
-                    cJSON *json = EditorStateSerialize(state);
+                    cJSON *json = EditorStateSerialize(&state);
                     EditorStateWriteToFile(&state, fullPath.raw);
                     cJSON_Delete(json);
                     EditorStateFree(&state);
@@ -152,8 +153,18 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (strcmp(argv[1], FLAG_UPDATE) == 0) { // first argument is to recursively update all files in the given folder.    
+    if (!strcmp(argv[1], FLAG_UPDATE)) { // first argument is to recursively update all files in the given folder.    
         RecursiveUpdate(".");
+        return EXIT_SUCCESS;
+    } else if (!strcmp(argv[1], FLAG_TEST)) {
+        for (int i = 0; i < VERSION_NUMBER; i++) { // make sure each version can still deserialize
+            char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
+            sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
+            EditorState state;
+            bool success = EditorStateReadFromFile(&state, fileName);
+            if (success) EditorStateFree(&state);
+            printf("Version %i Deserialize success: %s\n", i, success ? "yes" : "no");
+        }
         return EXIT_SUCCESS;
     }
 

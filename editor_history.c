@@ -165,11 +165,11 @@ void EditorHistoryChangeState(EditorHistory *history, EditorState *state, Change
 
 
 
-cJSON *EditorStateSerialize(EditorState state) {
+cJSON *EditorStateSerialize(EditorState *state) {
     cJSON *shapes = cJSON_CreateArray();
 
-    for (int i = 0; i < state.shapeCount; i++) { // should not enter if state.shapes is null cause count is also 0
-        cJSON *shape = CombatShapeSerialize(state.shapes[i]);
+    for (int i = 0; i < state->shapeCount; i++) { // should not enter if state.shapes is null cause count is also 0
+        cJSON *shape = CombatShapeSerialize(state->shapes[i]);
         if (!shape) {
             cJSON_Delete(shapes);
             return NULL;
@@ -178,16 +178,16 @@ cJSON *EditorStateSerialize(EditorState state) {
     }
 
     cJSON *activeFrames = cJSON_CreateArray();
-    int activeCount = state.frameCount * state.shapeCount;
+    int activeCount = state->frameCount * state->shapeCount;
     for (int i = 0; i < activeCount; i++) {
-        cJSON *val = cJSON_CreateNumber(state._shapeActiveFrames[i]);
+        cJSON *val = cJSON_CreateNumber(state->_shapeActiveFrames[i]);
         cJSON_AddItemToArray(activeFrames, val);
     }
 
     cJSON *frames = cJSON_CreateArray();
-    for (int i = 0; i < state.frameCount; i++) {
+    for (int i = 0; i < state->frameCount; i++) {
         cJSON *frame = cJSON_CreateObject();
-        FrameInfo frameInfo = state.frames[i];
+        FrameInfo frameInfo = state->frames[i];
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_DURATION, frameInfo.duration);
         cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
@@ -208,8 +208,19 @@ cJSON *EditorStateSerialize(EditorState state) {
 bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     if (!cJSON_IsObject(json)) return false;
     
-    cJSON *version = cJSON_GetObjectItem(json, STR_VERSION);
-    if (!version) {
+    cJSON *version_json = cJSON_GetObjectItem(json, STR_VERSION);
+    int version;
+    if (!version_json)
+        version = 0;
+    else if (!cJSON_IsNumber(version_json)) 
+        return false;
+    else {
+        int v = cJSON_GetNumberValue(version_json);
+        if (v <= 0 || VERSION_NUMBER < v) return false;
+        version = v;
+    }
+
+    if (version == 0) {
         cJSON *frameDurations = cJSON_GetObjectItem(json, STR_FRAME_DURATIONS);
         if (!frameDurations || !cJSON_IsArray(frameDurations)) return false;
         int frameCount = cJSON_GetArraySize(frameDurations);
@@ -224,10 +235,6 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
             frameIdx++;
         }
     } else {
-        if (!cJSON_IsNumber(version)) return false;
-        int version_number = cJSON_GetNumberValue(version);
-        if (version_number <= 0 || version_number > VERSION_NUMBER) return false;
-
         cJSON *magic = cJSON_GetObjectItem(json, STR_MAGIC);
         if (!magic || !cJSON_IsString(magic) || strcmp(cJSON_GetStringValue(magic), STR_MAGIC_VALUE) != 0) return false;
         
@@ -249,7 +256,7 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
             if (!canCancel || !cJSON_IsBool(canCancel)) goto fail;
             state->frames[frameIdx].canCancel = cJSON_IsTrue(canCancel);
 
-            if (version_number > 1) {
+            if (version > 1) {
                 cJSON *x = cJSON_GetObjectItem(frame, STR_FRAME_INFO_X);
                 if (!x || !cJSON_IsNumber(x)) goto fail;
                 cJSON *y = cJSON_GetObjectItem(frame, STR_FRAME_INFO_Y);
@@ -266,7 +273,7 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     cJSON *jsonShape;
     cJSON_ArrayForEach(jsonShape, shapes) {
         CombatShape shape;
-        if (!CombatShapeDeserialize(jsonShape, &shape)) goto fail;
+        if (!CombatShapeDeserialize(jsonShape, version, &shape)) goto fail;
         EditorStateAddShape(state, shape);
     }
 
@@ -309,7 +316,7 @@ bool EditorStateReadFromFile(EditorState *state, const char *path) {
 }
 
 bool EditorStateWriteToFile(EditorState *state, const char *path) {
-    cJSON *json = EditorStateSerialize(*state);
+    cJSON *json = EditorStateSerialize(state);
     if (!json) return false;
     
     char *str = cJSON_Print(json);

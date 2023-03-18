@@ -21,9 +21,11 @@
 #define STR_MAGIC_VALUE "CombatAnimator"
 #define STR_VERSION "version"
 
-// no version: uses frameDurations instead of frames. Rest of frame fields are set to default.
-// version 1: no x or y for each frame. They are set to default.
-#define VERSION_NUMBER 2
+// no version: initial version. Treated as 0 internally.
+// 1: changed frameDurations array to frames array. Each frame is a struct containing whether or not it is cancellable and its duration in ms.
+// 2: Added position Vector2 for each frame that indicates the root movement of the character doing the animation.
+// 3: Added hitbox stun and hitbox damage to CombatShape.
+#define VERSION_NUMBER 3
 
 typedef struct FrameInfo {
     int duration;
@@ -64,7 +66,7 @@ bool EditorStateRemoveShape(EditorState *state, int idx);
 void EditorStateAddFrame(EditorState *state);
 bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
-cJSON *EditorStateSerialize(EditorState state);
+cJSON *EditorStateSerialize(EditorState *state);
 bool EditorStateDeserialize(cJSON *json, EditorState *state);
 bool EditorStateReadFromFile(EditorState *state, const char *path);
 bool EditorStateWriteToFile(EditorState *state, const char *path);

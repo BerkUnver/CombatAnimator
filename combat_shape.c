@@ -78,6 +78,8 @@ cJSON *CombatShapeSerialize(CombatShape shape) {
     switch(shape.boxType) {
         case HITBOX:
             boxType = STR_HITBOX;
+            cJSON_AddNumberToObject(json, STR_HITBOX_STUN, shape.hitboxStun);
+            cJSON_AddNumberToObject(json, STR_HITBOX_DAMAGE, shape.hitboxDamage); 
             cJSON_AddNumberToObject(json, STR_HITBOX_KNOCKBACK_X, shape.hitboxKnockbackX);
             cJSON_AddNumberToObject(json, STR_HITBOX_KNOCKBACK_Y, shape.hitboxKnockbackY);
             break;
@@ -98,7 +100,7 @@ cJSON *CombatShapeSerialize(CombatShape shape) {
 }
 
 // all boilerplate
-bool CombatShapeDeserialize(cJSON *json, CombatShape *out) {
+bool CombatShapeDeserialize(cJSON *json, int version, CombatShape *out) {
     if (!cJSON_IsObject(json)) return false;
     
     out->transform = Transform2DIdentity();
@@ -152,11 +154,23 @@ bool CombatShapeDeserialize(cJSON *json, CombatShape *out) {
         cJSON *knockbackY = cJSON_GetObjectItem(json, STR_HITBOX_KNOCKBACK_Y);
         if (!knockbackY || !cJSON_IsNumber(knockbackY)) return false;
 
+        if (version >= 3) {
+            cJSON *damage = cJSON_GetObjectItem(json, STR_HITBOX_DAMAGE);
+            if (!damage || !cJSON_IsNumber(damage)) return false;
+            cJSON *stun = cJSON_GetObjectItem(json, STR_HITBOX_STUN);
+            if (!stun || !cJSON_IsNumber(stun)) return false;
+
+            out->hitboxDamage = (int) cJSON_GetNumberValue(damage);
+            out->hitboxStun = (int) cJSON_GetNumberValue(stun);
+        } else {
+            out->hitboxStun = DEFAULT_HITBOX_STUN;
+            out->hitboxDamage = DEFAULT_HITBOX_DAMAGE;
+        }
+
         out->boxType = HITBOX;
-        out->hitboxStun = DEFAULT_HITBOX_STUN;
-        out->hitboxDamage = DEFAULT_HITBOX_DAMAGE;
         out->hitboxKnockbackX = (int) cJSON_GetNumberValue(knockbackX);
         out->hitboxKnockbackY = (int) cJSON_GetNumberValue(knockbackY);
+
     } else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) {
         out->boxType = HURTBOX;
     } else return false;
