@@ -23,6 +23,17 @@
 #define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
 #define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
+#define DEFAULT_HITBOX_KNOCKBACK_X 2
+#define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
+#define DEFAULT_HITBOX_DAMAGE 0
+#define DEFAULT_HITBOX_STUN 1000
+
+#define DEFAULT_CIRCLE_RADIUS 24.0f
+#define DEFAULT_RECTANGLE_RIGHT_X 24.0f
+#define DEFAULT_RECTANGLE_BOTTOM_Y 24.0f
+#define DEFAULT_CAPSULE_RADIUS 24.0f
+#define DEFAULT_CAPSULE_HEIGHT 24.0f
+
 #define STR_HITBOX "HITBOX"
 #define STR_HITBOX_KNOCKBACK_X "hitboxKnockbackX"
 #define STR_HITBOX_KNOCKBACK_Y "hitboxKnockbackY"
@@ -80,10 +91,14 @@ typedef struct CombatShape {
     BoxType boxType;
     int hitboxKnockbackX; // defined only if boxType is HITBOX
     int hitboxKnockbackY;
+    int hitboxDamage;
+    int hitboxStun;
     ShapeType shapeType;
     ShapeData data;
     Transform2D transform;
 } CombatShape;
+
+CombatShape CombatShapeNew(ShapeType shapeType, BoxType boxType);
 
 cJSON *CombatShapeSerialize(CombatShape shape);
 bool CombatShapeDeserialize(cJSON *json, CombatShape *out);

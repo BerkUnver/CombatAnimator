@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,6 +8,43 @@
 #include "cjson/cJSON.h"
 #include "combat_shape.h"
 #include "transform_2d.h"
+
+CombatShape CombatShapeNew(ShapeType shapeType, BoxType boxType) {
+    CombatShape shape;
+    switch (shapeType) {
+        case CIRCLE:
+            shape.data.circleRadius = DEFAULT_CIRCLE_RADIUS;
+            break;
+        case RECTANGLE:
+            shape.data.rectangle.rightX = DEFAULT_RECTANGLE_RIGHT_X;
+            shape.data.rectangle.bottomY = DEFAULT_RECTANGLE_BOTTOM_Y;
+            break;
+        case CAPSULE:
+            shape.data.capsule.radius = DEFAULT_CAPSULE_RADIUS;
+            shape.data.capsule.height = DEFAULT_CAPSULE_HEIGHT;
+            break;
+        default:
+            assert(false);
+            break;
+    }
+    shape.shapeType = shapeType;
+
+    switch (boxType) {
+        case HURTBOX: break;
+        case HITBOX:
+            shape.hitboxStun = DEFAULT_HITBOX_STUN;
+            shape.hitboxDamage = DEFAULT_HITBOX_DAMAGE;
+            shape.hitboxKnockbackX = DEFAULT_HITBOX_KNOCKBACK_X;
+            shape.hitboxKnockbackY = DEFAULT_HITBOX_KNOCKBACK_Y;
+            break;
+        default:
+            assert(false);
+            break;
+    }
+    shape.transform = Transform2DIdentity();
+    shape.boxType = boxType;
+    return shape;
+}
 
 cJSON *CombatShapeSerialize(CombatShape shape) {
     const char *shapeType;
@@ -115,6 +153,8 @@ bool CombatShapeDeserialize(cJSON *json, CombatShape *out) {
         if (!knockbackY || !cJSON_IsNumber(knockbackY)) return false;
 
         out->boxType = HITBOX;
+        out->hitboxStun = DEFAULT_HITBOX_STUN;
+        out->hitboxDamage = DEFAULT_HITBOX_DAMAGE;
         out->hitboxKnockbackX = (int) cJSON_GetNumberValue(knockbackX);
         out->hitboxKnockbackY = (int) cJSON_GetNumberValue(knockbackY);
     } else if (strcmp(boxTypeStr, STR_HURTBOX) == 0) {

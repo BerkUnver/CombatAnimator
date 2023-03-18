@@ -1,4 +1,6 @@
+#include <assert.h>
 #include <dirent.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,21 +48,9 @@
 #define KEY_NEW_RECTANGLE KEY_TWO
 #define KEY_NEW_CAPSULE KEY_THREE
 
-#define COLOR_FRAME_DURATION_TEXT RAYWHITE
-#define KEY_FRAME_DURATION_EDIT KEY_D
-#define KEY_FRAME_DURATION_EDIT_MODIFIER KEY_LEFT_CONTROL
-#define KEY_FRAME_DURATION_ENTER_NEW KEY_ENTER
-#define KEY_FRAME_DURATION_DELETE KEY_BACKSPACE
 #define KEY_FRAME_TOGGLE KEY_SPACE
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
 #define COLOR_FRAME_POS_HANDLE_PREVIOUS (Color) {161, 78, 0, 255}
-#define DEFAULT_HITBOX_KNOCKBACK_X 2
-#define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
-#define DEFAULT_CIRCLE_RADIUS 24.0f
-#define DEFAULT_RECTANGLE_RIGHT_X 24.0f
-#define DEFAULT_RECTANGLE_BOTTOM_Y 24.0f
-#define DEFAULT_CAPSULE_RADIUS 24.0f
-#define DEFAULT_CAPSULE_HEIGHT 24.0f
 
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
@@ -119,7 +109,7 @@ void RecursiveUpdate(const char *path) {
     }
 
     struct dirent *directoryEntry; // works because this is only accessed before recursive update call.
-    // This is stored in static memory so it gets overwritten when readdir is called again.
+    // This is stored in static memory, so it gets overwritten when readdir is called again.
     
     while ((directoryEntry = readdir(dir))) {
         // it would be very bad if this didn't work
@@ -179,6 +169,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
     const int fontSize = GetFontDefault().baseSize;
 
     // load state from file or create new state if load failed
@@ -201,18 +192,20 @@ int main(int argc, char **argv) {
     
 
     typedef enum Mode {
-        IDLE,
-        PLAYING,
-        DRAGGING_HANDLE,
-        DRAGGING_FRAME_INFO_POS,
-        PANNING_SPRITE,
-        FRAME_DURATION_EDIT
+        MODE_IDLE,
+        MODE_PLAYING,
+        MODE_DRAGGING_HANDLE,
+        MODE_DRAGGING_FRAME_POS,
+        MODE_PANNING_SPRITE,
+        MODE_EDIT_FRAME_DURATION,
+        MODE_EDIT_HITBOX_DAMAGE,
+        MODE_EDIT_HITBOX_STUN
     } Mode;
-    Mode mode = IDLE;
+    Mode mode = MODE_IDLE;
+
     int playingFrameTime = 0;
     Handle draggingHandle = NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
-    StringBuffer editingFrameDurationBuffer = StringBufferNew();
 
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_EXIT) && IsKeyDown(KEY_EXIT_MODIFIER))
@@ -235,170 +228,154 @@ int main(int argc, char **argv) {
             transform.o = Vector2Subtract(mousePos, Transform2DBasisXFormInv(transform, localMousePos));
         }
         
-        if (mode == FRAME_DURATION_EDIT) {
-            if (IsKeyPressed(KEY_FRAME_DURATION_ENTER_NEW)) {
-                if (editingFrameDurationBuffer.length > 0) {
-                    // guaranteed to be well-formatted because it only accepts valid characters.
-                    int val = atoi(editingFrameDurationBuffer.raw);
-                    state.frames[state.frameIdx].duration = val;
+        switch (mode) {
+            case MODE_EDIT_FRAME_DURATION:
+            case MODE_EDIT_HITBOX_DAMAGE:
+            case MODE_EDIT_HITBOX_STUN:
+                if (IsKeyPressed(KEY_ENTER)) {
                     EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 }
-                mode = IDLE; // if the input is empty then revert to the old input.
-            } else if (IsKeyPressed(KEY_FRAME_DURATION_DELETE)) {
-                StringBufferRemoveChar(&editingFrameDurationBuffer);
-            } else {
-                int key = GetCharPressed();
-                if (key <= '9' && ((editingFrameDurationBuffer.length == 0 && '1' <= key) || '0' <= key)) {
-                    StringBufferAddChar(&editingFrameDurationBuffer, (char) key);
-                }
-            }
-        } else if (mode == DRAGGING_HANDLE) {
-            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                EditorHistoryCommitState(&history, &state);
-                mode = IDLE;
-            } else {
-                Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                CombatShapeSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle);
-                // check to see if this fails (editor is in invalid state?)
-            }
-        } else if (mode == DRAGGING_FRAME_INFO_POS) { // code is similar to above, think about how to consolidate.
-            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                EditorHistoryCommitState(&history, &state);
-                mode = IDLE;
-            } else {
-                Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
-            }
-        } else if (mode == PANNING_SPRITE) {
-            if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                mode = IDLE;
-            } else {
-                Vector2 globalPan = Transform2DToGlobal(transform, panningSpriteLocalPos);
-                transform.o = Vector2Add(transform.o, Vector2Subtract(mousePos, globalPan));
-            }
-        } else if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
-            if (!EditorStateWriteToFile(&state, savePath)) {
-                puts("Failed to save file for unknown reason.");
-            }
-        } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
-            mode = IDLE;
-            ChangeOptions option = UNDO;
-            if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
+                break;
 
-            EditorHistoryChangeState(&history, &state, option);
-        } else if (IsKeyPressed(KEY_FRAME_DURATION_EDIT) && IsKeyDown(KEY_FRAME_DURATION_EDIT_MODIFIER)) {
-            int frameDurationStrlen = snprintf(NULL, 0, "%i", state.frames[state.frameIdx].duration) + 1;
-
-            char *frameDurationStr = malloc(frameDurationStrlen);
-            snprintf(frameDurationStr, frameDurationStrlen, "%i", state.frames[state.frameIdx].duration);
-            mode = FRAME_DURATION_EDIT;
-            StringBufferClear(&editingFrameDurationBuffer);
-            StringBufferAddString(&editingFrameDurationBuffer, frameDurationStr);
-        
-        } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
-            EditorStateAddFrame(&state);
-            state.frameIdx = state.frameCount - 1;
-            EditorHistoryCommitState(&history, &state);
-            mode = IDLE;
-        
-        } else if (IsKeyPressed(KEY_REMOVE_FRAME) && IsKeyDown(KEY_REMOVE_FRAME_MODIFIER) && state.frameCount > 1) {
-            EditorStateRemoveFrame(&state, state.frameIdx);
-            if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
-            EditorHistoryCommitState(&history, &state);
-            mode = IDLE;
-
-        } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
-            EditorStateRemoveShape(&state, state.shapeIdx);
-            EditorHistoryCommitState(&history, &state);
-            mode = IDLE; 
-        
-        } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
-            if (state.shapeIdx < 0) {
-                state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
-            } else {
-                bool active = !EditorStateShapeActiveGet(&state, state.frameIdx, state.shapeIdx);
-                EditorStateShapeActiveSet(&state, state.frameIdx, state.shapeIdx, active);
-            }
-            mode = IDLE;
-            EditorHistoryCommitState(&history, &state);
-        
-        } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
-            CombatShape shape;
-            shape.transform = Transform2DIdentity(); // todo : make proper init function for combatshape
-            bool newShapeInstanced = true;
-            if (IsKeyPressed(KEY_NEW_CIRCLE)) {
-                shape.shapeType = CIRCLE;
-                shape.data.circleRadius = DEFAULT_CIRCLE_RADIUS;
-            } else if (IsKeyPressed(KEY_NEW_RECTANGLE)) {
-                shape.shapeType = RECTANGLE;
-                shape.data.rectangle.rightX = DEFAULT_RECTANGLE_RIGHT_X;
-                shape.data.rectangle.bottomY = DEFAULT_RECTANGLE_BOTTOM_Y;
-            } else if (IsKeyPressed(KEY_NEW_CAPSULE)) {
-                shape.shapeType = CAPSULE;
-                shape.data.capsule.radius = DEFAULT_CAPSULE_RADIUS;
-                shape.data.capsule.height = DEFAULT_CAPSULE_HEIGHT;
-            } else {
-                newShapeInstanced = false;
-            }
-
-            if (newShapeInstanced) {
-                shape.transform.o = (Vector2) { // spawn shape at center of frame.
-                    .x = (float) texture.width / (float) (state.frameCount * 2), 
-                    .y = (float) texture.height / 2.0f
-                };
-
-                if (IsKeyDown(KEY_NEW_HURTBOX_MODIFIER)) {
-                    shape.boxType = HURTBOX;
+            case MODE_DRAGGING_HANDLE:
+                if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 } else {
-                    shape.boxType = HITBOX;
-                    shape.hitboxKnockbackX = DEFAULT_HITBOX_KNOCKBACK_X;
-                    shape.hitboxKnockbackY = DEFAULT_HITBOX_KNOCKBACK_Y;
+                    Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
+                    assert(CombatShapeSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle));
                 }
-                EditorStateAddShape(&state, shape);
-                state.shapeIdx = state.shapeCount - 1;
-                EditorHistoryCommitState(&history, &state);
-                mode = IDLE;
-            }
-        } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
-            if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
-                mode = DRAGGING_FRAME_INFO_POS;
-            } else {
-                draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
-                                                                               state.shapes[state.shapeIdx]) : NONE;
-                if (draggingHandle != NONE) {
-                    mode = DRAGGING_HANDLE;
+                break;
+
+            case MODE_DRAGGING_FRAME_POS:
+                if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 } else {
-                    panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
-                    mode = PANNING_SPRITE;
+                    Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
+                    state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
                 }
-            }
-        } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
-            if (mode == PLAYING) {
-                mode = IDLE;
-            } else {
-                mode = PLAYING;
-                playingFrameTime = 0;
-            }
-        } else {
-            int frameDir = (IsKeyPressed(KEY_NEXT_FRAME) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_FRAME) ? 1 : 0);
-            if (frameDir) {
-                mode = IDLE;
-                int newFrame = state.frameIdx + frameDir;
+                break;
 
-                if (newFrame < 0) state.frameIdx = state.frameCount - 1;
-                else if (newFrame >= state.frameCount) state.frameIdx = 0;
-                else state.frameIdx = newFrame;
-            }
+            case MODE_PANNING_SPRITE:
+                if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
+                    mode = MODE_IDLE;
+                } else {
+                    Vector2 globalPan = Transform2DToGlobal(transform, panningSpriteLocalPos);
+                    transform.o = Vector2Add(transform.o, Vector2Subtract(mousePos, globalPan));
+                }
+                break;
 
-            int shapeDir = (IsKeyPressed(KEY_NEXT_SHAPE) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_SHAPE) ? 1 : 0);
-            if (shapeDir) {
-                mode = IDLE;
-                state.shapeIdx = Clamp(state.shapeIdx + shapeDir, -1, state.shapeCount - 1);
-            }
+            case MODE_PLAYING:
+            case MODE_IDLE:
+                if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
+                    if (!EditorStateWriteToFile(&state, savePath)) {
+                        puts("Failed to save file for unknown reason.");
+                    }
+                } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
+                    mode = MODE_IDLE;
+                    ChangeOptions option = UNDO;
+                    if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
+
+                    EditorHistoryChangeState(&history, &state, option);
+
+                } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
+                    EditorStateAddFrame(&state);
+                    state.frameIdx = state.frameCount - 1;
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+                
+                } else if (IsKeyPressed(KEY_REMOVE_FRAME) && IsKeyDown(KEY_REMOVE_FRAME_MODIFIER) && state.frameCount > 1) {
+                    EditorStateRemoveFrame(&state, state.frameIdx);
+                    if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+
+                } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
+                    EditorStateRemoveShape(&state, state.shapeIdx);
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+                
+                } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
+                    if (state.shapeIdx < 0) {
+                        state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
+                    } else {
+                        bool active = !EditorStateShapeActiveGet(&state, state.frameIdx, state.shapeIdx);
+                        EditorStateShapeActiveSet(&state, state.frameIdx, state.shapeIdx, active);
+                    }
+                    mode = MODE_IDLE;
+                    EditorHistoryCommitState(&history, &state);
+                
+                } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
+                    bool newShapeInstanced = true;
+                    ShapeType shapeType;
+                    
+                    if (IsKeyPressed(KEY_NEW_CIRCLE))           shapeType = CIRCLE;
+                    else if (IsKeyPressed(KEY_NEW_RECTANGLE))   shapeType = RECTANGLE;
+                    else if (IsKeyPressed(KEY_NEW_CAPSULE))     shapeType = CAPSULE;
+                    else                                        newShapeInstanced = false;
+
+                    if (newShapeInstanced) {
+                        BoxType boxType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? HURTBOX : HITBOX;
+                        CombatShape shape = CombatShapeNew(shapeType, boxType);
+                        shape.transform.o = (Vector2) { // spawn shape at center of frame.
+                            .x = (float) texture.width / (float) (state.frameCount * 2), 
+                            .y = (float) texture.height / 2.0f
+                        };
+
+                        EditorStateAddShape(&state, shape);
+                        state.shapeIdx = state.shapeCount - 1;
+                        EditorHistoryCommitState(&history, &state);
+                        mode = MODE_IDLE;
+                    }
+                } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
+                    if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
+                        mode = MODE_DRAGGING_FRAME_POS;
+                    } else {
+                        draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
+                                                                                       state.shapes[state.shapeIdx]) : NONE;
+                        if (draggingHandle != NONE) {
+                            mode = MODE_DRAGGING_HANDLE;
+                        } else {
+                            panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
+                            mode = MODE_PANNING_SPRITE;
+                        }
+                    }
+                } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
+                    if (mode == MODE_PLAYING) {
+                        mode = MODE_IDLE;
+                    } else {
+                        mode = MODE_PLAYING;
+                        playingFrameTime = 0;
+                    }
+                } else {
+                    int frameDir = (IsKeyPressed(KEY_NEXT_FRAME) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_FRAME) ? 1 : 0);
+                    if (frameDir) {
+                        mode = MODE_IDLE;
+                        int newFrame = state.frameIdx + frameDir;
+
+                        if (newFrame < 0) state.frameIdx = state.frameCount - 1;
+                        else if (newFrame >= state.frameCount) state.frameIdx = 0;
+                        else state.frameIdx = newFrame;
+                    }
+
+                    int shapeDir = (IsKeyPressed(KEY_NEXT_SHAPE) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_SHAPE) ? 1 : 0);
+                    if (shapeDir) {
+                        mode = MODE_IDLE;
+                        state.shapeIdx = Clamp(state.shapeIdx + shapeDir, -1, state.shapeCount - 1);
+                    }
+                }
+                break;
+
+            default:
+                assert(false);
+                break;
+
         }
 
         // playing tick update (not related to model)
-        if (mode == PLAYING) {
+        if (mode == MODE_PLAYING) {
             playingFrameTime += (int) (GetFrameTime() * FRAME_DURATION_UNIT_PER_SECOND);
             int frameDuration = state.frames[state.frameIdx].duration;
             if (playingFrameTime >= frameDuration)
@@ -447,12 +424,42 @@ int main(int argc, char **argv) {
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
         HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
 
-        // draw frame duration text
-        if (mode == FRAME_DURATION_EDIT) {
-            DrawText(TextFormat("Frame Duration: %s ms", editingFrameDurationBuffer.raw), 0, 0, fontSize, COLOR_FRAME_DURATION_TEXT);
-        } else {
-            DrawText(TextFormat("Frame Duration: %d ms", state.frames[state.frameIdx].duration), 0, 0, fontSize, COLOR_FRAME_DURATION_TEXT);
+        // draw frame duration value box
+        Rectangle rectFrameDurationLabel = { .x = 0, .y = 0, .width = 128, .height = (float) fontSize + 8};
+        GuiLabel(rectFrameDurationLabel, "Frame Duration (ms)");
+        Rectangle rectFrameDurationValue = rectFrameDurationLabel;
+        rectFrameDurationValue.x += rectFrameDurationValue.width;
+        rectFrameDurationValue.width = 32;
+        if (GuiValueBox(rectFrameDurationValue, NULL, &state.frames[state.frameIdx].duration, 1, INT_MAX, mode == MODE_EDIT_FRAME_DURATION)) {
+            mode = MODE_EDIT_FRAME_DURATION;
         }
+        
+        // draw hitbox damage and stun value boxes if a hitbox is currently selected.
+        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].boxType == HITBOX) {
+            Rectangle rectDamageLabel = rectFrameDurationLabel;
+            rectDamageLabel.y += rectDamageLabel.height;
+            GuiLabel(rectDamageLabel, "Damage");
+            
+            Rectangle rectDamageValue = rectDamageLabel;
+            rectDamageValue.x += rectDamageValue.width;
+            rectDamageValue.width = rectFrameDurationValue.width;
+            if (GuiValueBox(rectDamageValue, NULL, &state.shapes[state.shapeIdx].hitboxDamage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                mode = MODE_EDIT_HITBOX_DAMAGE;
+            }
+
+            Rectangle rectStunLabel = rectDamageLabel;
+            rectStunLabel.y += rectStunLabel.height;
+            GuiLabel(rectStunLabel, "Stun (ms)");
+            
+            Rectangle rectStunValue = rectStunLabel;
+            rectStunValue.x += rectStunValue.width;
+            rectStunValue.width = rectFrameDurationValue.width;
+            if (GuiValueBox(rectStunValue, NULL, &state.shapes[state.shapeIdx].hitboxStun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
+                mode = MODE_EDIT_HITBOX_STUN;
+            }
+        }
+        
+
         
         // draw timeline
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
@@ -486,7 +493,6 @@ int main(int argc, char **argv) {
         EndDrawing();
     }
 
-    StringBufferFree(&editingFrameDurationBuffer);
     EditorHistoryFree(&history);
     EditorStateFree(&state);
     UnloadTexture(texture);
