@@ -367,6 +367,7 @@ bool CombatShapeSetHandle(Vector2 localMousePos, CombatShape *shape, Handle hand
             if (shape->shapeType != CAPSULE) return false;
             float rotation = atan2(offset.y, offset.x) + PI / 2.0f;
             shape->transform = Transform2DRotate(shape->transform, rotation);
+            return true;
         
         default:
             return false;
