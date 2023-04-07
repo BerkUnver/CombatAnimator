@@ -53,6 +53,8 @@
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
 #define COLOR_FRAME_POS_HANDLE_PREVIOUS (Color) {161, 78, 0, 255}
 
+#define FRAME_VELOCITY_HANDLE_COLOR GREEN
+#define FRAME_VELOCITY_HANDLE_OFFSET (Vector2) {16, -16}
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
@@ -208,6 +210,7 @@ int main(int argc, char **argv) {
         MODE_PLAYING,
         MODE_DRAGGING_HANDLE,
         MODE_DRAGGING_FRAME_POS,
+        MODE_DRAGGING_FRAME_VELOCITY,
         MODE_PANNING_SPRITE,
         MODE_EDIT_FRAME_DURATION,
         MODE_EDIT_HITBOX_DAMAGE,
@@ -229,6 +232,9 @@ int main(int argc, char **argv) {
         int timelineHeight = FRAME_ROW_SIZE + SHAPE_ROW_SIZE * state.shapeCount;
         int timelineY = windowY - timelineHeight;
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
+        Vector2 velocityHandleOrigin = FRAME_VELOCITY_HANDLE_OFFSET;
+        velocityHandleOrigin.y += timelineY;
+
         Vector2 mousePos = GetMousePosition();
 
         const float mouseWheel = GetMouseWheelMove();
@@ -267,6 +273,16 @@ int main(int argc, char **argv) {
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
                     state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
+                }
+                break;
+            
+            case MODE_DRAGGING_FRAME_VELOCITY:
+                if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+                } else {
+                    Vector2 velocity = Transform2DBasisXForm(transform, Vector2Subtract(mousePos, velocityHandleOrigin));
+                    state.frames[state.frameIdx].velocity = Vector2Round(velocity);
                 }
                 break;
 
@@ -342,7 +358,10 @@ int main(int argc, char **argv) {
                         mode = MODE_IDLE;
                     }
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
-                    if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
+                    Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
+                    if (HandleIsColliding(Transform2DIdentity(), mousePos, velocityHandlePos)) {
+                        mode = MODE_DRAGGING_FRAME_VELOCITY;
+                    } else if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
                         draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
@@ -435,6 +454,11 @@ int main(int argc, char **argv) {
         }
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
         HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
+        
+        // draw frame velocity handle
+        Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
+        DrawLine(velocityHandleOrigin.x, velocityHandleOrigin.y, velocityHandlePos.x, velocityHandlePos.y, FRAME_VELOCITY_HANDLE_COLOR);
+        HandleDraw(velocityHandlePos, FRAME_VELOCITY_HANDLE_COLOR);
 
         // draw frame duration value box
         Rectangle rectFrameDurationLabel = { .x = 0, .y = 0, .width = 128, .height = (float) fontSize + 8};

@@ -8,7 +8,7 @@
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
 #define FRAME_INFO_POS_DEFAULT (Vector2) {.x = 80.0f, .y = 64.0f}
-#define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false}
+#define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false, .velocity = (Vector2) {0, 0}}
 #define STR_SHAPES "shapes"
 #define STR_FRAMES "frames"
 #define STR_FRAME_DURATIONS "frameDurations"
@@ -31,6 +31,7 @@ typedef struct FrameInfo {
     int duration;
     bool canCancel;
     Vector2 pos;
+    Vector2 velocity;
 } FrameInfo;
 
 typedef struct EditorState {
