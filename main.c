@@ -282,9 +282,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 velocity = Transform2DBasisXForm(transform, Vector2Subtract(mousePos, velocityHandleOrigin));
-                    Vector2 velocityRound = Vector2Round(velocity);
-                    if (Vector2Equals(velocityRound, VECTOR2_ZERO)) state.frames[state.frameIdx].velocityExists = false;
-                    else state.frames[state.frameIdx].velocity = Vector2Round(velocity);
+                    state.frames[state.frameIdx].velocity = Vector2Round(velocity);
                 }
                 break;
 
@@ -360,14 +358,7 @@ int main(int argc, char **argv) {
                         mode = MODE_IDLE;
                     }
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
-                    Vector2 velocityHandlePos;
-                    if (state.frames[state.frameIdx].velocityExists) {
-                        Vector2 handleOffset = Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity);
-                        velocityHandlePos = Vector2Add(velocityHandleOrigin, handleOffset);
-                    } else {
-                        velocityHandlePos = velocityHandleOrigin;
-                    }
-
+                    Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
                     if (HandleIsColliding(Transform2DIdentity(), mousePos, velocityHandlePos)) {
                         mode = MODE_DRAGGING_FRAME_VELOCITY;
                     } else if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
@@ -463,16 +454,11 @@ int main(int argc, char **argv) {
         }
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
         HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
-       
-        if (state.frames[state.frameIdx].velocityExists) {
+        
         // draw frame velocity handle
-            Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
-            DrawLine(velocityHandleOrigin.x, velocityHandleOrigin.y, velocityHandlePos.x, velocityHandlePos.y, FRAME_VELOCITY_HANDLE_COLOR);
-            HandleDraw(velocityHandlePos, FRAME_VELOCITY_HANDLE_COLOR);
-        } else {
-            HandleDraw(velocityHandleOrigin, FRAME_VELOCITY_HANDLE_COLOR);
-        }
-
+        Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
+        DrawLine(velocityHandleOrigin.x, velocityHandleOrigin.y, velocityHandlePos.x, velocityHandlePos.y, FRAME_VELOCITY_HANDLE_COLOR);
+        HandleDraw(velocityHandlePos, FRAME_VELOCITY_HANDLE_COLOR);
 
         // draw frame duration value box
         Rectangle rectFrameDurationLabel = { .x = 0, .y = 0, .width = 128, .height = (float) fontSize + 8};
