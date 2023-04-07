@@ -16,6 +16,8 @@
 #define STR_FRAME_INFO_CAN_CANCEL "canCancel"
 #define STR_FRAME_INFO_X "x"
 #define STR_FRAME_INFO_Y "y"
+#define STR_FRAME_INFO_VELOCITY_X "velocityX"
+#define STR_FRAME_INFO_VELOCITY_Y "velocityY"
 #define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
 #define STR_MAGIC "magic"
 #define STR_MAGIC_VALUE "CombatAnimator"
@@ -24,7 +26,7 @@
 // no version: initial version. Treated as 0 internally.
 // 1: changed frameDurations array to frames array. Each frame is a struct containing whether or not it is cancellable and its duration in ms.
 // 2: Added position Vector2 for each frame that indicates the root movement of the character doing the animation.
-// 3: Added hitbox stun and hitbox damage to CombatShape.
+// 3: Added hitbox stun and hitbox damage to CombatShape. Added frame velocity in a later version, but this is optional so I will not increment the version number.
 #define VERSION_NUMBER 3
 
 typedef struct FrameInfo {

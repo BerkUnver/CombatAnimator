@@ -192,6 +192,8 @@ cJSON *EditorStateSerialize(EditorState *state) {
         cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_Y, frameInfo.pos.y);
+        if (frameInfo.velocity.x != 0) cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_X, frameInfo.velocity.x);
+        if (frameInfo.velocity.y != 0) cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_Y, frameInfo.velocity.y);
         cJSON_AddItemToArray(frames, frame);
     }
 
@@ -259,9 +261,22 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
             if (version > 1) {
                 cJSON *x = cJSON_GetObjectItem(frame, STR_FRAME_INFO_X);
                 if (!x || !cJSON_IsNumber(x)) goto fail;
+                
                 cJSON *y = cJSON_GetObjectItem(frame, STR_FRAME_INFO_Y);
                 if (!y || !cJSON_IsNumber(y)) goto fail;
                 state->frames[frameIdx].pos = (Vector2) {.x = cJSON_GetNumberValue(x), .y = cJSON_GetNumberValue(y)};
+                
+                cJSON *velocityX = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_X);
+                if (velocityX) {
+                    if (!cJSON_IsNumber(velocityX)) goto fail;
+                    state->frames[frameIdx].velocity.x = cJSON_GetNumberValue(velocityX);
+                }
+
+                cJSON *velocityY = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_Y);
+                if (velocityY) {
+                    if (!cJSON_IsNumber(velocityY)) goto fail;
+                    state->frames[frameIdx].velocity.y = cJSON_GetNumberValue(velocityY);
+                }
             }
 
             frameIdx++;
