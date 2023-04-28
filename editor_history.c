@@ -192,8 +192,12 @@ cJSON *EditorStateSerialize(EditorState *state) {
         cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
         cJSON_AddNumberToObject(frame, STR_FRAME_INFO_Y, frameInfo.pos.y);
-        if (frameInfo.velocity.x != 0) cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_X, frameInfo.velocity.x);
-        if (frameInfo.velocity.y != 0) cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_Y, frameInfo.velocity.y);
+        
+        cJSON_AddBoolToObject(frame, STR_FRAME_INFO_VELOCITY_EXISTS, frameInfo.velocityExists);
+        if (frameInfo.velocityExists) {
+            cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_X, frameInfo.velocity.x);
+            cJSON_AddNumberToObject(frame, STR_FRAME_INFO_VELOCITY_Y, frameInfo.velocity.y);
+        }
         cJSON_AddItemToArray(frames, frame);
     }
 
@@ -212,7 +216,8 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     
     cJSON *version_json = cJSON_GetObjectItem(json, STR_VERSION);
     int version;
-    if (!version_json)
+    
+   if (!version_json)
         version = 0;
     else if (!cJSON_IsNumber(version_json)) 
         return false;
@@ -258,7 +263,7 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
             if (!canCancel || !cJSON_IsBool(canCancel)) goto fail;
             state->frames[frameIdx].canCancel = cJSON_IsTrue(canCancel);
 
-            if (version > 1) {
+            if (version >= 2) {
                 cJSON *x = cJSON_GetObjectItem(frame, STR_FRAME_INFO_X);
                 if (!x || !cJSON_IsNumber(x)) goto fail;
                 
@@ -266,16 +271,17 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
                 if (!y || !cJSON_IsNumber(y)) goto fail;
                 state->frames[frameIdx].pos = (Vector2) {.x = cJSON_GetNumberValue(x), .y = cJSON_GetNumberValue(y)};
                 
-                cJSON *velocityX = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_X);
-                if (velocityX) {
-                    if (!cJSON_IsNumber(velocityX)) goto fail;
-                    state->frames[frameIdx].velocity.x = cJSON_GetNumberValue(velocityX);
-                }
-
-                cJSON *velocityY = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_Y);
-                if (velocityY) {
-                    if (!cJSON_IsNumber(velocityY)) goto fail;
-                    state->frames[frameIdx].velocity.y = cJSON_GetNumberValue(velocityY);
+                if (version >= 4) {
+                    cJSON *velocityExists = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_EXISTS);
+                    if (!velocityExists || !cJSON_IsBool(velocityExists)) goto fail;
+                    if (cJSON_IsTrue(velocityExists)) {
+                        cJSON *velocityX = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_X);
+                        if (!velocityX || !cJSON_IsNumber(velocityX)) goto fail;
+                        state->frames[frameIdx].velocity.x = cJSON_GetNumberValue(velocityX);
+                        cJSON *velocityY = cJSON_GetObjectItem(frame, STR_FRAME_INFO_VELOCITY_Y);
+                        if (!velocityY || !cJSON_IsNumber(velocityY)) goto fail;
+                        state->frames[frameIdx].velocity.y = cJSON_GetNumberValue(velocityY);
+                    }
                 }
             }
 
