@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "cjson/cJSON.h"
-#include "combat_shape.h"
+#include "layer.h"
 #include "string_buffer.h"
 #include "editor_history.h"
 
@@ -35,10 +35,10 @@ void EditorStateShapeActiveSet(EditorState *state, int frameIdx, int shapeIdx, b
     state->_shapeActiveFrames[state->frameCount * shapeIdx + frameIdx] = enabled;
 }
 
-void EditorStateAddShape(EditorState *state, CombatShape shape) {
+void EditorStateAddShape(EditorState *state, Layer shape) {
     int oldMax = state->shapeCount * state->frameCount;
     state->shapeCount++;
-    state->shapes = realloc(state->shapes, sizeof(CombatShape) * state->shapeCount);
+    state->shapes = realloc(state->shapes, sizeof(Layer) * state->shapeCount);
     state->shapes[state->shapeCount - 1] = shape;
     int newMax = state->shapeCount * state->frameCount;
     state->_shapeActiveFrames = realloc(state->_shapeActiveFrames, sizeof(bool) * newMax);
@@ -90,8 +90,8 @@ EditorState EditorStateDeepCopy(EditorState *state) {
     bool *activeFramesCopy = malloc(activeFramesSize);
     memcpy(activeFramesCopy, state->_shapeActiveFrames, activeFramesSize);
 
-    int shapesSize = sizeof(CombatShape) * state->shapeCount;
-    CombatShape *shapesCopy = malloc(shapesSize);
+    int shapesSize = sizeof(Layer) * state->shapeCount;
+    Layer *shapesCopy = malloc(shapesSize);
     memcpy(shapesCopy, state->shapes, shapesSize);
 
     int framesSize = sizeof(FrameInfo) * state->frameCount;
@@ -169,7 +169,7 @@ cJSON *EditorStateSerialize(EditorState *state) {
     cJSON *shapes = cJSON_CreateArray();
 
     for (int i = 0; i < state->shapeCount; i++) { // should not enter if state.shapes is null cause count is also 0
-        cJSON *shape = CombatShapeSerialize(state->shapes[i]);
+        cJSON *shape = LayerSerialize(state->shapes[i]);
         if (!shape) {
             cJSON_Delete(shapes);
             return NULL;
@@ -274,8 +274,8 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     if (!shapes || !cJSON_IsArray(shapes)) goto fail;
     cJSON *jsonShape;
     cJSON_ArrayForEach(jsonShape, shapes) {
-        CombatShape shape;
-        if (!CombatShapeDeserialize(jsonShape, version, &shape)) goto fail;
+        Layer shape;
+        if (!LayerDeserialize(jsonShape, version, &shape)) goto fail;
         EditorStateAddShape(state, shape);
     }
 

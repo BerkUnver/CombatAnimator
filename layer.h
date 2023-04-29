@@ -1,5 +1,6 @@
-#ifndef COMBAT_SHAPE
-#define COMBAT_SHAPE
+#ifndef LAYER_H
+#define LAYER_H
+
 #include "raylib.h"
 #include "cjson/cJSON.h"
 #include "transform_2d.h"
@@ -59,24 +60,11 @@ typedef enum Handle {
     HANDLE_CAPSULE_ROTATION
 } Handle;
 
-typedef enum BoxType {
-    BOX_TYPE_HITBOX,
-    BOX_TYPE_HURTBOX,
-    BOX_TYPE_METADATA,
-} BoxType;
-
-typedef union ShapeData {
-    int circleRadius;
-    struct {
-        int rightX;
-        int bottomY;
-    } rectangle;
-    struct {
-        int radius;
-        int height;
-	    float rotation;
-    } capsule;
-} ShapeData;
+typedef enum LayerType {
+    LAYER_TYPE_HITBOX,
+    LAYER_TYPE_HURTBOX,
+    LAYER_TYPE_METADATA,
+} LayerType;
 
 typedef enum ShapeType {
     SHAPE_CIRCLE,
@@ -84,40 +72,46 @@ typedef enum ShapeType {
     SHAPE_CAPSULE
 } ShapeType;
 
-typedef struct CombatShape {
-    BoxType boxType;
-    ShapeType shapeType;
+typedef struct Layer {
+    LayerType type;
 
-    int hitboxKnockbackX; // defined only if boxType is BOX_TYPE_HITBOX
-    int hitboxKnockbackY;
-    int hitboxDamage;
-    int hitboxStun;
     union {
-        int circleRadius;
         struct {
-            int rightX;
-            int bottomY;
-        } rectangle;
-        struct {
-            int radius;
-            int height;
-            float rotation;
-        } capsule;
-    } data;
+            int hitboxKnockbackX; // defined only if boxType is BOX_TYPE_HITBOX
+            int hitboxKnockbackY;
+            int hitboxDamage;
+            int hitboxStun;
+            ShapeType shapeType;
 
+            union {
+                int circleRadius;
+                struct {
+                    int rightX;
+                    int bottomY;
+                } rectangle;
+                struct {
+                    int radius;
+                    int height;
+                    float rotation;
+                } capsule;
+            } data;
+        };
+
+        char metadata_tag[8];
+    };
     Transform2D transform;
-} CombatShape;
+} Layer;
 
-CombatShape CombatShapeNew(ShapeType shapeType, BoxType boxType);
+Layer LayerNew(ShapeType shapeType, LayerType layerType);
 
-cJSON *CombatShapeSerialize(CombatShape shape);
-bool CombatShapeDeserialize(cJSON *json, int version, CombatShape *out);
+cJSON *LayerSerialize(Layer layer);
+bool LayerDeserialize(cJSON *json, int version, Layer *out);
 
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);
 
-void CombatShapeDraw(Transform2D transform, CombatShape shape, bool handlesActive);
-Handle CombatShapeSelectHandle(Transform2D transform, Vector2 globalMousePos, CombatShape shape);
-bool CombatShapeSetHandle(Vector2 localMousePos, CombatShape *shape, Handle handle);
+void LayerDraw(Transform2D transform, Layer layer, bool handlesActive);
+Handle LayerSelectHandle(Transform2D transform, Vector2 globalMousePos, Layer layer);
+bool LayerSetHandle(Vector2 localMousePos, Layer *layer, Handle handle);
 
 #endif

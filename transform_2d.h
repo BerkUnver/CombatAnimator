@@ -1,5 +1,5 @@
-#ifndef TRANSFORM_2D
-#define TRANSFORM_2D
+#ifndef TRANSFORM_2D_H
+#define TRANSFORM_2D_H
 
 #include "raylib.h"
 

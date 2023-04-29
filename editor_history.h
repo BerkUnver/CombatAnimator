@@ -1,9 +1,9 @@
-#ifndef EDITOR_HISTORY
-#define EDITOR_HISTORY
+#ifndef EDITOR_HISTORY_H
+#define EDITOR_HISTORY_H
 
 #include <stdlib.h>
 #include "cjson/cJSON.h"
-#include "combat_shape.h"
+#include "layer.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
@@ -34,7 +34,7 @@ typedef struct FrameInfo {
 } FrameInfo;
 
 typedef struct EditorState {
-    CombatShape *shapes;
+    Layer *shapes;
     int shapeCount;
     bool *_shapeActiveFrames;
     FrameInfo *frames;
@@ -61,7 +61,7 @@ bool EditorStateShapeActiveGet(EditorState *state, int frameIdx, int shapeIdx);
 void EditorStateShapeActiveSet(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
 
 
-void EditorStateAddShape(EditorState *state, CombatShape shape);
+void EditorStateAddShape(EditorState *state, Layer shape);
 bool EditorStateRemoveShape(EditorState *state, int idx);
 void EditorStateAddFrame(EditorState *state);
 bool EditorStateRemoveFrame(EditorState *state, int idx);

@@ -1,7 +1,7 @@
 #include <stdbool.h>
 
-#ifndef STRING_BUFFER
-#define STRING_BUFFER
+#ifndef STRING_BUFFER_H
+#define STRING_BUFFER_H
 
 #define EXPAND_AMOUNT 1.5f
 #define INITIAL_MAXIMUM_LENGTH 11

@@ -10,7 +10,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
-#include "combat_shape.h"
+#include "layer.h"
 #include "editor_history.h"
 #include "string_buffer.h"
 #include "transform_2d.h"
@@ -53,7 +53,6 @@
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
 #define COLOR_FRAME_POS_HANDLE_PREVIOUS (Color) {161, 78, 0, 255}
 
-#define FRAME_VELOCITY_HANDLE_COLOR GREEN
 #define FRAME_VELOCITY_HANDLE_OFFSET (Vector2) {16, -16}
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
@@ -261,7 +260,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                    assert(CombatShapeSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle));
+                    assert(LayerSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle));
                 }
                 break;
 
@@ -338,8 +337,8 @@ int main(int argc, char **argv) {
                         newShapeInstanced = false;
 
                     if (newShapeInstanced) {
-                        BoxType boxType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? BOX_TYPE_HURTBOX : BOX_TYPE_HITBOX;
-                        CombatShape shape = CombatShapeNew(shapeType, boxType);
+                        LayerType layerType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? LAYER_TYPE_HURTBOX : LAYER_TYPE_HITBOX;
+                        Layer shape = LayerNew(shapeType, layerType);
                         shape.transform.o = (Vector2) { // spawn shape at center of frame.
                             .x = (float) texture.width / (float) (state.frameCount * 2), 
                             .y = (float) texture.height / 2.0f
@@ -354,8 +353,8 @@ int main(int argc, char **argv) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
-                        draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
-                                                                                       state.shapes[state.shapeIdx]) : HANDLE_NONE;
+                        draggingHandle = state.shapeIdx >= 0 ? LayerSelectHandle(transform, mousePos,
+                                                                                 state.shapes[state.shapeIdx]) : HANDLE_NONE;
                         if (draggingHandle != HANDLE_NONE) {
                             mode = MODE_DRAGGING_HANDLE;
                         } else {
@@ -433,7 +432,7 @@ int main(int argc, char **argv) {
         // draw combat shapes
         for (int i = 0; i < state.shapeCount; i++) {
             if (EditorStateShapeActiveGet(&state, state.frameIdx, i)) {
-                CombatShapeDraw(transform, state.shapes[i], i == state.shapeIdx);
+                LayerDraw(transform, state.shapes[i], i == state.shapeIdx);
             }
         }
         
@@ -456,7 +455,7 @@ int main(int argc, char **argv) {
         }
         
         // draw hitbox damage and stun value boxes if a hitbox is currently selected.
-        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].boxType == BOX_TYPE_HITBOX) {
+        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].type == LAYER_TYPE_HITBOX) {
             Rectangle rectDamageLabel = rectFrameDurationLabel;
             rectDamageLabel.y += rectDamageLabel.height;
             GuiLabel(rectDamageLabel, "Hitbox Damage");
@@ -502,7 +501,7 @@ int main(int argc, char **argv) {
             for (int j = 0; j < state.shapeCount; j++) {
                 Color color;
                 bool active = EditorStateShapeActiveGet(&state, i, j);
-                if (state.shapes[j].boxType == BOX_TYPE_HITBOX)
+                if (state.shapes[j].type == LAYER_TYPE_HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
                 else
                     color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
