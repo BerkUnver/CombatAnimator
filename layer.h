@@ -26,7 +26,6 @@
 #define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
 #define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
-#define TAG_LENGTH_MAX 8
 
 // Strings used for serialization
 #define STR_HITBOX "HITBOX"
@@ -45,7 +44,7 @@
 #define STR_CAPSULE_HEIGHT "capsuleHeight"
 #define STR_CAPSULE_ROTATION "capsuleRotation"
 #define STR_SHAPE_TYPE "shapeType"
-#define STR_BOX_TYPE "boxType"
+#define STR_TYPE "type"
 #define STR_X "x"
 #define STR_Y "y"
 
@@ -76,12 +75,12 @@ typedef struct Layer {
     LayerType type;
 
     union {
-        struct {
+        struct { // defined when boxType is BOX_TYPE_HURTBOX or BOX_TYPE_HITBOX
             int hitboxKnockbackX; // defined only if boxType is BOX_TYPE_HITBOX
             int hitboxKnockbackY;
             int hitboxDamage;
             int hitboxStun;
-            ShapeType shapeType;
+            ShapeType type;
 
             union {
                 int circleRadius;
@@ -94,11 +93,12 @@ typedef struct Layer {
                     int height;
                     float rotation;
                 } capsule;
-            } data;
-        };
+            };
+        } box;
 
-        char metadata_tag[8];
+        char metadataTag[16];
     };
+
     Transform2D transform;
 } Layer;
 

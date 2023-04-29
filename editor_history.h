@@ -9,14 +9,14 @@
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
 #define FRAME_INFO_POS_DEFAULT (Vector2) {.x = 80.0f, .y = 64.0f}
 #define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false}
-#define STR_SHAPES "shapes"
+#define STR_LAYERS "layers"
 #define STR_FRAMES "frames"
 #define STR_FRAME_DURATIONS "frameDurations"
 #define STR_FRAME_INFO_DURATION "duration"
 #define STR_FRAME_INFO_CAN_CANCEL "canCancel"
 #define STR_FRAME_INFO_X "x"
 #define STR_FRAME_INFO_Y "y"
-#define STR_SHAPE_ACTIVE_FRAMES "shapeActiveFrames"
+#define STR_LAYER_ACTIVE_FRAMES "layerActiveFrames"
 #define STR_MAGIC "magic"
 #define STR_MAGIC_VALUE "CombatAnimator"
 #define STR_VERSION "version"
@@ -25,7 +25,9 @@
 // 1: changed frameDurations array to frames array. Each frame is a struct containing whether it is cancellable and its duration in ms.
 // 2: Added position Vector2 for each frame that indicates the root movement of the character doing the animation.
 // 3: Added hitbox stun and hitbox damage to CombatShape.
-#define VERSION_NUMBER 3
+// 4: Renamed "shapes" to "layers" and "shapeActiveFrames" to "layerActiveFrames". Renamed "boxType" to "type" in layer.
+
+#define VERSION_NUMBER 4
 
 typedef struct FrameInfo {
     int duration;
@@ -34,12 +36,12 @@ typedef struct FrameInfo {
 } FrameInfo;
 
 typedef struct EditorState {
-    Layer *shapes;
-    int shapeCount;
-    bool *_shapeActiveFrames;
+    Layer *layers;
+    int layerCount;
+    bool *_layerActiveFrames;
     FrameInfo *frames;
     int frameCount;
-    int shapeIdx;
+    int layerIdx;
     int frameIdx;
 } EditorState;
 
@@ -51,18 +53,18 @@ typedef struct EditorHistory {
 } EditorHistory;
 
 typedef enum ChangeOptions {
-    UNDO,
-    REDO
+    CHANGE_UNDO,
+    CHANGE_REDO
 } ChangeOptions;
 
 EditorState EditorStateNew(int frameCount);
 void EditorStateFree(EditorState *state);
-bool EditorStateShapeActiveGet(EditorState *state, int frameIdx, int shapeIdx);
-void EditorStateShapeActiveSet(EditorState *state, int frameIdx, int shapeIdx, bool enabled);
+bool EditorStateLayerActiveGet(EditorState *state, int frameIdx, int layerIdx);
+void EditorStateLayerActiveSet(EditorState *state, int frameIdx, int layerIdx, bool enabled);
 
 
-void EditorStateAddShape(EditorState *state, Layer shape);
-bool EditorStateRemoveShape(EditorState *state, int idx);
+void EditorStateLayerAdd(EditorState *state, Layer layer);
+bool EditorStateLayerRemove(EditorState *state, int idx);
 void EditorStateAddFrame(EditorState *state);
 bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);

@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #define RAYGUI_IMPLEMENTATION
+
 #include "raygui.h"
 #include "raylib.h"
 #include "raymath.h"
@@ -19,31 +21,29 @@
 #define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
 
 #define FILE_EXTENSION "json"
-#define FLAG_UPDATE "-u"
-#define FLAG_TEST "-t"
 #define APP_NAME "Combat Animator"
 #define DEFAULT_SPRITE_WINDOW_X 800
 #define DEFAULT_SPRITE_WINDOW_Y 400
 #define KEY_PLAY_ANIMATION KEY_ENTER
-#define KEY_PREVIOUS_FRAME KEY_LEFT
-#define KEY_NEXT_FRAME KEY_RIGHT
-#define KEY_PREVIOUS_SHAPE KEY_UP
-#define KEY_NEXT_SHAPE KEY_DOWN
+#define KEY_FRAME_PREVIOUS KEY_LEFT
+#define KEY_FRAME_NEXT KEY_RIGHT
+#define KEY_LAYER_PREVIOUS KEY_UP
+#define KEY_LAYER_NEXT KEY_DOWN
 #define MOUSE_BUTTON_SELECT MOUSE_BUTTON_LEFT
 #define KEY_UNDO KEY_Z
 #define KEY_UNDO_MODIFIER KEY_LEFT_CONTROL
 #define KEY_REDO_MODIFIER KEY_LEFT_SHIFT
 
-#define KEY_NEW_FRAME KEY_N
-#define KEY_NEW_FRAME_MODIFIER KEY_LEFT_ALT
+#define KEY_FRAME_NEW KEY_N
+#define KEY_FRAME_NEW_MODIFIER KEY_LEFT_ALT
 
-#define KEY_REMOVE_FRAME KEY_BACKSPACE
-#define KEY_REMOVE_FRAME_MODIFIER KEY_LEFT_ALT
+#define KEY_FRAME_REMOVE KEY_BACKSPACE
+#define KEY_FRAME_REMOVE_MODIFIER KEY_LEFT_ALT
 
-#define KEY_REMOVE_SHAPE KEY_BACKSPACE
-#define KEY_REMOVE_SHAPE_MODIFIER KEY_LEFT_CONTROL
+#define KEY_LAYER_REMOVE KEY_BACKSPACE
+#define KEY_LAYER_REMOVE_MODIFIER KEY_LEFT_CONTROL
 
-#define KEY_NEW_SHAPE_MODIFIER KEY_LEFT_CONTROL
+#define KEY_LAYER_NEW_MODIFIER KEY_LEFT_CONTROL
 #define KEY_NEW_HURTBOX_MODIFIER KEY_LEFT_SHIFT
 #define KEY_NEW_CIRCLE KEY_ONE
 #define KEY_NEW_RECTANGLE KEY_TWO
@@ -68,8 +68,8 @@
 #define FRAME_RHOMBUS_CAN_CANCEL_COLOR RAYWHITE
 #define FRAME_ROW_TEXT_COLOR FRAME_ROW_COLOR
 
-#define SHAPE_ROW_SIZE 32
-#define SHAPE_ICON_CIRCLE_RADIUS 12
+#define LAYER_ROW_SIZE 32
+#define LAYER_ICON_CIRCLE_RADIUS 12
 
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
@@ -154,10 +154,10 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!strcmp(argv[1], FLAG_UPDATE)) { // first argument is to recursively update all files in the given folder.    
+    if (!strcmp(argv[1], "-u")) { // first argument is to recursively update all files in the given folder.
         RecursiveUpdate(".");
         return EXIT_SUCCESS;
-    } else if (!strcmp(argv[1], FLAG_TEST)) {
+    } else if (!strcmp(argv[1], "-t")) {
         for (int i = 0; i < VERSION_NUMBER; i++) { // make sure each version can still deserialize
             char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
             sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     const float startScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     Transform2D transform = Transform2DIdentity();
     transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
-    const int guiInitialHeight = state.shapeCount * FRAME_ROW_SIZE + FRAME_ROW_SIZE;
+    const int guiInitialHeight = state.layerCount * FRAME_ROW_SIZE + FRAME_ROW_SIZE;
     SetWindowSize(DEFAULT_SPRITE_WINDOW_X, DEFAULT_SPRITE_WINDOW_Y + guiInitialHeight);
     
     transform.o = (Vector2) {
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
         // updating these here and not after the model update causes changes to be reflected one frame late.
         int windowX = GetScreenWidth();
         int windowY = GetScreenHeight();
-        int timelineHeight = FRAME_ROW_SIZE + SHAPE_ROW_SIZE * state.shapeCount;
+        int timelineHeight = FRAME_ROW_SIZE + LAYER_ROW_SIZE * state.layerCount;
         int timelineY = windowY - timelineHeight;
         int hitboxRowY = timelineY + FRAME_ROW_SIZE;
         Vector2 velocityHandleOrigin = FRAME_VELOCITY_HANDLE_OFFSET;
@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                    assert(LayerSetHandle(localMousePos, &state.shapes[state.shapeIdx], draggingHandle));
+                    assert(LayerSetHandle(localMousePos, &state.layers[state.layerIdx], draggingHandle));
                 }
                 break;
 
@@ -291,39 +291,39 @@ int main(int argc, char **argv) {
                     }
                 } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
                     mode = MODE_IDLE;
-                    ChangeOptions option = UNDO;
-                    if (IsKeyDown(KEY_REDO_MODIFIER)) option = REDO;
+                    ChangeOptions option = CHANGE_UNDO;
+                    if (IsKeyDown(KEY_REDO_MODIFIER)) option = CHANGE_REDO;
 
                     EditorHistoryChangeState(&history, &state, option);
 
-                } else if (IsKeyPressed(KEY_NEW_FRAME) && IsKeyDown(KEY_NEW_FRAME_MODIFIER)) {
+                } else if (IsKeyPressed(KEY_FRAME_NEW) && IsKeyDown(KEY_FRAME_NEW_MODIFIER)) {
                     EditorStateAddFrame(&state);
                     state.frameIdx = state.frameCount - 1;
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
                 
-                } else if (IsKeyPressed(KEY_REMOVE_FRAME) && IsKeyDown(KEY_REMOVE_FRAME_MODIFIER) && state.frameCount > 1) {
+                } else if (IsKeyPressed(KEY_FRAME_REMOVE) && IsKeyDown(KEY_FRAME_REMOVE_MODIFIER) && state.frameCount > 1) {
                     EditorStateRemoveFrame(&state, state.frameIdx);
                     if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
 
-                } else if (IsKeyPressed(KEY_REMOVE_SHAPE) && IsKeyDown(KEY_REMOVE_SHAPE_MODIFIER) && state.shapeIdx >= 0) {
-                    EditorStateRemoveShape(&state, state.shapeIdx);
+                } else if (IsKeyPressed(KEY_LAYER_REMOVE) && IsKeyDown(KEY_LAYER_REMOVE_MODIFIER) && state.layerIdx >= 0) {
+                    EditorStateLayerRemove(&state, state.layerIdx);
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
                 
                 } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
-                    if (state.shapeIdx < 0) {
+                    if (state.layerIdx < 0) {
                         state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
                     } else {
-                        bool active = !EditorStateShapeActiveGet(&state, state.frameIdx, state.shapeIdx);
-                        EditorStateShapeActiveSet(&state, state.frameIdx, state.shapeIdx, active);
+                        bool active = !EditorStateLayerActiveGet(&state, state.frameIdx, state.layerIdx);
+                        EditorStateLayerActiveSet(&state, state.frameIdx, state.layerIdx, active);
                     }
                     mode = MODE_IDLE;
                     EditorHistoryCommitState(&history, &state);
                 
-                } else if (IsKeyDown(KEY_NEW_SHAPE_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
+                } else if (IsKeyDown(KEY_LAYER_NEW_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
                     bool newShapeInstanced = true;
                     ShapeType shapeType;
                     
@@ -338,14 +338,14 @@ int main(int argc, char **argv) {
 
                     if (newShapeInstanced) {
                         LayerType layerType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? LAYER_TYPE_HURTBOX : LAYER_TYPE_HITBOX;
-                        Layer shape = LayerNew(shapeType, layerType);
-                        shape.transform.o = (Vector2) { // spawn shape at center of frame.
+                        Layer layer = LayerNew(shapeType, layerType);
+                        layer.transform.o = (Vector2) { // spawn shape at center of frame.
                             .x = (float) texture.width / (float) (state.frameCount * 2), 
                             .y = (float) texture.height / 2.0f
                         };
 
-                        EditorStateAddShape(&state, shape);
-                        state.shapeIdx = state.shapeCount - 1;
+                        EditorStateLayerAdd(&state, layer);
+                        state.layerIdx = state.layerCount - 1;
                         EditorHistoryCommitState(&history, &state);
                         mode = MODE_IDLE;
                     }
@@ -353,8 +353,8 @@ int main(int argc, char **argv) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
-                        draggingHandle = state.shapeIdx >= 0 ? LayerSelectHandle(transform, mousePos,
-                                                                                 state.shapes[state.shapeIdx]) : HANDLE_NONE;
+                        draggingHandle = state.layerIdx >= 0 ? LayerSelectHandle(transform, mousePos,
+                                                                                 state.layers[state.layerIdx]) : HANDLE_NONE;
                         if (draggingHandle != HANDLE_NONE) {
                             mode = MODE_DRAGGING_HANDLE;
                         } else {
@@ -370,7 +370,7 @@ int main(int argc, char **argv) {
                         playingFrameTime = 0;
                     }
                 } else {
-                    int frameDir = (IsKeyPressed(KEY_NEXT_FRAME) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_FRAME) ? 1 : 0);
+                    int frameDir = (IsKeyPressed(KEY_FRAME_NEXT) ? 1 : 0) - (IsKeyPressed(KEY_FRAME_PREVIOUS) ? 1 : 0);
                     if (frameDir) {
                         mode = MODE_IDLE;
                         int newFrame = state.frameIdx + frameDir;
@@ -380,10 +380,10 @@ int main(int argc, char **argv) {
                         else state.frameIdx = newFrame;
                     }
 
-                    int shapeDir = (IsKeyPressed(KEY_NEXT_SHAPE) ? 1 : 0) - (IsKeyPressed(KEY_PREVIOUS_SHAPE) ? 1 : 0);
-                    if (shapeDir) {
+                    int layerDir = (IsKeyPressed(KEY_LAYER_NEXT) ? 1 : 0) - (IsKeyPressed(KEY_LAYER_PREVIOUS) ? 1 : 0);
+                    if (layerDir) {
                         mode = MODE_IDLE;
-                        state.shapeIdx = Clamp(state.shapeIdx + shapeDir, -1, state.shapeCount - 1);
+                        state.layerIdx = Clamp(state.layerIdx + layerDir, -1, state.layerCount - 1);
                     }
                 }
                 break;
@@ -429,10 +429,10 @@ int main(int argc, char **argv) {
         DrawTexturePro(texture, source, dest, VECTOR2_ZERO, 0.0f, WHITE);
         rlPopMatrix();
 
-        // draw combat shapes
-        for (int i = 0; i < state.shapeCount; i++) {
-            if (EditorStateShapeActiveGet(&state, state.frameIdx, i)) {
-                LayerDraw(transform, state.shapes[i], i == state.shapeIdx);
+        // draw layers
+        for (int i = 0; i < state.layerCount; i++) {
+            if (EditorStateLayerActiveGet(&state, state.frameIdx, i)) {
+                LayerDraw(transform, state.layers[i], i == state.layerIdx);
             }
         }
         
@@ -455,7 +455,7 @@ int main(int argc, char **argv) {
         }
         
         // draw hitbox damage and stun value boxes if a hitbox is currently selected.
-        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].type == LAYER_TYPE_HITBOX) {
+        if (state.layerIdx >= 0 && state.layers[state.layerIdx].type == LAYER_TYPE_HITBOX) {
             Rectangle rectDamageLabel = rectFrameDurationLabel;
             rectDamageLabel.y += rectDamageLabel.height;
             GuiLabel(rectDamageLabel, "Hitbox Damage");
@@ -463,7 +463,7 @@ int main(int argc, char **argv) {
             Rectangle rectDamageValue = rectDamageLabel;
             rectDamageValue.x += rectDamageValue.width;
             rectDamageValue.width = rectFrameDurationValue.width;
-            if (GuiValueBox(rectDamageValue, NULL, &state.shapes[state.shapeIdx].hitboxDamage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
+            if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].box.hitboxDamage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
                 mode = MODE_EDIT_HITBOX_DAMAGE;
             }
 
@@ -474,7 +474,7 @@ int main(int argc, char **argv) {
             Rectangle rectStunValue = rectStunLabel;
             rectStunValue.x += rectStunValue.width;
             rectStunValue.width = rectFrameDurationValue.width;
-            if (GuiValueBox(rectStunValue, NULL, &state.shapes[state.shapeIdx].hitboxStun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
+            if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].box.hitboxStun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
                 mode = MODE_EDIT_HITBOX_STUN;
             }
         }
@@ -484,7 +484,7 @@ int main(int argc, char **argv) {
         // draw timeline
         DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
-        int selectedY = state.shapeIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.shapeIdx * SHAPE_ROW_SIZE : timelineY;
+        int selectedY = state.layerIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.layerIdx * LAYER_ROW_SIZE : timelineY;
         DrawRectangle(selectedX, selectedY, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
 
         for (int i = 0; i < state.frameCount; i++) {
@@ -498,15 +498,15 @@ int main(int argc, char **argv) {
             int textX = frameCenter.x - MeasureText(text, fontSize) / 2.0f;
             int textY = frameCenter.y - fontSize / 2.0f;
             DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
-            for (int j = 0; j < state.shapeCount; j++) {
+            for (int j = 0; j < state.layerCount; j++) {
                 Color color;
-                bool active = EditorStateShapeActiveGet(&state, i, j);
-                if (state.shapes[j].type == LAYER_TYPE_HITBOX)
+                bool active = EditorStateLayerActiveGet(&state, i, j);
+                if (state.layers[j].type == LAYER_TYPE_HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
                 else
                     color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
-                int shapeY = hitboxRowY + SHAPE_ROW_SIZE * (j + 0.5);
-                DrawCircle(xPos, shapeY, SHAPE_ICON_CIRCLE_RADIUS, color);
+                int layerY = hitboxRowY + LAYER_ROW_SIZE * (j + 0.5);
+                DrawCircle(xPos, layerY, LAYER_ICON_CIRCLE_RADIUS, color);
             }
         }
 
