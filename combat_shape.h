@@ -11,29 +11,23 @@
 
 #define COMBAT_SHAPE_ALPHA 63
 
+// Red
 #define HITBOX_OUTLINE_COLOR (Color) {255, 0, 0, 255}
 #define HITBOX_COLOR (Color) {255, 0, 0, COMBAT_SHAPE_ALPHA}
 
 #define HITBOX_CIRCLE_INACTIVE_COLOR (Color) {63, 0, 0, 255}
 #define HITBOX_CIRCLE_ACTIVE_COLOR HITBOX_OUTLINE_COLOR
 
+// Blue (Teal)
 #define HURTBOX_OUTLINE_COLOR (Color) {0, 255, 255, 255}
 #define HURTBOX_COLOR (Color) {0, 255, 255, COMBAT_SHAPE_ALPHA}
 
 #define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
 #define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
 
-#define DEFAULT_HITBOX_KNOCKBACK_X 2
-#define DEFAULT_HITBOX_KNOCKBACK_Y (-2)
-#define DEFAULT_HITBOX_DAMAGE 0
-#define DEFAULT_HITBOX_STUN 1000
+#define TAG_LENGTH_MAX 8
 
-#define DEFAULT_CIRCLE_RADIUS 24.0f
-#define DEFAULT_RECTANGLE_RIGHT_X 24.0f
-#define DEFAULT_RECTANGLE_BOTTOM_Y 24.0f
-#define DEFAULT_CAPSULE_RADIUS 24.0f
-#define DEFAULT_CAPSULE_HEIGHT 24.0f
-
+// Strings used for serialization
 #define STR_HITBOX "HITBOX"
 #define STR_HITBOX_STUN "hitboxStun"
 #define STR_HITBOX_DAMAGE "hitboxDamage"
@@ -55,19 +49,20 @@
 #define STR_Y "y"
 
 typedef enum Handle {
-    NONE,
-    CENTER,
-    HITBOX_KNOCKBACK,
-    CIRCLE_RADIUS,
-    RECTANGLE_CORNER,
-    CAPSULE_HEIGHT,
-    CAPSULE_RADIUS,
-    CAPSULE_ROTATION
+    HANDLE_NONE,
+    HANDLE_CENTER,
+    HANDLE_HITBOX_KNOCKBACK,
+    HANDLE_CIRCLE_RADIUS,
+    HANDLE_RECTANGLE_CORNER,
+    HANDLE_CAPSULE_HEIGHT,
+    HANDLE_CAPSULE_RADIUS,
+    HANDLE_CAPSULE_ROTATION
 } Handle;
 
 typedef enum BoxType {
-    HITBOX,
-    HURTBOX
+    BOX_TYPE_HITBOX,
+    BOX_TYPE_HURTBOX,
+    BOX_TYPE_METADATA,
 } BoxType;
 
 typedef union ShapeData {
@@ -84,19 +79,32 @@ typedef union ShapeData {
 } ShapeData;
 
 typedef enum ShapeType {
-    CIRCLE,
-    RECTANGLE,
-    CAPSULE
+    SHAPE_CIRCLE,
+    SHAPE_RECTANGLE,
+    SHAPE_CAPSULE
 } ShapeType;
 
 typedef struct CombatShape {
     BoxType boxType;
-    int hitboxKnockbackX; // defined only if boxType is HITBOX
+    ShapeType shapeType;
+
+    int hitboxKnockbackX; // defined only if boxType is BOX_TYPE_HITBOX
     int hitboxKnockbackY;
     int hitboxDamage;
     int hitboxStun;
-    ShapeType shapeType;
-    ShapeData data;
+    union {
+        int circleRadius;
+        struct {
+            int rightX;
+            int bottomY;
+        } rectangle;
+        struct {
+            int radius;
+            int height;
+            float rotation;
+        } capsule;
+    } data;
+
     Transform2D transform;
 } CombatShape;
 

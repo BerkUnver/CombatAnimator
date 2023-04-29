@@ -210,7 +210,6 @@ int main(int argc, char **argv) {
         MODE_PLAYING,
         MODE_DRAGGING_HANDLE,
         MODE_DRAGGING_FRAME_POS,
-        MODE_DRAGGING_FRAME_VELOCITY,
         MODE_PANNING_SPRITE,
         MODE_EDIT_FRAME_DURATION,
         MODE_EDIT_HITBOX_DAMAGE,
@@ -219,7 +218,7 @@ int main(int argc, char **argv) {
     Mode mode = MODE_IDLE;
 
     int playingFrameTime = 0;
-    Handle draggingHandle = NONE;
+    Handle draggingHandle = HANDLE_NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
 
     while (!WindowShouldClose()) {
@@ -273,18 +272,6 @@ int main(int argc, char **argv) {
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
                     state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
-                }
-                break;
-            
-            case MODE_DRAGGING_FRAME_VELOCITY:
-                if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                    EditorHistoryCommitState(&history, &state);
-                    mode = MODE_IDLE;
-                } else {
-                    Vector2 velocity = Transform2DBasisXForm(transform, Vector2Subtract(mousePos, velocityHandleOrigin));
-                    Vector2 velocityRound = Vector2Round(velocity);
-                    if (Vector2Equals(velocityRound, VECTOR2_ZERO)) state.frames[state.frameIdx].velocityExists = false;
-                    else state.frames[state.frameIdx].velocity = Vector2Round(velocity);
                 }
                 break;
 
@@ -341,13 +328,17 @@ int main(int argc, char **argv) {
                     bool newShapeInstanced = true;
                     ShapeType shapeType;
                     
-                    if (IsKeyPressed(KEY_NEW_CIRCLE))           shapeType = CIRCLE;
-                    else if (IsKeyPressed(KEY_NEW_RECTANGLE))   shapeType = RECTANGLE;
-                    else if (IsKeyPressed(KEY_NEW_CAPSULE))     shapeType = CAPSULE;
-                    else                                        newShapeInstanced = false;
+                    if (IsKeyPressed(KEY_NEW_CIRCLE))
+                        shapeType = SHAPE_CIRCLE;
+                    else if (IsKeyPressed(KEY_NEW_RECTANGLE))
+                        shapeType = SHAPE_RECTANGLE;
+                    else if (IsKeyPressed(KEY_NEW_CAPSULE))
+                        shapeType = SHAPE_CAPSULE;
+                    else
+                        newShapeInstanced = false;
 
                     if (newShapeInstanced) {
-                        BoxType boxType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? HURTBOX : HITBOX;
+                        BoxType boxType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? BOX_TYPE_HURTBOX : BOX_TYPE_HITBOX;
                         CombatShape shape = CombatShapeNew(shapeType, boxType);
                         shape.transform.o = (Vector2) { // spawn shape at center of frame.
                             .x = (float) texture.width / (float) (state.frameCount * 2), 
@@ -360,22 +351,12 @@ int main(int argc, char **argv) {
                         mode = MODE_IDLE;
                     }
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
-                    Vector2 velocityHandlePos;
-                    if (state.frames[state.frameIdx].velocityExists) {
-                        Vector2 handleOffset = Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity);
-                        velocityHandlePos = Vector2Add(velocityHandleOrigin, handleOffset);
-                    } else {
-                        velocityHandlePos = velocityHandleOrigin;
-                    }
-
-                    if (HandleIsColliding(Transform2DIdentity(), mousePos, velocityHandlePos)) {
-                        mode = MODE_DRAGGING_FRAME_VELOCITY;
-                    } else if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
+                    if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
                         draggingHandle = state.shapeIdx >= 0 ? CombatShapeSelectHandle(transform, mousePos,
-                                                                                       state.shapes[state.shapeIdx]) : NONE;
-                        if (draggingHandle != NONE) {
+                                                                                       state.shapes[state.shapeIdx]) : HANDLE_NONE;
+                        if (draggingHandle != HANDLE_NONE) {
                             mode = MODE_DRAGGING_HANDLE;
                         } else {
                             panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
@@ -463,16 +444,6 @@ int main(int argc, char **argv) {
         }
         Vector2 globalFramePos = Transform2DToGlobal(transform, state.frames[state.frameIdx].pos);
         HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
-       
-        if (state.frames[state.frameIdx].velocityExists) {
-        // draw frame velocity handle
-            Vector2 velocityHandlePos = Vector2Add(velocityHandleOrigin, Transform2DBasisXFormInv(transform, state.frames[state.frameIdx].velocity));
-            DrawLine(velocityHandleOrigin.x, velocityHandleOrigin.y, velocityHandlePos.x, velocityHandlePos.y, FRAME_VELOCITY_HANDLE_COLOR);
-            HandleDraw(velocityHandlePos, FRAME_VELOCITY_HANDLE_COLOR);
-        } else {
-            HandleDraw(velocityHandleOrigin, FRAME_VELOCITY_HANDLE_COLOR);
-        }
-
 
         // draw frame duration value box
         Rectangle rectFrameDurationLabel = { .x = 0, .y = 0, .width = 128, .height = (float) fontSize + 8};
@@ -485,7 +456,7 @@ int main(int argc, char **argv) {
         }
         
         // draw hitbox damage and stun value boxes if a hitbox is currently selected.
-        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].boxType == HITBOX) {
+        if (state.shapeIdx >= 0 && state.shapes[state.shapeIdx].boxType == BOX_TYPE_HITBOX) {
             Rectangle rectDamageLabel = rectFrameDurationLabel;
             rectDamageLabel.y += rectDamageLabel.height;
             GuiLabel(rectDamageLabel, "Hitbox Damage");
@@ -531,7 +502,7 @@ int main(int argc, char **argv) {
             for (int j = 0; j < state.shapeCount; j++) {
                 Color color;
                 bool active = EditorStateShapeActiveGet(&state, i, j);
-                if (state.shapes[j].boxType == HITBOX)
+                if (state.shapes[j].boxType == BOX_TYPE_HITBOX)
                     color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
                 else
                     color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
