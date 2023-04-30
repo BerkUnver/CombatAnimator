@@ -260,3 +260,28 @@ bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos) {
     }
     assert(false);
 }
+
+cJSON *ShapeSerialize(Shape shape) {
+    cJSON *shapeJson = cJSON_CreateObject();
+    switch (shape.type) {
+        case SHAPE_CIRCLE:
+            cJSON_AddStringToObject(shapeJson, "type", "CIRCLE");
+            cJSON_AddNumberToObject(shapeJson, "circleRadius", shape.circleRadius);
+            break;
+        case SHAPE_RECTANGLE:
+            cJSON_AddStringToObject(shapeJson, "type", "RECTANGLE");
+            cJSON *rect = cJSON_CreateObject();
+            cJSON_AddNumberToObject(rect, "rightX", shape.rectangle.rightX);
+            cJSON_AddNumberToObject(rect, "bottomY", shape.rectangle.bottomY);
+            cJSON_AddItemToObject(shapeJson, "rectangle", rect);
+            break;
+        case SHAPE_CAPSULE:
+            cJSON_AddStringToObject(shapeJson, "type", "CAPSULE");
+            cJSON *capsule = cJSON_CreateObject();
+            cJSON_AddNumberToObject(capsule, "height", shape.capsule.height);
+            cJSON_AddNumberToObject(capsule, "radius", shape.capsule.radius);
+            // Ignoring serializing rotation for now, will figure out a nice way to make it work.
+            break;
+    }
+    return shapeJson;
+}

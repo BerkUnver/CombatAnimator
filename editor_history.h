@@ -69,6 +69,7 @@ void EditorStateAddFrame(EditorState *state);
 bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
 
+bool EditorStateSerialize(EditorState *state, const char *path);
 /*
 cJSON *EditorStateSerialize(EditorState *state);
 bool EditorStateDeserialize(cJSON *json, EditorState *state);

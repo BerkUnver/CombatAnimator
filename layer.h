@@ -110,4 +110,5 @@ void LayerDraw(Layer *layer, Transform2D transform, bool handlesActive);
 Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMousePos);
 bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
 
+cJSON *ShapeSerialize(Shape shape);
 #endif

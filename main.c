@@ -286,9 +286,9 @@ int main(int argc, char **argv) {
             case MODE_PLAYING:
             case MODE_IDLE:
                 if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
-                    // if (!EditorStateWriteToFile(&state, savePath)) {
-                    //     puts("Failed to save file for unknown reason.");
-                    // }
+                    if (!EditorStateSerialize(&state, savePath)) {
+                        puts("Failed to save file for unknown reason.");
+                    }
                 } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
                     mode = MODE_IDLE;
                     ChangeOptions option = CHANGE_UNDO;

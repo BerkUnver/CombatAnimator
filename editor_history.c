@@ -163,6 +163,97 @@ void EditorHistoryChangeState(EditorHistory *history, EditorState *state, Change
     EditorStateFree(&oldState);
 }
 
+bool EditorStateSerialize(EditorState *state, const char *path) {
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, "magic", "CombatAnimator");
+    cJSON_AddNumberToObject(json, "version", 5);
+
+    cJSON *layers = cJSON_CreateArray();
+    for (int i = 0; i < state->layerCount; i++) {
+        Layer *layer = state->layers + i;
+        cJSON *layerJson = cJSON_CreateObject();
+        cJSON_AddNumberToObject(layerJson, "x", layer->transform.o.x);
+        cJSON_AddNumberToObject(layerJson, "y", layer->transform.o.y);
+        switch (state->layers[i].type) {
+            case LAYER_HITBOX:
+                cJSON_AddStringToObject(layerJson, "type", "HITBOX");
+                cJSON *hitbox = cJSON_CreateObject();
+                cJSON_AddNumberToObject(hitbox, "knockbackX", layer->hitbox.knockbackX);
+                cJSON_AddNumberToObject(hitbox, "knockbackY", layer->hitbox.knockbackY);
+                cJSON_AddNumberToObject(hitbox, "damage", layer->hitbox.damage);
+                cJSON_AddNumberToObject(hitbox, "stun", layer->hitbox.stun);
+                cJSON_AddItemToObject(hitbox, "shape", ShapeSerialize(layer->hitbox.shape));
+                cJSON_AddItemToObject(layerJson, "hitbox", hitbox);
+                break;
+            case LAYER_HURTBOX:
+                cJSON_AddStringToObject(layerJson, "type", "HURTBOX");
+                cJSON_AddItemToObject(layerJson, "hurtboxShape", ShapeSerialize(layer->hurtboxShape));
+                break;
+            case LAYER_METADATA:
+                cJSON_AddStringToObject(layerJson, "type", "METADATA");
+                cJSON_AddStringToObject(layerJson, "metadataTag", layer->metadataTag);
+                break;
+        }
+        cJSON_AddItemToArray(layers, layerJson);
+    }
+    cJSON_AddItemToObject(json, "layers", layers);
+
+    cJSON *frames = cJSON_CreateArray();
+    for (int i = 0; i < state->frameCount; i++) {
+        cJSON *frame = cJSON_CreateObject();
+        FrameInfo frameInfo = state->frames[i];
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_DURATION, frameInfo.duration);
+        cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
+        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_Y, frameInfo.pos.y);
+        cJSON_AddItemToArray(frames, frame);
+    }
+    cJSON_AddItemToObject(json, "frames", frames);
+
+    cJSON *activeFrames = cJSON_CreateArray();
+    int activeCount = state->frameCount * state->layerCount;
+    for (int i = 0; i < activeCount; i++) {
+        cJSON *val = cJSON_CreateNumber(state->_layerActiveFrames[i]);
+        cJSON_AddItemToArray(activeFrames, val);
+    }
+    cJSON_AddItemToObject(json, "layerActiveFrames", activeFrames);
+
+    FILE *file = fopen(path, "w+");
+    if (!file) {
+        cJSON_Delete(json);
+        return false;
+    }
+    char *str = cJSON_Print(json);
+    cJSON_Delete(json);
+    fputs(str, file);
+    free(str);
+    fclose(file);
+    return true;
+}
+
+/*
+ * {
+ *      "x": 0,
+ *      "y": 0,
+ *      "type" : "HITBOX",
+ *      "hitbox": {
+ *          "shape": {
+ *              "type": "CIRCLE"
+ *              "circleRadius": 24
+ *          }
+ *          "knockbackX": 24,
+ *          "knockbackY": 9,
+ *          "stun": 1000,
+ *          "damage": 0
+ *      }
+ * }, {
+ *      "x": 0
+ *      "y": 0
+ *      "type": "HURTBOX"
+ * }
+ *
+ */
+
 
 /*
 cJSON *EditorStateSerialize(EditorState *state) {
