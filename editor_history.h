@@ -68,10 +68,13 @@ bool EditorStateLayerRemove(EditorState *state, int idx);
 void EditorStateAddFrame(EditorState *state);
 bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
+
+/*
 cJSON *EditorStateSerialize(EditorState *state);
 bool EditorStateDeserialize(cJSON *json, EditorState *state);
 bool EditorStateReadFromFile(EditorState *state, const char *path);
 bool EditorStateWriteToFile(EditorState *state, const char *path);
+*/
 
 EditorHistory EditorHistoryNew(EditorState *initial);
 void EditorHistoryFree(EditorHistory *history);

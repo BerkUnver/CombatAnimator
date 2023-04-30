@@ -44,10 +44,6 @@
 #define KEY_LAYER_REMOVE_MODIFIER KEY_LEFT_CONTROL
 
 #define KEY_LAYER_NEW_MODIFIER KEY_LEFT_CONTROL
-#define KEY_NEW_HURTBOX_MODIFIER KEY_LEFT_SHIFT
-#define KEY_NEW_CIRCLE KEY_ONE
-#define KEY_NEW_RECTANGLE KEY_TWO
-#define KEY_NEW_CAPSULE KEY_THREE
 
 #define KEY_FRAME_TOGGLE KEY_SPACE
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
@@ -102,6 +98,7 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
 
 }
 
+/*
 void RecursiveUpdate(const char *path) {
     
     DIR *dir = opendir(path);
@@ -147,6 +144,7 @@ void RecursiveUpdate(const char *path) {
     }
     closedir(dir);
 }
+ */
 
 int main(int argc, char **argv) {
     if (argc < 2) {
@@ -155,16 +153,16 @@ int main(int argc, char **argv) {
     }
 
     if (!strcmp(argv[1], "-u")) { // first argument is to recursively update all files in the given folder.
-        RecursiveUpdate(".");
+        // RecursiveUpdate(".");
         return EXIT_SUCCESS;
     } else if (!strcmp(argv[1], "-t")) {
         for (int i = 0; i < VERSION_NUMBER; i++) { // make sure each version can still deserialize
             char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
             sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
-            EditorState state;
-            bool success = EditorStateReadFromFile(&state, fileName);
-            if (success) EditorStateFree(&state);
-            printf("Version %i Deserialize success: %s\n", i, success ? "yes" : "no");
+            // EditorState state;
+            // bool success = EditorStateReadFromFile(&state, fileName);
+            // if (success) EditorStateFree(&state);
+            // printf("Version %i Deserialize success: %s\n", i, success ? "yes" : "no");
         }
         return EXIT_SUCCESS;
     }
@@ -188,7 +186,7 @@ int main(int argc, char **argv) {
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
     EditorState state;
-    if (!EditorStateReadFromFile(&state, savePath)) state = EditorStateNew(1);
+    /* if (!EditorStateReadFromFile(&state, savePath)) */ state = EditorStateNew(1);
 
     EditorHistory history = EditorHistoryNew(&state);
 
@@ -212,7 +210,8 @@ int main(int argc, char **argv) {
         MODE_PANNING_SPRITE,
         MODE_EDIT_FRAME_DURATION,
         MODE_EDIT_HITBOX_DAMAGE,
-        MODE_EDIT_HITBOX_STUN
+        MODE_EDIT_HITBOX_STUN,
+        MODE_EDIT_METADATA_TAG
     } Mode;
     Mode mode = MODE_IDLE;
 
@@ -248,6 +247,7 @@ int main(int argc, char **argv) {
             case MODE_EDIT_FRAME_DURATION:
             case MODE_EDIT_HITBOX_DAMAGE:
             case MODE_EDIT_HITBOX_STUN:
+            case MODE_EDIT_METADATA_TAG:
                 if (IsKeyPressed(KEY_ENTER)) {
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                    assert(LayerSetHandle(localMousePos, &state.layers[state.layerIdx], draggingHandle));
+                    assert(LayerHandleSet(state.layers + state.layerIdx, draggingHandle, localMousePos));
                 }
                 break;
 
@@ -286,9 +286,9 @@ int main(int argc, char **argv) {
             case MODE_PLAYING:
             case MODE_IDLE:
                 if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
-                    if (!EditorStateWriteToFile(&state, savePath)) {
-                        puts("Failed to save file for unknown reason.");
-                    }
+                    // if (!EditorStateWriteToFile(&state, savePath)) {
+                    //     puts("Failed to save file for unknown reason.");
+                    // }
                 } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
                     mode = MODE_IDLE;
                     ChangeOptions option = CHANGE_UNDO;
@@ -324,37 +324,59 @@ int main(int argc, char **argv) {
                     EditorHistoryCommitState(&history, &state);
                 
                 } else if (IsKeyDown(KEY_LAYER_NEW_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
-                    bool newShapeInstanced = true;
-                    ShapeType shapeType;
-                    
-                    if (IsKeyPressed(KEY_NEW_CIRCLE))
-                        shapeType = SHAPE_CIRCLE;
-                    else if (IsKeyPressed(KEY_NEW_RECTANGLE))
-                        shapeType = SHAPE_RECTANGLE;
-                    else if (IsKeyPressed(KEY_NEW_CAPSULE))
-                        shapeType = SHAPE_CAPSULE;
-                    else
-                        newShapeInstanced = false;
-
-                    if (newShapeInstanced) {
-                        LayerType layerType = IsKeyDown(KEY_NEW_HURTBOX_MODIFIER) ? LAYER_TYPE_HURTBOX : LAYER_TYPE_HITBOX;
-                        Layer layer = LayerNew(shapeType, layerType);
-                        layer.transform.o = (Vector2) { // spawn shape at center of frame.
-                            .x = (float) texture.width / (float) (state.frameCount * 2), 
+                    Layer layer;
+                    layer.transform = Transform2DIdentity();
+                    layer.transform.o = (Vector2) { // spawn shape at center of frame.
+                            .x = (float) texture.width / (float) (state.frameCount * 2),
                             .y = (float) texture.height / 2.0f
-                        };
+                    };
 
-                        EditorStateLayerAdd(&state, layer);
-                        state.layerIdx = state.layerCount - 1;
-                        EditorHistoryCommitState(&history, &state);
-                        mode = MODE_IDLE;
+                    if (IsKeyPressed(KEY_M)) { // Metadata
+                        layer.type = LAYER_METADATA;
+                        layer.metadataTag[0] = '\0';
+
+                    } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox
+                        Shape shape;
+                        if (IsKeyPressed(KEY_ONE)) {
+                            shape.type = SHAPE_CIRCLE;
+                            shape.circleRadius = 24;
+                        } else if (IsKeyPressed(KEY_TWO)) {
+                            shape.type = SHAPE_RECTANGLE;
+                            shape.rectangle.rightX = 24;
+                            shape.rectangle.bottomY = 24;
+                        } else if (IsKeyPressed(KEY_THREE)) {
+                            shape.type = SHAPE_CAPSULE;
+                            shape.capsule.radius = 24;
+                            shape.capsule.height = 24;
+                        } else goto layerNotInstanced;
+
+                        if (IsKeyDown(KEY_H)) {
+                            layer.type = LAYER_HURTBOX;
+                            layer.hurtboxShape = shape;
+                        } else {
+                            layer.type = LAYER_HITBOX;
+                            layer.hitbox.shape = shape;
+                            layer.hitbox.knockbackX = 2;
+                            layer.hitbox.knockbackY = -2;
+                            layer.hitbox.damage = 0;
+                            layer.hitbox.stun = 1000;
+                        }
+
+                    } else {
+                        goto layerNotInstanced;
                     }
+
+                    EditorStateLayerAdd(&state, layer);
+                    state.layerIdx = state.layerCount - 1;
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+
+                    layerNotInstanced:;// don't add the layer.
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
-                        draggingHandle = state.layerIdx >= 0 ? LayerSelectHandle(transform, mousePos,
-                                                                                 state.layers[state.layerIdx]) : HANDLE_NONE;
+                        draggingHandle = state.layerIdx >= 0 ? LayerHandleSelect(&state.layers[state.layerIdx], transform, mousePos) : HANDLE_NONE;
                         if (draggingHandle != HANDLE_NONE) {
                             mode = MODE_DRAGGING_HANDLE;
                         } else {
@@ -387,11 +409,6 @@ int main(int argc, char **argv) {
                     }
                 }
                 break;
-
-            default:
-                assert(false);
-                break;
-
         }
 
         // playing tick update (not related to model)
@@ -432,7 +449,7 @@ int main(int argc, char **argv) {
         // draw layers
         for (int i = 0; i < state.layerCount; i++) {
             if (EditorStateLayerActiveGet(&state, state.frameIdx, i)) {
-                LayerDraw(transform, state.layers[i], i == state.layerIdx);
+                LayerDraw(state.layers + i, transform, i == state.layerIdx);
             }
         }
         
@@ -449,33 +466,53 @@ int main(int argc, char **argv) {
         GuiLabel(rectFrameDurationLabel, "Frame Duration (ms)");
         Rectangle rectFrameDurationValue = rectFrameDurationLabel;
         rectFrameDurationValue.x += rectFrameDurationValue.width;
-        rectFrameDurationValue.width = 32;
+        rectFrameDurationValue.width = 128;
         if (GuiValueBox(rectFrameDurationValue, NULL, &state.frames[state.frameIdx].duration, 1, INT_MAX, mode == MODE_EDIT_FRAME_DURATION)) {
             mode = MODE_EDIT_FRAME_DURATION;
         }
         
         // draw hitbox damage and stun value boxes if a hitbox is currently selected.
-        if (state.layerIdx >= 0 && state.layers[state.layerIdx].type == LAYER_TYPE_HITBOX) {
-            Rectangle rectDamageLabel = rectFrameDurationLabel;
-            rectDamageLabel.y += rectDamageLabel.height;
-            GuiLabel(rectDamageLabel, "Hitbox Damage");
-            
-            Rectangle rectDamageValue = rectDamageLabel;
-            rectDamageValue.x += rectDamageValue.width;
-            rectDamageValue.width = rectFrameDurationValue.width;
-            if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].box.hitboxDamage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
-                mode = MODE_EDIT_HITBOX_DAMAGE;
-            }
+        if (state.layerIdx >= 0) {
+            switch (state.layers[state.layerIdx].type) {
+                case LAYER_HITBOX: {
+                    Rectangle rectDamageLabel = rectFrameDurationLabel;
+                    rectDamageLabel.y += rectDamageLabel.height;
+                    GuiLabel(rectDamageLabel, "Hitbox Damage");
 
-            Rectangle rectStunLabel = rectDamageLabel;
-            rectStunLabel.y += rectStunLabel.height;
-            GuiLabel(rectStunLabel, "Hitbox Stun (ms)");
-            
-            Rectangle rectStunValue = rectStunLabel;
-            rectStunValue.x += rectStunValue.width;
-            rectStunValue.width = rectFrameDurationValue.width;
-            if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].box.hitboxStun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
-                mode = MODE_EDIT_HITBOX_STUN;
+                    Rectangle rectDamageValue = rectDamageLabel;
+                    rectDamageValue.x += rectDamageValue.width;
+                    rectDamageValue.width = rectFrameDurationValue.width;
+                    if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX,
+                                    mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                        mode = MODE_EDIT_HITBOX_DAMAGE;
+                    }
+
+                    Rectangle rectStunLabel = rectDamageLabel;
+                    rectStunLabel.y += rectStunLabel.height;
+                    GuiLabel(rectStunLabel, "Hitbox Stun (ms)");
+
+                    Rectangle rectStunValue = rectStunLabel;
+                    rectStunValue.x += rectStunValue.width;
+                    rectStunValue.width = rectFrameDurationValue.width;
+                    if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX,
+                                    mode == MODE_EDIT_HITBOX_STUN)) {
+                        mode = MODE_EDIT_HITBOX_STUN;
+                    }
+                } break;
+
+                case LAYER_HURTBOX:
+                    break;
+
+                case LAYER_METADATA: {
+                    Rectangle rectTagLabel = rectFrameDurationLabel;
+                    rectTagLabel.y += rectTagLabel.height;
+                    GuiLabel(rectTagLabel, "Metadata Tag");
+                    Rectangle rectTagValue = rectFrameDurationValue;
+                    rectTagValue.y += rectTagLabel.y;
+                    if (GuiTextBox(rectTagValue, state.layers[state.layerIdx].metadataTag, LAYER_METADATA_TAG_LENGTH, mode == MODE_EDIT_METADATA_TAG)) {
+                        mode = MODE_EDIT_METADATA_TAG;
+                    }
+                } break;
             }
         }
         
@@ -491,21 +528,28 @@ int main(int argc, char **argv) {
             int xPos = i * FRAME_ROW_SIZE + FRAME_ROW_SIZE / 2;
 
             Color frameColor = state.frames[i].canCancel ? FRAME_RHOMBUS_CAN_CANCEL_COLOR : FRAME_RHOMBUS_CANNOT_CANCEL_COLOR;
-            Vector2 frameCenter = {xPos, timelineY + FRAME_ROW_SIZE / 2};
+            Vector2 frameCenter = {(float) xPos, (float) timelineY + FRAME_ROW_SIZE / 2.0f};
             DrawRhombus(frameCenter, FRAME_RHOMBUS_RADIUS, FRAME_RHOMBUS_RADIUS, frameColor);
             
             const char *text = TextFormat("%i", i + 1);
-            int textX = frameCenter.x - MeasureText(text, fontSize) / 2.0f;
-            int textY = frameCenter.y - fontSize / 2.0f;
+            int textX = (int) (frameCenter.x - (float) MeasureText(text, fontSize) / 2.0f);
+            int textY = (int) (frameCenter.y - (float) fontSize / 2.0f);
             DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
             for (int j = 0; j < state.layerCount; j++) {
                 Color color;
                 bool active = EditorStateLayerActiveGet(&state, i, j);
-                if (state.layers[j].type == LAYER_TYPE_HITBOX)
-                    color = active ? HITBOX_CIRCLE_ACTIVE_COLOR : HITBOX_CIRCLE_INACTIVE_COLOR;
-                else
-                    color = active ? HURTBOX_CIRCLE_ACTIVE_COLOR : HURTBOX_CIRCLE_INACTIVE_COLOR;
-                int layerY = hitboxRowY + LAYER_ROW_SIZE * (j + 0.5);
+                switch (state.layers[j].type) {
+                    case LAYER_HITBOX:
+                        color = active ? LAYER_HITBOX_COLOR_TIMELINE_ACTIVE : LAYER_HITBOX_COLOR_TIMELINE_INACTIVE;
+                        break;
+                    case LAYER_HURTBOX:
+                        color = active ? LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE : LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE;
+                        break;
+                    case LAYER_METADATA:
+                        color = active ? LAYER_METADATA_COLOR_TIMELINE_ACTIVE : LAYER_METADATA_COLOR_TIMELINE_INACTIVE;
+                        break;
+                }
+                int layerY = hitboxRowY + (int) (LAYER_ROW_SIZE * ((float) j + 0.5f));
                 DrawCircle(xPos, layerY, LAYER_ICON_CIRCLE_RADIUS, color);
             }
         }

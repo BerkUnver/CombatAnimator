@@ -5,27 +5,24 @@
 #include "cjson/cJSON.h"
 #include "transform_2d.h"
 
-#define COMBAT_SHAPE_SEGMENTS 16
+#define SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
-#define HANDLE_INTERIOR_RADIUS 6.0f
-#define HANDLE_INTERIOR_COLOR RAYWHITE
-
-#define COMBAT_SHAPE_ALPHA 63
-
+// hitbox
+// hurtbox
+// knockback
 // Red
-#define HITBOX_OUTLINE_COLOR (Color) {255, 0, 0, 255}
-#define HITBOX_COLOR (Color) {255, 0, 0, COMBAT_SHAPE_ALPHA}
-
-#define HITBOX_CIRCLE_INACTIVE_COLOR (Color) {63, 0, 0, 255}
-#define HITBOX_CIRCLE_ACTIVE_COLOR HITBOX_OUTLINE_COLOR
-
-// Blue (Teal)
-#define HURTBOX_OUTLINE_COLOR (Color) {0, 255, 255, 255}
-#define HURTBOX_COLOR (Color) {0, 255, 255, COMBAT_SHAPE_ALPHA}
-
-#define HURTBOX_CIRCLE_INACTIVE_COLOR (Color) {0, 63, 63, 255}
-#define HURTBOX_CIRCLE_ACTIVE_COLOR HURTBOX_OUTLINE_COLOR
-
+#define LAYER_HITBOX_COLOR_OUTLINE (Color) {255, 0, 0, 255}
+#define LAYER_HITBOX_COLOR (Color) {255, 0, 0, 63}
+#define LAYER_HITBOX_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 0, 255}
+#define LAYER_HITBOX_COLOR_TIMELINE_ACTIVE LAYER_HITBOX_COLOR_OUTLINE
+#define LAYER_HURTBOX_COLOR_OUTLINE (Color) {0, 255, 255, 255}
+#define LAYER_HURTBOX_COLOR (Color) {0, 255, 255, 63}
+#define LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 63, 255}
+#define LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE LAYER_HURTBOX_COLOR_OUTLINE
+#define LAYER_METADATA_TAG_LENGTH 16
+#define LAYER_METADATA_COLOR_OUTLINE (Color) {255, 0, 255, 255}
+#define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
+#define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
 
 // Strings used for serialization
 #define STR_HITBOX "HITBOX"
@@ -59,59 +56,58 @@ typedef enum Handle {
     HANDLE_CAPSULE_ROTATION
 } Handle;
 
-typedef enum LayerType {
-    LAYER_TYPE_HITBOX,
-    LAYER_TYPE_HURTBOX,
-    LAYER_TYPE_METADATA,
-} LayerType;
-
 typedef enum ShapeType {
     SHAPE_CIRCLE,
     SHAPE_RECTANGLE,
     SHAPE_CAPSULE
 } ShapeType;
 
-typedef struct Layer {
-    LayerType type;
-
+typedef struct Shape {
+    ShapeType type;
     union {
-        struct { // defined when boxType is BOX_TYPE_HURTBOX or BOX_TYPE_HITBOX
-            int hitboxKnockbackX; // defined only if boxType is BOX_TYPE_HITBOX
-            int hitboxKnockbackY;
-            int hitboxDamage;
-            int hitboxStun;
-            ShapeType type;
-
-            union {
-                int circleRadius;
-                struct {
-                    int rightX;
-                    int bottomY;
-                } rectangle;
-                struct {
-                    int radius;
-                    int height;
-                    float rotation;
-                } capsule;
-            };
-        } box;
-
-        char metadataTag[16];
+        int circleRadius;
+        struct {
+            int rightX;
+            int bottomY;
+        } rectangle;
+        struct {
+            int radius;
+            int height;
+        } capsule;
     };
+} Shape;
 
+typedef enum LayerType {
+    LAYER_HURTBOX,
+    LAYER_HITBOX,
+    LAYER_METADATA,
+} LayerType;
+
+typedef struct Layer {
     Transform2D transform;
+    LayerType type;
+    union {
+        Shape hurtboxShape;
+        struct {
+            int knockbackX;
+            int knockbackY;
+            int damage;
+            int stun;
+            Shape shape;
+        } hitbox;
+        char metadataTag[LAYER_METADATA_TAG_LENGTH];
+    };
 } Layer;
 
-Layer LayerNew(ShapeType shapeType, LayerType layerType);
 
-cJSON *LayerSerialize(Layer layer);
-bool LayerDeserialize(cJSON *json, int version, Layer *out);
+// cJSON *LayerSerialize(Layer layer);
+// bool LayerDeserialize(cJSON *json, int version, Layer *out);
 
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);
 
-void LayerDraw(Transform2D transform, Layer layer, bool handlesActive);
-Handle LayerSelectHandle(Transform2D transform, Vector2 globalMousePos, Layer layer);
-bool LayerSetHandle(Vector2 localMousePos, Layer *layer, Handle handle);
+void LayerDraw(Layer *layer, Transform2D transform, bool handlesActive);
+Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMousePos);
+bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
 
 #endif

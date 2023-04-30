@@ -164,7 +164,7 @@ void EditorHistoryChangeState(EditorHistory *history, EditorState *state, Change
 }
 
 
-
+/*
 cJSON *EditorStateSerialize(EditorState *state) {
     cJSON *layers = cJSON_CreateArray();
 
@@ -205,6 +205,7 @@ cJSON *EditorStateSerialize(EditorState *state) {
     return json;
 }
 
+
 bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     if (!cJSON_IsObject(json)) return false;
     
@@ -216,7 +217,7 @@ bool EditorStateDeserialize(cJSON *json, EditorState *state) {
     else if (!cJSON_IsNumber(version_json)) 
         return false;
     else {
-        int v = cJSON_GetNumberValue(version_json);
+        int v = (int) cJSON_GetNumberValue(version_json);
         if (v <= 0 || VERSION_NUMBER < v) return false;
         version = v;
     }
@@ -335,3 +336,4 @@ bool EditorStateWriteToFile(EditorState *state, const char *path) {
     cJSON_Delete(json);
     return true;
 }
+*/
