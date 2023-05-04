@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include "raylib.h"
 #include "raymath.h"
@@ -291,38 +292,60 @@ cJSON *ShapeSerialize(Shape shape) {
     return shapeJson;
 }
 
-bool ShapeDeserialize(cJSON *json, Shape *shape) {
-    if (!json || !cJSON_IsObject(json)) return false;
-    cJSON *type = cJSON_GetObjectItem(json, "type");
-    if (!cJSON_IsString(type)) return false;
+bool ShapeDeserialize(cJSON *json, Shape *shape, int version) {
+#define RETURN_FAIL do { printf("Cannot deserialize shape. Error: %s at %i.\n", __FILE__, __LINE__); return false; } while (0)
+    if (!json || !cJSON_IsObject(json)) RETURN_FAIL;
+    cJSON *type = cJSON_GetObjectItem(json, version >= 4 ? "type" : "shapeType");
+    if (!cJSON_IsString(type)) RETURN_FAIL;
     char *typeString = cJSON_GetStringValue(type);
     if (!strcmp(typeString, "CIRCLE")) {
         cJSON *radius = cJSON_GetObjectItem(json, "circleRadius");
-        if (!cJSON_IsNumber(radius)) return false;
+        if (!cJSON_IsNumber(radius)) RETURN_FAIL;
         shape->type = SHAPE_CIRCLE;
         shape->circleRadius = cJSON_GetNumberValue(radius);
         return true;
     } else if (!strcmp(typeString, "RECTANGLE")) {
-        cJSON *rect = cJSON_GetObjectItem(json, "rectangle");
-        if (!cJSON_IsObject(rect)) return false;
-        cJSON *rightX = cJSON_GetObjectItem(rect, "rightX");
-        if (!cJSON_IsNumber(rightX)) return false;
-        cJSON *bottomY = cJSON_GetObjectItem(rect, "bottomY");
-        if (!cJSON_IsObject(bottomY)) return false;
+        cJSON *rightX;
+        cJSON *bottomY;
+
+        if (version >= 4) {
+            cJSON *rect = cJSON_GetObjectItem(json, "rectangle");
+            if (!cJSON_IsObject(rect)) RETURN_FAIL;
+            rightX = cJSON_GetObjectItem(rect, "rightX");
+            bottomY = cJSON_GetObjectItem(rect, "bottomY");
+        } else {
+            rightX = cJSON_GetObjectItem(json, "rectangleRightX");
+            bottomY = cJSON_GetObjectItem(json, "rectangleBottomY");
+        }
+
+        if (!cJSON_IsNumber(rightX)) RETURN_FAIL;
+        if (!cJSON_IsNumber(bottomY)) RETURN_FAIL;
+
         shape->type = SHAPE_RECTANGLE;
         shape->rectangle.rightX = cJSON_GetNumberValue(rightX);
         shape->rectangle.bottomY = cJSON_GetNumberValue(bottomY);
         return true;
     } else if (!strcmp(typeString, "CAPSULE")) {
-        cJSON *capsule = cJSON_GetObjectItem(json, "capsule");
-        if (!cJSON_IsObject(capsule)) return false;
-        cJSON *height = cJSON_GetObjectItem(capsule, "height");
-        if (!cJSON_IsNumber(height)) return false;
-        cJSON *radius = cJSON_GetObjectItem(capsule, "radius");
-        if (!cJSON_IsNumber(radius)) return false;
+        cJSON *height;
+        cJSON *radius;
+
+        if (version >= 4) {
+            cJSON *capsule = cJSON_GetObjectItem(json, "capsule");
+            if (!cJSON_IsObject(capsule)) RETURN_FAIL;
+            height = cJSON_GetObjectItem(capsule, "height");
+            radius = cJSON_GetObjectItem(capsule, "radius");
+        } else {
+            height = cJSON_GetObjectItem(json, "capsuleHeight");
+            radius = cJSON_GetObjectItem(json, "capsuleRadius");
+        }
+
+        if (!cJSON_IsNumber(height)) RETURN_FAIL;
+        if (!cJSON_IsNumber(radius)) RETURN_FAIL;
+
         shape->type = SHAPE_CAPSULE;
         shape->capsule.height = cJSON_GetNumberValue(height);
         shape->capsule.radius = cJSON_GetNumberValue(radius);
         return true;
-    } else return false;
+    } else RETURN_FAIL;
+#undef RETURN_FAIL
 }

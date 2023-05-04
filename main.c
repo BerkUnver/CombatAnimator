@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "-u")) { // first argument is to recursively update all files in the given folder.
         // RecursiveUpdate(".");
         return EXIT_SUCCESS;
-    } else if (!strcmp(argv[1], "-t")) {
+    } /* else if (!strcmp(argv[1], "-t")) {
         for (int i = 0; i < VERSION_NUMBER; i++) { // make sure each version can still deserialize
             char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
             sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
             // printf("Version %i Deserialize success: %s\n", i, success ? "yes" : "no");
         }
         return EXIT_SUCCESS;
-    }
+    } */
 
     const char *texturePath = argv[1];
 

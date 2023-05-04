@@ -24,26 +24,6 @@
 #define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
 #define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
 
-// Strings used for serialization
-#define STR_HITBOX "HITBOX"
-#define STR_HITBOX_STUN "hitboxStun"
-#define STR_HITBOX_DAMAGE "hitboxDamage"
-#define STR_HITBOX_KNOCKBACK_X "hitboxKnockbackX"
-#define STR_HITBOX_KNOCKBACK_Y "hitboxKnockbackY"
-#define STR_HURTBOX "HURTBOX"
-#define STR_CIRCLE "CIRCLE"
-#define STR_RECTANGLE "RECTANGLE"
-#define STR_CAPSULE "CAPSULE"
-#define STR_CIRCLE_RADIUS "circleRadius"
-#define STR_RECTANGLE_RIGHT_X "rectangleRightX"
-#define STR_RECTANGLE_BOTTOM_Y "rectangleBottomY"
-#define STR_CAPSULE_RADIUS "capsuleRadius"
-#define STR_CAPSULE_HEIGHT "capsuleHeight"
-#define STR_CAPSULE_ROTATION "capsuleRotation"
-#define STR_SHAPE_TYPE "shapeType"
-#define STR_TYPE "type"
-#define STR_X "x"
-#define STR_Y "y"
 
 typedef enum Handle {
     HANDLE_NONE,
@@ -111,5 +91,5 @@ Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMous
 bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
 
 cJSON *ShapeSerialize(Shape shape);
-bool ShapeDeserialize(cJSON *json, Shape *shape);
+bool ShapeDeserialize(cJSON *json, Shape *shape, int version);
 #endif

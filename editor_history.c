@@ -170,7 +170,17 @@ void EditorHistoryChangeState(EditorHistory *history, EditorState *state, Change
 bool EditorStateSerialize(EditorState *state, const char *path) {
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "magic", "CombatAnimator");
-    cJSON_AddNumberToObject(json, "version", 5);
+
+    // no version: initial version. Treated as 0 internally.
+    // 1: changed frameDurations array to frames array. Each frame is a struct containing whether it is cancellable and its duration in ms.
+    // 2: Added position Vector2 for each frame that indicates the root movement of the character doing the animation.
+    // 3: Added hitbox stun and hitbox damage to CombatShape.
+    // 4: Very large rework.
+    //      Added metadata layer type.
+    //      Stopped inlining shape properties into each layer. Now shapes are a separate struct.
+    //      Renamed "shapes" to "layers" and "shapeActiveFrames" to "layerActiveFrames".
+    //      Renamed "boxType" to "type" in layer.
+    cJSON_AddNumberToObject(json, "version", 4);
 
     cJSON *layers = cJSON_CreateArray();
     for (int i = 0; i < state->layerCount; i++) {
@@ -206,10 +216,10 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
     for (int i = 0; i < state->frameCount; i++) {
         cJSON *frame = cJSON_CreateObject();
         FrameInfo frameInfo = state->frames[i];
-        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_DURATION, frameInfo.duration);
-        cJSON_AddBoolToObject(frame, STR_FRAME_INFO_CAN_CANCEL, frameInfo.canCancel);
-        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_X, frameInfo.pos.x);
-        cJSON_AddNumberToObject(frame, STR_FRAME_INFO_Y, frameInfo.pos.y);
+        cJSON_AddNumberToObject(frame, "duration", frameInfo.duration);
+        cJSON_AddBoolToObject(frame, "canCancel", frameInfo.canCancel);
+        cJSON_AddNumberToObject(frame, "x", frameInfo.pos.x);
+        cJSON_AddNumberToObject(frame, "y", frameInfo.pos.y);
         cJSON_AddItemToArray(frames, frame);
     }
     cJSON_AddItemToObject(json, "frames", frames);
@@ -261,8 +271,10 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         return false;
     }
 
+#define RETURN_FAIL do { printf("Failed to parse file %s. Error: %s at line %i.\n", path, __FILE__, __LINE__); goto fail; } while(0)
+
     cJSON *magic = cJSON_GetObjectItem(json, "magic");
-    if (!magic || !cJSON_IsString(magic)) goto fail;
+    if (!magic || !cJSON_IsString(magic)) RETURN_FAIL;
 
     cJSON *versionJson = cJSON_GetObjectItem(json, "version");
     int version;
@@ -274,25 +286,25 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         version = (int) cJSON_GetNumberValue(versionJson);
     }
 
-    if (version < 5) {
-        printf("Support for file versions below 5 is discontinued.\n");
+    if (version < 0 || version > 4) {
+        printf("Invalid file version %i.\n", version);
         return false;
     }
 
     cJSON *frames = cJSON_GetObjectItem(json, "frames");
-    if (!cJSON_IsArray(frames)) return false;
+    if (!cJSON_IsArray(frames)) RETURN_FAIL;
     *out = EditorStateNew(cJSON_GetArraySize(frames));
     cJSON *frameJson;
     int frameIdx = 0;
     cJSON_ArrayForEach(frameJson, frames) {
         cJSON *x = cJSON_GetObjectItem(frameJson, "x");
-        if (!cJSON_IsNumber(x)) return false;
+        if (!cJSON_IsNumber(x)) RETURN_FAIL;
         cJSON *y = cJSON_GetObjectItem(frameJson, "y");
-        if (!cJSON_IsNumber(y)) return false;
+        if (!cJSON_IsNumber(y)) RETURN_FAIL;
         cJSON *duration = cJSON_GetObjectItem(frameJson, "duration");
-        if (!cJSON_IsNumber(duration)) return false;
+        if (!cJSON_IsNumber(duration)) RETURN_FAIL;
         cJSON *canCancel = cJSON_GetObjectItem(frameJson, "canCancel");
-        if (!cJSON_IsBool(canCancel)) return false;
+        if (!cJSON_IsBool(canCancel)) RETURN_FAIL;
         out->frames[frameIdx] = (FrameInfo) {
             .pos = (Vector2) {
                     .x = (float) cJSON_GetNumberValue(x),
@@ -304,47 +316,67 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         frameIdx++;
     }
 
-    cJSON *layers = cJSON_GetObjectItem(json, "layers");
-    if (!cJSON_IsArray(layers)) goto fail;
+    cJSON *layers = cJSON_GetObjectItem(json, version >= 4 ? "layers" : "shapes");
+    if (!cJSON_IsArray(layers)) RETURN_FAIL;
     cJSON *layerJson;
     cJSON_ArrayForEach(layerJson, layers) {
-        if (!cJSON_IsObject(layerJson)) goto fail;
+        if (!cJSON_IsObject(layerJson)) RETURN_FAIL;
         cJSON *x = cJSON_GetObjectItem(layerJson, "x");
-        if (!cJSON_IsNumber(x)) goto fail;
+        if (!cJSON_IsNumber(x)) RETURN_FAIL;
         cJSON *y = cJSON_GetObjectItem(layerJson, "y");
-        if(!cJSON_IsNumber(y)) goto fail;
-        cJSON *type = cJSON_GetObjectItem(layerJson, "type");
-        if (!cJSON_IsString(type)) goto fail;
+        if(!cJSON_IsNumber(y)) RETURN_FAIL;
+        cJSON *type = cJSON_GetObjectItem(layerJson, version >= 4 ? "type" : "shapeType");
+        if (!cJSON_IsString(type)) RETURN_FAIL;
         const char *typeString = cJSON_GetStringValue(type);
         Layer layer;
         if (!strcmp(typeString, "HITBOX")) {
-            cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
-            if (!cJSON_IsObject(hitbox)) goto fail;
-            cJSON *knockbackX = cJSON_GetObjectItem(hitbox, "knockbackX");
-            if (!cJSON_IsNumber(knockbackX)) goto fail;
-            cJSON *knockbackY = cJSON_GetObjectItem(hitbox, "knockbackY");
-            if (!cJSON_IsNumber(knockbackY)) goto fail;
-            cJSON *stun = cJSON_GetObjectItem(hitbox, "stun");
-            if (!cJSON_IsNumber(stun)) goto fail;
-            cJSON *damage = cJSON_GetObjectItem(hitbox, "damage");
-            if (!cJSON_IsNumber(damage)) goto fail;
-            cJSON *shape = cJSON_GetObjectItem(hitbox, "shape");
-            if (!ShapeDeserialize(shape, &layer.hitbox.shape)) goto fail;
+            cJSON *knockbackX;
+            cJSON *knockbackY;
+            cJSON *damage;
+            cJSON *stun;
+            cJSON *shape;
+
+            if (version >= 4) {
+                cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
+                if (!cJSON_IsObject(hitbox)) RETURN_FAIL;
+                knockbackX = cJSON_GetObjectItem(hitbox, "knockbackX");
+                knockbackY = cJSON_GetObjectItem(hitbox, "knockbackY");
+                stun = cJSON_GetObjectItem(hitbox, "stun");
+                damage = cJSON_GetObjectItem(hitbox, "damage");
+                shape = cJSON_GetObjectItem(hitbox, "shape");
+            } else {
+                knockbackX = cJSON_GetObjectItem(layerJson, "hitboxKnockbackX");
+                knockbackY = cJSON_GetObjectItem(layerJson, "hitboxKnockbackY");
+                stun = cJSON_GetObjectItem(layerJson, "hitboxStun");
+                damage = cJSON_GetObjectItem(layerJson, "hitboxDamage");
+                shape = layerJson; // shape is inlined in old versions.
+            }
+
+            if (!cJSON_IsNumber(knockbackX)) RETURN_FAIL;
+            if (!cJSON_IsNumber(knockbackY)) RETURN_FAIL;
+            if (!cJSON_IsNumber(stun)) RETURN_FAIL;
+            if (!cJSON_IsNumber(damage)) RETURN_FAIL;
+            if (!ShapeDeserialize(shape, &layer.hitbox.shape, version)) RETURN_FAIL;
+
             layer.type = LAYER_HITBOX;
             layer.hitbox.knockbackX = (int) cJSON_GetNumberValue(knockbackX);
             layer.hitbox.knockbackY = (int) cJSON_GetNumberValue(knockbackY);
             layer.hitbox.stun = (int) cJSON_GetNumberValue(stun);
             layer.hitbox.damage = (int) cJSON_GetNumberValue(damage);
+
         } else if (!strcmp(typeString, "HURTBOX")) {
-            cJSON *shape = cJSON_GetObjectItem(layerJson, "hurtboxShape");
-            if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape)) goto fail;
+            cJSON *shape = version >= 4 ? cJSON_GetObjectItem(layerJson, "hurtboxShape") : layerJson;
+            if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) RETURN_FAIL;
             layer.type = LAYER_HURTBOX;
+
         } else if (!strcmp(typeString, "METADATA")) {
+            if (version < 4) RETURN_FAIL;
             cJSON *tag = cJSON_GetObjectItem(layerJson, "metadataTag");
-            if (!tag || !cJSON_IsString(tag)) goto fail;
+            if (!tag || !cJSON_IsString(tag)) RETURN_FAIL;
             layer.type = LAYER_METADATA;
             strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
-        } else goto fail;
+
+        } else RETURN_FAIL;
 
         layer.transform = Transform2DIdentity();
         layer.transform.o = (Vector2) {
@@ -355,18 +387,20 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         EditorStateLayerAdd(out, layer);
     }
 
-    cJSON *activeFrames = cJSON_GetObjectItem(json, "layerActiveFrames");
-    if (!cJSON_IsArray(activeFrames)) goto fail;
+    cJSON *activeFrames = cJSON_GetObjectItem(json, version >= 4 ? "layerActiveFrames" : "shapeActiveFrames");
+    if (!cJSON_IsArray(activeFrames)) RETURN_FAIL;
     cJSON *active;
     int activeFrameIdx = 0;
     cJSON_ArrayForEach(active, activeFrames) {
-        if (!cJSON_IsNumber(active)) goto fail;
+        if (!cJSON_IsNumber(active)) RETURN_FAIL;
         out->_layerActiveFrames[activeFrameIdx] = cJSON_GetNumberValue(active) != 0;
         activeFrameIdx++;
     }
 
     cJSON_Delete(json);
     return true;
+
+#undef RETURN_FAIL
     fail:
     cJSON_Delete(json);
     EditorStateFree(out);
