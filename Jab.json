@@ -8,7 +8,7 @@
 			"hitbox":	{
 				"knockbackX":	19,
 				"knockbackY":	-10,
-				"damage":	0,
+				"damage":	20,
 				"stun":	1000,
 				"shape":	{
 					"type":	"CIRCLE",

@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
     EditorState state;
-    /* if (!EditorStateReadFromFile(&state, savePath)) */ state = EditorStateNew(1);
+    if (!EditorStateDeserialize(&state, savePath)) state = EditorStateNew(1);
 
     EditorHistory history = EditorHistoryNew(&state);
 

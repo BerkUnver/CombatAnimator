@@ -111,4 +111,5 @@ Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMous
 bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
 
 cJSON *ShapeSerialize(Shape shape);
+bool ShapeDeserialize(cJSON *json, Shape *shape);
 #endif

@@ -1,6 +1,7 @@
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
-#include <assert.h>
+#include <string.h>
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -96,7 +97,11 @@ void LayerDraw(Layer *layer, Transform2D transform, bool handlesActive) {
             colorOutline = LAYER_HITBOX_COLOR_OUTLINE;
             color = LAYER_HITBOX_COLOR;
             ShapeDraw(layer->hitbox.shape, layer->transform, color, handlesActive, colorOutline);
-            DrawLine(0, 0, layer->hitbox.knockbackX, layer->hitbox.knockbackY, colorOutline);
+            DrawLine(layer->transform.o.x,
+                     layer->transform.o.y,
+                     layer->transform.o.x + layer->hitbox.knockbackX,
+                     layer->transform.o.y + layer->hitbox.knockbackY,
+                     colorOutline);
             break;
         case LAYER_HURTBOX:
             colorOutline = LAYER_HURTBOX_COLOR_OUTLINE;
@@ -284,4 +289,40 @@ cJSON *ShapeSerialize(Shape shape) {
             break;
     }
     return shapeJson;
+}
+
+bool ShapeDeserialize(cJSON *json, Shape *shape) {
+    if (!json || !cJSON_IsObject(json)) return false;
+    cJSON *type = cJSON_GetObjectItem(json, "type");
+    if (!cJSON_IsString(type)) return false;
+    char *typeString = cJSON_GetStringValue(type);
+    if (!strcmp(typeString, "CIRCLE")) {
+        cJSON *radius = cJSON_GetObjectItem(json, "circleRadius");
+        if (!cJSON_IsNumber(radius)) return false;
+        shape->type = SHAPE_CIRCLE;
+        shape->circleRadius = cJSON_GetNumberValue(radius);
+        return true;
+    } else if (!strcmp(typeString, "RECTANGLE")) {
+        cJSON *rect = cJSON_GetObjectItem(json, "rectangle");
+        if (!cJSON_IsObject(rect)) return false;
+        cJSON *rightX = cJSON_GetObjectItem(rect, "rightX");
+        if (!cJSON_IsNumber(rightX)) return false;
+        cJSON *bottomY = cJSON_GetObjectItem(rect, "bottomY");
+        if (!cJSON_IsObject(bottomY)) return false;
+        shape->type = SHAPE_RECTANGLE;
+        shape->rectangle.rightX = cJSON_GetNumberValue(rightX);
+        shape->rectangle.bottomY = cJSON_GetNumberValue(bottomY);
+        return true;
+    } else if (!strcmp(typeString, "CAPSULE")) {
+        cJSON *capsule = cJSON_GetObjectItem(json, "capsule");
+        if (!cJSON_IsObject(capsule)) return false;
+        cJSON *height = cJSON_GetObjectItem(capsule, "height");
+        if (!cJSON_IsNumber(height)) return false;
+        cJSON *radius = cJSON_GetObjectItem(capsule, "radius");
+        if (!cJSON_IsNumber(radius)) return false;
+        shape->type = SHAPE_CAPSULE;
+        shape->capsule.height = cJSON_GetNumberValue(height);
+        shape->capsule.radius = cJSON_GetNumberValue(radius);
+        return true;
+    } else return false;
 }
