@@ -98,7 +98,7 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
 
 }
 
-/*
+
 void RecursiveUpdate(const char *path) {
     
     DIR *dir = opendir(path);
@@ -129,10 +129,8 @@ void RecursiveUpdate(const char *path) {
             char *dot = strrchr(directoryEntry->d_name, '.');            
             if (dot && strcmp(dot, "."FILE_EXTENSION) == 0) {
                 EditorState state;
-                if (EditorStateReadFromFile(&state, fullPath.raw)) {
-                    cJSON *json = EditorStateSerialize(&state);
-                    EditorStateWriteToFile(&state, fullPath.raw);
-                    cJSON_Delete(json);
+                if (EditorStateDeserialize(&state, fullPath.raw)) {
+                    EditorStateSerialize(&state, fullPath.raw);
                     EditorStateFree(&state);
                     printf("Successfully updated the combat animation file at %s.\n", fullPath.raw);
                 } else {
@@ -144,7 +142,6 @@ void RecursiveUpdate(const char *path) {
     }
     closedir(dir);
 }
- */
 
 int main(int argc, char **argv) {
     if (argc < 2) {
@@ -348,6 +345,7 @@ int main(int argc, char **argv) {
                             shape.type = SHAPE_CAPSULE;
                             shape.capsule.radius = 24;
                             shape.capsule.height = 24;
+                            shape.capsule.rotation = 0;
                         } else goto layerNotInstanced;
 
                         if (IsKeyDown(KEY_H)) {

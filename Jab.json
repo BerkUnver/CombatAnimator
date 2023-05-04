@@ -32,6 +32,108 @@
 					}
 				}
 			}
+		}, {
+			"x":	66,
+			"y":	47,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	11,
+					"radius":	10,
+					"rotation":	0
+				}
+			}
+		}, {
+			"x":	70,
+			"y":	48,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	11,
+					"radius":	9,
+					"rotation":	-0.61286771297454834
+				}
+			}
+		}, {
+			"x":	76,
+			"y":	47,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	9,
+					"radius":	10,
+					"rotation":	0
+				}
+			}
+		}, {
+			"x":	101,
+			"y":	54,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	13,
+					"radius":	7,
+					"rotation":	1.2523922920227051
+				}
+			}
+		}, {
+			"x":	96,
+			"y":	54,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	13,
+					"radius":	7,
+					"rotation":	0.98875504732131958
+				}
+			}
+		}, {
+			"x":	94,
+			"y":	50,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	10,
+					"radius":	10,
+					"rotation":	0.53628480434417725
+				}
+			}
+		}, {
+			"x":	86,
+			"y":	48,
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	12,
+					"radius":	9,
+					"rotation":	0.33904671669006348
+				}
+			}
+		}, {
+			"x":	99,
+			"y":	37,
+			"type":	"HITBOX",
+			"hitbox":	{
+				"knockbackX":	2,
+				"knockbackY":	-2,
+				"damage":	0,
+				"stun":	1000,
+				"shape":	{
+					"type":	"CAPSULE",
+					"capsule":	{
+						"height":	14,
+						"radius":	15,
+						"rotation":	-1.4233194589614868
+					}
+				}
+			}
 		}],
 	"frames":	[{
 			"duration":	100,
@@ -114,5 +216,5 @@
 			"x":	80,
 			"y":	64
 		}],
-	"layerActiveFrames":	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	"layerActiveFrames":	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
 }

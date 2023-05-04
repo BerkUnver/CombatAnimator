@@ -53,6 +53,7 @@ typedef struct Shape {
         struct {
             int radius;
             int height;
+            float rotation;
         } capsule;
     };
 } Shape;
@@ -78,10 +79,6 @@ typedef struct Layer {
         char metadataTag[LAYER_METADATA_TAG_LENGTH];
     };
 } Layer;
-
-
-// cJSON *LayerSerialize(Layer layer);
-// bool LayerDeserialize(cJSON *json, int version, Layer *out);
 
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);
