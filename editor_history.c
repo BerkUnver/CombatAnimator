@@ -1,10 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include "cjson/cJSON.h"
 #include "layer.h"
 #include "string_buffer.h"
@@ -271,29 +268,26 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         return false;
     }
 
-#define RETURN_FAIL do { printf("Failed to parse file %s. Error: %s at line %i.\n", path, __FILE__, __LINE__); goto fail; } while(0)
-
     cJSON *magic = cJSON_GetObjectItem(json, "magic");
-    if (!magic || !cJSON_IsString(magic)) RETURN_FAIL;
-
+    if (!magic || !cJSON_IsString(magic)) goto delete_json;
     cJSON *versionJson = cJSON_GetObjectItem(json, "version");
     int version;
     if (!versionJson) {
         version = 0;
     } else if (!cJSON_IsNumber(versionJson)) {
-        return false;
+        goto delete_json;
     } else {
         version = (int) cJSON_GetNumberValue(versionJson);
     }
 
-    if (version < 0 || version > 4) {
-        printf("Invalid file version %i.\n", version);
-        return false;
-    }
+    if (version < 0 || version > 4) goto delete_json;
 
     cJSON *frames = cJSON_GetObjectItem(json, "frames");
-    if (!cJSON_IsArray(frames)) RETURN_FAIL;
+    if (!cJSON_IsArray(frames)) goto delete_json;
     *out = EditorStateNew(cJSON_GetArraySize(frames));
+
+#define RETURN_FAIL do { printf("Failed to parse file %s. Error: %s at line %i.\n", path, __FILE__, __LINE__); goto delete_editor_state; } while(0)
+    
     cJSON *frameJson;
     int frameIdx = 0;
     cJSON_ArrayForEach(frameJson, frames) {
@@ -325,7 +319,7 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         if (!cJSON_IsNumber(x)) RETURN_FAIL;
         cJSON *y = cJSON_GetObjectItem(layerJson, "y");
         if(!cJSON_IsNumber(y)) RETURN_FAIL;
-        cJSON *type = cJSON_GetObjectItem(layerJson, version >= 4 ? "type" : "shapeType");
+        cJSON *type = cJSON_GetObjectItem(layerJson, version >= 4 ? "type" : "boxType");
         if (!cJSON_IsString(type)) RETURN_FAIL;
         const char *typeString = cJSON_GetStringValue(type);
         Layer layer;
@@ -401,8 +395,9 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
     return true;
 
 #undef RETURN_FAIL
-    fail:
-    cJSON_Delete(json);
+    delete_editor_state:
     EditorStateFree(out);
+    delete_json:
+    cJSON_Delete(json);
     return false;
 }

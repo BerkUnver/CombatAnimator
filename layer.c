@@ -16,7 +16,6 @@ void HandleDraw(Vector2 pos, Color strokeColor) {
 
 void ShapeDraw(Shape shape, Transform2D transform, Color color, bool outline, Color outlineColor) {
     rlPushMatrix();
-    // todo: this is a hack for rlTransform2DXForm not working.
     rlTranslatef(transform.o.x, transform.o.y, 0);
     switch (shape.type) {
         case SHAPE_CIRCLE:
