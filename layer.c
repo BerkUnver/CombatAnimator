@@ -207,13 +207,13 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
     switch (shape->type) {
         case SHAPE_CIRCLE:
             if (handle != HANDLE_CIRCLE_RADIUS) return false;
-            shape->circleRadius = (int) (handlePos.x > 0 ? 0 : handlePos.x);
+            shape->circleRadius = (int) (handlePos.x > 0 ? handlePos.x : 0);
             return true;
 
         case SHAPE_RECTANGLE:
             if (handle != HANDLE_RECTANGLE_CORNER) return false;
-            shape->rectangle.rightX = (int) (handlePos.x > 0 ? 0 : handlePos.x);
-            shape->rectangle.bottomY = (int) (handlePos.y > 0 ? 0 : handlePos.y);
+            shape->rectangle.rightX = (int) (handlePos.x > 0 ? handlePos.x : 0);
+            shape->rectangle.bottomY = (int) (handlePos.y > 0 ? handlePos.y : 0);
             return true;
 
         case SHAPE_CAPSULE:
