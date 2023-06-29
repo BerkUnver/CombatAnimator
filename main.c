@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 
     const char *texturePath = argv[1];
 
-    InitWindow(1, 1, APP_NAME);
+    InitWindow(1, 1, APP_NAME); // We set the window size later so we can expand to have the right number of rows.
     SetTargetFPS(60);
 
     Texture2D texture = LoadTexture(texturePath);
@@ -192,9 +192,17 @@ int main(int argc, char **argv) {
     Transform2D transform = Transform2DIdentity();
     transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
     const int guiInitialHeight = state.layerCount * FRAME_ROW_SIZE + FRAME_ROW_SIZE;
-    SetWindowSize(DEFAULT_SPRITE_WINDOW_X, DEFAULT_SPRITE_WINDOW_Y + guiInitialHeight);
     
-    transform.o = (Vector2) {
+	int initialWindowWidth = DEFAULT_SPRITE_WINDOW_X;
+	int initialWindowHeight = DEFAULT_SPRITE_WINDOW_Y + guiInitialHeight;
+
+	int monitor = GetCurrentMonitor();
+	SetWindowSize(initialWindowWidth, initialWindowHeight);
+	int initialWindowX = (GetMonitorWidth(monitor) - initialWindowWidth) / 2;
+	int initialWindowY = (GetMonitorHeight(monitor) - initialWindowHeight) / 2;
+	SetWindowPosition(initialWindowX, initialWindowY);
+
+	transform.o = (Vector2) {
         .x = (DEFAULT_SPRITE_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
         .y = (DEFAULT_SPRITE_WINDOW_Y - texture.height * startScale) / 2.0f
     };
