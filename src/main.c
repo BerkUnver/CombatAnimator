@@ -421,9 +421,10 @@ int main(int argc, char **argv) {
 
         int windowX = GetScreenWidth();
         int windowY = GetScreenHeight();
-        int timelineY = windowY - (FRAME_ROW_SIZE + LAYER_ROW_SIZE * state.layerCount);
-        int hitboxRowY = timelineY + FRAME_ROW_SIZE;
-
+        int hitboxRowY = windowY - LAYER_ROW_SIZE * state.layerCount;
+        int timelineY = hitboxRowY - FRAME_ROW_SIZE;
+        int timelineHeight = windowY - timelineY;
+        
         // draw texture
         rlPushMatrix();
         rlTransform2DXForm(transform);
@@ -511,11 +512,7 @@ int main(int argc, char **argv) {
             }
         }
         
-        int timelineHeight = windowY - timelineY;
         
-        // draw timeline header
-        // DrawRectangle(0, timelineY - 32, windowX, 32, TIMELINE_HEADER_COLOR);
-
         // draw timeline
         DrawRectangle(0, timelineY, windowX, timelineHeight, TIMELINE_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
