@@ -1,0 +1,42 @@
+We want to make several different types of layers.
+A layer exists over multiple frames.
+
+We want to declare some shared properties between different layers.
+    - Position. It seems like we want each layer to have a definitive position.
+
+Layer types
+    - Hitboxes
+        - Shape
+        - Knockback
+        - Stun
+        - Damage
+    - Hurtboxes
+        - Shape
+    - Events 
+        - A string that gets passed from the animator on a frame transition.
+        - Indicates to whatever is calling the animator that it should take some kind of predefined special event.
+    - Spline curves
+        - I believe we will use the spline curves to dictate how particle effects are drawn.
+        - Therefore, each point on the spline curve should exist only on one layer.
+
+Layer meta types
+    - Frame layers: Hitbox / Hurtbox layers
+    - In-between frame layers:
+        - Events (which should only happen on frame transitions)
+        - Possibly spline curves
+        - It seems we want these to be named. We should enforce name uniqueness.
+
+Splines
+    - It appears we want splines to be used for particle effects. Probably shouldn't be a hardcoded enum.
+    - Should be a string name.
+    - Animator reads string name and uses that to draw the right kinds of particles.
+    - It's the animation player's job to decide how to interpolate over the spline.
+
+Frame data
+    - Frame duration (in milliseconds)
+    - If an attack is cancellable
+        - This seems incredibly specific. I don't know if we want this to be in the animator. 
+        - We could possibly just have a boolean type layer and the player code looks for a layer with a specific string name.
+    - Root motion
+        - We also need a fixed point as the origin of the root motion. 
+        - Right now we are using the first point of the animation as the basis for the root motion. This might be fine.

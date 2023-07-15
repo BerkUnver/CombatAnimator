@@ -17,9 +17,6 @@
 #include "string_buffer.h"
 #include "transform_2d.h"
 
-#define KEY_EXIT KEY_E
-#define KEY_EXIT_MODIFIER KEY_LEFT_CONTROL
-
 #define FILE_EXTENSION "json"
 #define APP_NAME "Combat Animator"
 #define DEFAULT_SPRITE_WINDOW_X 800
@@ -49,7 +46,6 @@
 #define COLOR_FRAME_POS_HANDLE (Color) {255, 123, 0, 255}
 #define COLOR_FRAME_POS_HANDLE_PREVIOUS (Color) {161, 78, 0, 255}
 
-#define FRAME_VELOCITY_HANDLE_OFFSET (Vector2) {16, -16}
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
 #define SCALE_SPEED 0.75f
@@ -57,12 +53,13 @@
 
 #define COLOR_BACKGROUND GRAY
 #define COLOR_SELECTED (Color) {123, 123, 123, 255}
-#define FRAME_ROW_COLOR (Color) {50, 50, 50, 255}
+#define TIMELINE_COLOR (Color) {50, 50, 50, 255}
+#define TIMELINE_HEADER_COLOR (Color) {40, 40, 40, 255}
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
 #define FRAME_RHOMBUS_CANNOT_CANCEL_COLOR (Color) {63, 63, 63, 255}
 #define FRAME_RHOMBUS_CAN_CANCEL_COLOR RAYWHITE
-#define FRAME_ROW_TEXT_COLOR FRAME_ROW_COLOR
+#define FRAME_ROW_TEXT_COLOR TIMELINE_COLOR
 
 #define LAYER_ROW_SIZE 32
 #define LAYER_ICON_CIRCLE_RADIUS 12
@@ -226,20 +223,8 @@ int main(int argc, char **argv) {
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
 
     while (!WindowShouldClose()) {
-        if (IsKeyPressed(KEY_EXIT) && IsKeyDown(KEY_EXIT_MODIFIER))
-            break;
-
-        // updating these here and not after the model update causes changes to be reflected one frame late.
-        int windowX = GetScreenWidth();
-        int windowY = GetScreenHeight();
-        int timelineHeight = FRAME_ROW_SIZE + LAYER_ROW_SIZE * state.layerCount;
-        int timelineY = windowY - timelineHeight;
-        int hitboxRowY = timelineY + FRAME_ROW_SIZE;
-        Vector2 velocityHandleOrigin = FRAME_VELOCITY_HANDLE_OFFSET;
-        velocityHandleOrigin.y += timelineY;
 
         Vector2 mousePos = GetMousePosition();
-
         const float mouseWheel = GetMouseWheelMove();
         if (mouseWheel != 0.0f) {
             Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
@@ -341,7 +326,7 @@ int main(int argc, char **argv) {
                         layer.type = LAYER_METADATA;
                         layer.metadataTag[0] = '\0';
 
-                    } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox
+                    } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox or Hitbox
                         Shape shape;
                         if (IsKeyPressed(KEY_ONE)) {
                             shape.type = SHAPE_CIRCLE;
@@ -379,7 +364,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
 
                     layerNotInstanced:;// don't add the layer.
-                } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT) && mousePos.y < timelineY) {
+                } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
@@ -433,6 +418,11 @@ int main(int argc, char **argv) {
         // drawing
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
+
+        int windowX = GetScreenWidth();
+        int windowY = GetScreenHeight();
+        int timelineY = windowY - (FRAME_ROW_SIZE + LAYER_ROW_SIZE * state.layerCount);
+        int hitboxRowY = timelineY + FRAME_ROW_SIZE;
 
         // draw texture
         rlPushMatrix();
@@ -489,8 +479,7 @@ int main(int argc, char **argv) {
                     Rectangle rectDamageValue = rectDamageLabel;
                     rectDamageValue.x += rectDamageValue.width;
                     rectDamageValue.width = rectFrameDurationValue.width;
-                    if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX,
-                                    mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                    if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
                         mode = MODE_EDIT_HITBOX_DAMAGE;
                     }
 
@@ -501,8 +490,7 @@ int main(int argc, char **argv) {
                     Rectangle rectStunValue = rectStunLabel;
                     rectStunValue.x += rectStunValue.width;
                     rectStunValue.width = rectFrameDurationValue.width;
-                    if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX,
-                                    mode == MODE_EDIT_HITBOX_STUN)) {
+                    if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
                         mode = MODE_EDIT_HITBOX_STUN;
                     }
                 } break;
@@ -515,7 +503,7 @@ int main(int argc, char **argv) {
                     rectTagLabel.y += rectTagLabel.height;
                     GuiLabel(rectTagLabel, "Metadata Tag");
                     Rectangle rectTagValue = rectFrameDurationValue;
-                    rectTagValue.y += rectTagLabel.y;
+                    rectTagValue.y += rectTagLabel.height;
                     if (GuiTextBox(rectTagValue, state.layers[state.layerIdx].metadataTag, LAYER_METADATA_TAG_LENGTH, mode == MODE_EDIT_METADATA_TAG)) {
                         mode = MODE_EDIT_METADATA_TAG;
                     }
@@ -523,10 +511,13 @@ int main(int argc, char **argv) {
             }
         }
         
-
+        int timelineHeight = windowY - timelineY;
         
+        // draw timeline header
+        // DrawRectangle(0, timelineY - 32, windowX, 32, TIMELINE_HEADER_COLOR);
+
         // draw timeline
-        DrawRectangle(0, timelineY, windowX, timelineHeight, FRAME_ROW_COLOR); // draw timeline background
+        DrawRectangle(0, timelineY, windowX, timelineHeight, TIMELINE_COLOR); // draw timeline background
         int selectedX = FRAME_ROW_SIZE * state.frameIdx;
         int selectedY = state.layerIdx >= 0 ? timelineY + FRAME_ROW_SIZE + state.layerIdx * LAYER_ROW_SIZE : timelineY;
         DrawRectangle(selectedX, selectedY, FRAME_ROW_SIZE, FRAME_ROW_SIZE, COLOR_SELECTED);
