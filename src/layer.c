@@ -55,7 +55,7 @@ void ShapeDraw(Shape shape, Transform2D transform, Color color, bool outline, Co
     rlPopMatrix();
 }
 
-// TODO: fix so the transforms are multiplied separately instead of passed together.
+// @TODO: fix so the transforms are multiplied separately instead of passed together.
 void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTransform, Color color) {
     Vector2 center = Transform2DToGlobal(transform, layerTransform.o);
     switch (shape.type) {
@@ -90,6 +90,9 @@ void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTrans
 
 void LayerFree(Layer *layer) {
     free(layer->framesActive);
+    // if (layer->type == LAYER_SPLINE) {
+    //    free(layer->splinePoints);
+    // }
 }
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {

@@ -65,6 +65,13 @@ typedef enum LayerType {
     // LAYER_SPLINE
 } LayerType;
 
+typedef struct SplinePoints {
+    Vector2 position;
+    float extentsLeft;
+    float extentsRight;
+    float rotation;
+} SplinePoints;
+
 typedef struct Layer {
     Transform2D transform;
     LayerType type;
@@ -80,19 +87,15 @@ typedef struct Layer {
             int stun;
             Shape shape;
         } hitbox;
-        char metadataTag[LAYER_METADATA_TAG_LENGTH];
-        /* 
-        struct {
-            Vector2 position;
-            float extentsLeft;
-            float extentsRight;
-            float rotation;
-        } *splinePoints;
-        */
+        char metadataTag[LAYER_METADATA_TAG_LENGTH]; // @TODO replace with string buffer
+         
+        // SplinePoint *splinePoints; 
+        // Length is frameCount.
+        // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.
     };
 } Layer;
 
-Layer LayerNew(int frameCount);
+// No layer init function because creating a layer is too complex to do in a single function because of the unions.
 void LayerFree(Layer *layer);
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);

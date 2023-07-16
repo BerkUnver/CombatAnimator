@@ -325,6 +325,10 @@ int main(int argc, char **argv) {
                         layer.type = LAYER_METADATA;
                         layer.metadataTag[0] = '\0';
 
+                    // } else if (IsKeyPressed(KEY_C)) { // Splines
+                    //    layer.type = LAYER_SPLINE;
+                    //    layer.splinePoints = malloc
+
                     } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox or Hitbox
                         Shape shape;
                         if (IsKeyPressed(KEY_ONE)) {
@@ -357,7 +361,10 @@ int main(int argc, char **argv) {
                         goto layerNotInstanced;
                     }
                     
+                    layer.frameCount = state.frameCount;
                     layer.framesActive = malloc(sizeof(bool) * state.frameCount);
+                    memset(layer.framesActive, 0, sizeof(bool) * state.frameCount);
+                    
                     EditorStateLayerAdd(&state, layer);
                     state.layerIdx = state.layerCount - 1;
                     EditorHistoryCommitState(&history, &state);
