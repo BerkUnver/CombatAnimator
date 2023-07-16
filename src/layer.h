@@ -23,9 +23,9 @@
 #define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
 #define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
 
-#define LAYER_SPLINE_COLOR_OUTLINE (Color) {0, 255, 0, 255}
-#define LAYER_SPLINE_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 0, 255}
-#define LAYER_SPLINE_COLOR_TIMELINE_ACTIVE LAYER_SPLINE_COLOR_OUTLINE
+#define LAYER_BEZIER_COLOR_OUTLINE (Color) {0, 255, 0, 255}
+#define LAYER_BEZIER_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 0, 255}
+#define LAYER_BEZIER_COLOR_TIMELINE_ACTIVE LAYER_BEZIER_COLOR_OUTLINE
 
 typedef enum Handle {
     HANDLE_NONE,
@@ -64,15 +64,15 @@ typedef enum LayerType {
     LAYER_HURTBOX,
     LAYER_HITBOX,
     LAYER_METADATA,
-    LAYER_SPLINE
+    LAYER_BEZIER
 } LayerType;
 
-typedef struct SplinePoints {
+typedef struct BezierPoint {
     Vector2 position;
     float extentsLeft;
     float extentsRight;
     float rotation;
-} SplinePoints;
+} BezierPoint;
 
 typedef struct Layer {
     Transform2D transform;
@@ -91,7 +91,7 @@ typedef struct Layer {
         } hitbox;
         char metadataTag[LAYER_METADATA_TAG_LENGTH]; // @TODO replace with string buffer
          
-        SplinePoints *splinePoints; 
+        BezierPoint *bezierPoints; 
         // Length is frameCount.
         // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.
     };

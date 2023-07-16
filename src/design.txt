@@ -15,22 +15,22 @@ Layer types
     - Events 
         - A string that gets passed from the animator on a frame transition.
         - Indicates to whatever is calling the animator that it should take some kind of predefined special event.
-    - Spline curves
-        - I believe we will use the spline curves to dictate how particle effects are drawn.
-        - Therefore, each point on the spline curve should exist only on one layer.
+    - Bezier curves
+        - I believe we will use the bezier curves to dictate how particle effects are drawn.
+        - Therefore, each point on the bezier curve should exist only on one layer.
 
 Layer meta types
     - Frame layers: Hitbox / Hurtbox layers
     - In-between frame layers:
         - Events (which should only happen on frame transitions)
-        - Possibly spline curves
+        - Possibly bezier curves
         - It seems we want these to be named. We should enforce name uniqueness.
 
-Splines
-    - It appears we want splines to be used for particle effects. Probably shouldn't be a hardcoded enum.
+Beziers
+    - It appears we want beziers to be used for particle effects. Probably shouldn't be a hardcoded enum.
     - Should be a string name.
     - Animator reads string name and uses that to draw the right kinds of particles.
-    - It's the animation player's job to decide how to interpolate over the spline.
+    - It's the animation player's job to decide how to interpolate over the bezier.
 
 Frame data
     - Frame duration (in milliseconds)

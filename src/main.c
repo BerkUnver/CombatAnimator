@@ -308,7 +308,44 @@ int main(int argc, char **argv) {
                     if (state.layerIdx < 0) {
                         state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
                     } else {
-                        state.layers[state.layerIdx].framesActive[state.frameIdx] = !state.layers[state.layerIdx].framesActive[state.frameIdx];
+                        Layer *layer = state.layers + state.layerIdx;
+                        
+                        bool active = !layer->framesActive[state.frameIdx];
+                        layer->framesActive[state.frameIdx] = active;
+                        
+                        if (active && layer->type == LAYER_BEZIER) { // Initialize a new bezier point
+
+                            BezierPoint point;
+                            point.extentsLeft = 10.0f,
+                            point.extentsRight = 10.0f,
+                            point.rotation = 0.0f;
+                            
+                            // If the points around this bezier are enabled, interpolate between them to find the bezier position.
+                            bool surroundingPoints = 
+                                state.frameCount >= 3 
+                                && state.frameIdx > 0 
+                                && state.frameIdx < state.frameCount - 1
+                                && layer->framesActive[state.frameIdx - 1]
+                                && layer->framesActive[state.frameIdx + 1];
+                            
+                            if (surroundingPoints) { // Lerp between surrouding points if they exist
+                                BezierPoint prev = layer->bezierPoints[state.frameIdx - 1];
+                                BezierPoint next = layer->bezierPoints[state.frameIdx + 1];
+                                point.position = Vector2Lerp(prev.position, next.position, 0.5f);
+                            } else if (state.frameIdx < state.frameCount - 1 && layer->framesActive[state.frameIdx + 1]) {
+                                Vector2 origin = layer->bezierPoints[state.frameIdx + 1].position;
+                                origin.x -= 10.0f;
+                                point.position = origin;
+                            } else if (state.frameIdx > 0 && layer->framesActive[state.frameIdx - 1]) {
+                                Vector2 origin = layer->bezierPoints[state.frameIdx - 1].position;
+                                origin.y += 10.0f;
+                                point.position = origin;
+                            } else {
+                                point.position = (Vector2) {0.0f, 0.0f};    
+                            }
+
+                            layer->bezierPoints[state.frameIdx] = point;
+                        }     
                     }
                     mode = MODE_IDLE;
                     EditorHistoryCommitState(&history, &state);
@@ -325,9 +362,9 @@ int main(int argc, char **argv) {
                         layer.type = LAYER_METADATA;
                         layer.metadataTag[0] = '\0';
 
-                    } else if (IsKeyPressed(KEY_C)) { // Splines
-                        layer.type = LAYER_SPLINE;
-                        layer.splinePoints = malloc(sizeof *layer.splinePoints * state.frameCount);
+                    } else if (IsKeyPressed(KEY_B)) { // Bezier
+                        layer.type = LAYER_BEZIER;
+                        layer.bezierPoints = malloc(sizeof *layer.bezierPoints * state.frameCount);
 
                     } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox or Hitbox
                         Shape shape;
@@ -515,7 +552,7 @@ int main(int argc, char **argv) {
                     }
                 } break;
 
-                case LAYER_SPLINE:
+                case LAYER_BEZIER:
                     break;
             }
         }
@@ -551,8 +588,8 @@ int main(int argc, char **argv) {
                     case LAYER_METADATA:
                         color = active ? LAYER_METADATA_COLOR_TIMELINE_ACTIVE : LAYER_METADATA_COLOR_TIMELINE_INACTIVE;
                         break;
-                    case LAYER_SPLINE:
-                        color = active ? LAYER_SPLINE_COLOR_TIMELINE_ACTIVE : LAYER_SPLINE_COLOR_TIMELINE_INACTIVE;
+                    case LAYER_BEZIER:
+                        color = active ? LAYER_BEZIER_COLOR_TIMELINE_ACTIVE : LAYER_BEZIER_COLOR_TIMELINE_INACTIVE;
                         break;
                 }
                 int layerY = hitboxRowY + (int) (LAYER_ROW_SIZE * ((float) j + 0.5f));

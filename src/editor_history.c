@@ -97,10 +97,10 @@ EditorState EditorStateDeepCopy(EditorState *state) {
         memcpy(framesActive, layersCopy[i].framesActive, sizeof(bool) * state->frameCount); 
         layersCopy[i].framesActive = framesActive;
 
-        if (layersCopy[i].type == LAYER_SPLINE) {
-            SplinePoints *splinePoints = malloc(sizeof(SplinePoints) * state->frameCount);
-            memcpy(splinePoints, layersCopy[i].splinePoints, sizeof(SplinePoints) * state->frameCount);
-            layersCopy[i].splinePoints = splinePoints;
+        if (layersCopy[i].type == LAYER_BEZIER) {
+            BezierPoint *points = malloc(sizeof(BezierPoint) * state->frameCount);
+            memcpy(points, layersCopy[i].bezierPoints, sizeof(BezierPoint) * state->frameCount);
+            layersCopy[i].bezierPoints = points;
         }
     }
 
@@ -221,8 +221,8 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                 cJSON_AddStringToObject(layerJson, "type", "METADATA");
                 cJSON_AddStringToObject(layerJson, "metadataTag", layer->metadataTag);
                 break;
-            case LAYER_SPLINE:
-                cJSON_AddStringToObject(layerJson, "type", "SPLINE");
+            case LAYER_BEZIER:
+                cJSON_AddStringToObject(layerJson, "type", "BEZIER");
                 break;
         }
         cJSON_AddItemToArray(layers, layerJson);
@@ -388,8 +388,8 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             layer.type = LAYER_METADATA;
             strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
 
-        } else if (version >= 6 && !strcmp(typeString, "SPLINE")) {
-            layer.type = LAYER_SPLINE;
+        } else if (version >= 6 && !strcmp(typeString, "BEZIER")) {
+            layer.type = LAYER_BEZIER;
 
         } else RETURN_FAIL;
         

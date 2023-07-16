@@ -12,4 +12,4 @@ all: run
 
 build: ${FILES}
 	mkdir -p "../build"
-	gcc ${FILES} -o ${APP} -g -Wall -Werror -fsanitize=address -fsanitize=undefined -std=c99 -Wno-missing-braces -I../include -lraylib -lcjson -lGL -lm -lpthread -ldl -lrt -lX11
+	gcc ${FILES} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -I../include -lraylib -lcjson -lGL -lm -lpthread -ldl -lrt -lX11

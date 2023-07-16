@@ -90,8 +90,8 @@ void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTrans
 
 void LayerFree(Layer *layer) {
     free(layer->framesActive);
-    if (layer->type == LAYER_SPLINE) {
-        free(layer->splinePoints);
+    if (layer->type == LAYER_BEZIER) {
+        free(layer->bezierPoints);
     }
 }
 
@@ -101,6 +101,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
     Color color;
     rlPushMatrix();
     rlTransform2DXForm(transform);
+
+    // Draw shapes
     switch (layer->type) {
         case LAYER_HITBOX:
             colorOutline = LAYER_HITBOX_COLOR_OUTLINE;
@@ -120,12 +122,21 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
         case LAYER_METADATA:
             colorOutline = LAYER_METADATA_COLOR_OUTLINE;
             break;
-        case LAYER_SPLINE:
-            colorOutline = LAYER_SPLINE_COLOR_OUTLINE;
+        case LAYER_BEZIER:
+            colorOutline = LAYER_BEZIER_COLOR_OUTLINE;
+            /*
+            for (int frameIdx = 0; framedIdx < layer->frameCount; frameIdx++) {
+                Vector2 points[16];
+                for (int pointIdx = 0; i < 16; i++) {
+                    int pos = 
+                }
+            }
+            */
             break;
     }
     rlPopMatrix();
 
+    // Draw handles
     if (!handlesActive) return;
     Vector2 centerGlobal = Transform2DToGlobal(transform, layer->transform.o);
     HandleDraw(centerGlobal, colorOutline);
@@ -144,7 +155,7 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             break;
         case LAYER_METADATA:
             break;
-        case LAYER_SPLINE: 
+        case LAYER_BEZIER: 
             break;
     }
 
@@ -210,7 +221,7 @@ Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMous
         } break;
 
         case LAYER_METADATA:
-        case LAYER_SPLINE:
+        case LAYER_BEZIER:
             break;
     }
     if (HandleIsColliding(transform, globalMousePos, layer->transform.o)) return HANDLE_CENTER;
@@ -270,7 +281,7 @@ bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos) {
         case LAYER_HURTBOX:
             return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
         case LAYER_METADATA:
-        case LAYER_SPLINE:
+        case LAYER_BEZIER:
             return false;
     }
     assert(false);
