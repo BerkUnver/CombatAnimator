@@ -338,7 +338,7 @@ int main(int argc, char **argv) {
                                 point.position = origin;
                             } else if (state.frameIdx > 0 && layer->framesActive[state.frameIdx - 1]) {
                                 Vector2 origin = layer->bezierPoints[state.frameIdx - 1].position;
-                                origin.y += 10.0f;
+                                origin.x += 10.0f;
                                 point.position = origin;
                             } else {
                                 point.position = (Vector2) {0.0f, 0.0f};    

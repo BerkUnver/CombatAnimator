@@ -44,8 +44,8 @@ Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector) {
 Transform2D Transform2DRotate(Transform2D transform, float rot) {
     return (Transform2D) {
         .o = transform.o,
-        .x = {.x = cosf(rot), .y = sinf(rot)},
-        .y = {.x = -sinf(rot), .y = cosf(rot)}
+        .x = Vector2Rotate(transform.x, rot),
+        .y = Vector2Rotate(transform.y, rot)
     };
 }
 
@@ -64,6 +64,17 @@ Transform2D Transform2DScale(Transform2D transform, Vector2 scale) {
     transform.x = Vector2Multiply(transform.x, scale);
     transform.y = Vector2Multiply(transform.y, scale);
     return transform;
+}
+
+Transform2D Transform2DMultiply(Transform2D a, Transform2D b) {
+    return (Transform2D) {
+        .x.x = a.x.x * b.x.x + a.y.x * b.x.y,
+        .x.y = a.x.y * b.x.x + a.y.y * b.x.y,
+        .y.x = a.x.x * b.y.x + a.y.x * b.y.y,
+        .y.y = a.x.y * b.y.x + a.y.y * b.y.y,
+        .o.x = a.x.x * b.o.x + a.y.x * b.o.y + a.o.x,
+        .o.y = a.x.y * b.o.x + a.y.y * b.o.y + a.o.y
+    };
 }
 
 Vector2 Transform2DBasisXFormInv(Transform2D transform, Vector2 vector) {

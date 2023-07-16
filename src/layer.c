@@ -55,31 +55,29 @@ void ShapeDraw(Shape shape, Transform2D transform, Color color, bool outline, Co
     rlPopMatrix();
 }
 
-// @TODO: fix so the transforms are multiplied separately instead of passed together.
-void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTransform, Color color) {
-    Vector2 center = Transform2DToGlobal(transform, layerTransform.o);
+void ShapeDrawHandles(Shape shape, Transform2D transform, Color color) {
     switch (shape.type) {
         case SHAPE_CIRCLE: {
             Vector2 radiusVector = {.x = (float) shape.circleRadius, .y = 0.0f};
             Vector2 radiusPos = Transform2DBasisXFormInv(transform, radiusVector);
-            HandleDraw(Vector2Add(center, radiusPos), color);
+            HandleDraw(Vector2Add(transform.o, radiusPos), color);
         } break;
 
         case SHAPE_RECTANGLE: {
             Vector2 localHandlePos = {.x = (float) shape.rectangle.rightX, .y = (float) shape.rectangle.bottomY};
             Vector2 extents = Transform2DBasisXFormInv(transform, localHandlePos);
-            HandleDraw(Vector2Add(center, extents), color);
+            HandleDraw(Vector2Add(transform.o, extents), color);
         } break;
 
         case SHAPE_CAPSULE: {
             Vector2 radius = {.x = (float) shape.capsule.radius, .y = 0.0f};
             Vector2 height = {.x = 0.0f, .y = (float) shape.capsule.height};
             Vector2 rotation = {.x = 0.0f, .y = (float) -shape.capsule.height};
-            Transform2D xform = Transform2DRotate(layerTransform, shape.capsule.rotation);
+            Transform2D xform = Transform2DRotate(transform, shape.capsule.rotation);
 
-            Vector2 globalRadius = Vector2Add(center, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(xform, radius)));
-            Vector2 globalHeight = Vector2Add(center, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(xform, height)));
-            Vector2 globalRotation = Vector2Add(center, Transform2DBasisXFormInv(transform, Transform2DBasisXFormInv(xform, rotation)));
+            Vector2 globalRadius = Vector2Add(transform.o, Transform2DBasisXFormInv(xform, radius));
+            Vector2 globalHeight = Vector2Add(transform.o, Transform2DBasisXFormInv(xform, height));
+            Vector2 globalRotation = Vector2Add(transform.o, Transform2DBasisXFormInv(xform, rotation));
 
             HandleDraw(globalRadius, color);
             HandleDraw(globalHeight, color);
@@ -112,7 +110,8 @@ void LayerFree(Layer *layer) {
 }
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {
-    if (!layer->framesActive[frame]) return;
+    if (layer->type != LAYER_BEZIER && !layer->framesActive[frame]) return;
+    
     Color colorOutline;
     Color color;
     rlPushMatrix();
@@ -142,6 +141,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             break;
         
         case LAYER_BEZIER:
+            rlPushMatrix();
+            rlTransform2DXForm(layer->transform);
             colorOutline = LAYER_BEZIER_COLOR_OUTLINE;
             for (int frameIdx = 0; frameIdx < layer->frameCount - 1; frameIdx++) {
                 // Make sure both ends of the line segment are defined before we try to draw it.
@@ -157,6 +158,7 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                 }
                 DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR);
             }
+            rlPopMatrix();
             break;
     }
     rlPopMatrix();
@@ -166,21 +168,26 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
     Vector2 centerGlobal = Transform2DToGlobal(transform, layer->transform.o);
     HandleDraw(centerGlobal, colorOutline);
     switch (layer->type) {
-        case LAYER_HITBOX:
-            ShapeDrawHandles(layer->hitbox.shape, transform, layer->transform, colorOutline);
+        case LAYER_HITBOX: {
+            Transform2D layerTransform = Transform2DMultiply(transform, layer->transform);
+            ShapeDrawHandles(layer->hitbox.shape, layerTransform, colorOutline);
             Vector2 knockbackLocal = (Vector2) {
                 .x = (float) layer->hitbox.knockbackX,
                 .y = (float) layer->hitbox.knockbackY
             };
             Vector2 knockbackGlobal = Vector2Add(centerGlobal, Transform2DBasisXFormInv(transform, knockbackLocal));
             HandleDraw(knockbackGlobal, colorOutline);
-            break;
-        case LAYER_HURTBOX:
-            ShapeDrawHandles(layer->hurtboxShape, transform, layer->transform, colorOutline);
-            break;
+        } break;
+        
+        case LAYER_HURTBOX: {
+            Transform2D layerTransform = Transform2DMultiply(transform, layer->transform);
+            ShapeDrawHandles(layer->hurtboxShape, layerTransform, colorOutline);
+        } break;
+        
         case LAYER_METADATA:
             break;
-        case LAYER_BEZIER: 
+        case LAYER_BEZIER:
+
             break;
     }
 

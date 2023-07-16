@@ -26,6 +26,8 @@ Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector);
 Transform2D Transform2DRotate(Transform2D transform, float rotation);
 float Transform2DGetRotation(Transform2D transform);
 
+
+Transform2D Transform2DMultiply(Transform2D a, Transform2D b);
 Transform2D Transform2DSetScale(Transform2D transform, Vector2 scale);
 Transform2D Transform2DScale(Transform2D transform, Vector2 scale);
 
