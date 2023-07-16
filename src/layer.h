@@ -62,11 +62,15 @@ typedef enum LayerType {
     LAYER_HURTBOX,
     LAYER_HITBOX,
     LAYER_METADATA,
+    // LAYER_SPLINE
 } LayerType;
 
 typedef struct Layer {
     Transform2D transform;
     LayerType type;
+
+    int frameCount;
+    bool *framesActive;
     union {
         Shape hurtboxShape;
         struct {
@@ -77,13 +81,23 @@ typedef struct Layer {
             Shape shape;
         } hitbox;
         char metadataTag[LAYER_METADATA_TAG_LENGTH];
+        /* 
+        struct {
+            Vector2 position;
+            float extentsLeft;
+            float extentsRight;
+            float rotation;
+        } *splinePoints;
+        */
     };
 } Layer;
 
+Layer LayerNew(int frameCount);
+void LayerFree(Layer *layer);
 bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vector2 localPos);
 void HandleDraw(Vector2 pos, Color strokeColor);
 
-void LayerDraw(Layer *layer, Transform2D transform, bool handlesActive);
+void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive);
 Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMousePos);
 bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
 

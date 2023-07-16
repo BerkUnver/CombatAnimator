@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "raylib.h"
 #include "raymath.h"
@@ -87,7 +88,12 @@ void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTrans
     }
 }
 
-void LayerDraw(Layer *layer, Transform2D transform, bool handlesActive) {
+void LayerFree(Layer *layer) {
+    free(layer->framesActive);
+}
+
+void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {
+    if (!layer->framesActive[frame]) return;
     Color colorOutline;
     Color color;
     rlPushMatrix();

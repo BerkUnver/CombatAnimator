@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     } else if (!strcmp(argv[1], "-t")) {
 
-        for (int i = 3; i < 4; i++) { // make sure each version can still deserialize
+        for (int i = FILE_VERSION_OLDEST; i < FILE_VERSION_CURRENT; i++) { // make sure each version can still deserialize
             char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
             sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
             EditorState state;
@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
                     EditorHistoryChangeState(&history, &state, option);
 
                 } else if (IsKeyPressed(KEY_FRAME_NEW) && IsKeyDown(KEY_FRAME_NEW_MODIFIER)) {
-                    EditorStateAddFrame(&state);
+                    EditorStateAddFrame(&state, state.frameIdx);
                     state.frameIdx = state.frameCount - 1;
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
@@ -308,8 +308,7 @@ int main(int argc, char **argv) {
                     if (state.layerIdx < 0) {
                         state.frames[state.frameIdx].canCancel = !state.frames[state.frameIdx].canCancel;
                     } else {
-                        bool active = !EditorStateLayerActiveGet(&state, state.frameIdx, state.layerIdx);
-                        EditorStateLayerActiveSet(&state, state.frameIdx, state.layerIdx, active);
+                        state.layers[state.layerIdx].framesActive[state.frameIdx] = !state.layers[state.layerIdx].framesActive[state.frameIdx];
                     }
                     mode = MODE_IDLE;
                     EditorHistoryCommitState(&history, &state);
@@ -357,7 +356,8 @@ int main(int argc, char **argv) {
                     } else {
                         goto layerNotInstanced;
                     }
-
+                    
+                    layer.framesActive = malloc(sizeof(bool) * state.frameCount);
                     EditorStateLayerAdd(&state, layer);
                     state.layerIdx = state.layerCount - 1;
                     EditorHistoryCommitState(&history, &state);
@@ -446,9 +446,7 @@ int main(int argc, char **argv) {
 
         // draw layers
         for (int i = 0; i < state.layerCount; i++) {
-            if (EditorStateLayerActiveGet(&state, state.frameIdx, i)) {
-                LayerDraw(state.layers + i, transform, i == state.layerIdx);
-            }
+            LayerDraw(state.layers + i, state.frameIdx, transform, i == state.layerIdx);
         }
         
         // draw frame pos handle
@@ -532,7 +530,7 @@ int main(int argc, char **argv) {
             DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
             for (int j = 0; j < state.layerCount; j++) {
                 Color color;
-                bool active = EditorStateLayerActiveGet(&state, i, j);
+                bool active = state.layers[j].framesActive[i];
                 switch (state.layers[j].type) {
                     case LAYER_HITBOX:
                         color = active ? LAYER_HITBOX_COLOR_TIMELINE_ACTIVE : LAYER_HITBOX_COLOR_TIMELINE_INACTIVE;

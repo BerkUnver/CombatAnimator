@@ -10,6 +10,10 @@
 #define FRAME_INFO_POS_DEFAULT (Vector2) {.x = 80.0f, .y = 64.0f}
 #define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false}
 
+// Oldest supported version of the file format
+#define FILE_VERSION_OLDEST 3
+#define FILE_VERSION_CURRENT 5
+
 typedef struct FrameInfo {
     int duration;
     bool canCancel;
@@ -19,7 +23,6 @@ typedef struct FrameInfo {
 typedef struct EditorState {
     Layer *layers;
     int layerCount;
-    bool *_layerActiveFrames;
     FrameInfo *frames;
     int frameCount;
     int layerIdx;
@@ -40,13 +43,10 @@ typedef enum ChangeOptions {
 
 EditorState EditorStateNew(int frameCount);
 void EditorStateFree(EditorState *state);
-bool EditorStateLayerActiveGet(EditorState *state, int frameIdx, int layerIdx);
-void EditorStateLayerActiveSet(EditorState *state, int frameIdx, int layerIdx, bool enabled);
-
 
 void EditorStateLayerAdd(EditorState *state, Layer layer);
 bool EditorStateLayerRemove(EditorState *state, int idx);
-void EditorStateAddFrame(EditorState *state);
+void EditorStateAddFrame(EditorState *state, int idx);
 bool EditorStateRemoveFrame(EditorState *state, int idx);
 EditorState EditorStateDeepCopy(EditorState *state);
 

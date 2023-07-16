@@ -1,10 +1,9 @@
 {
 	"magic":	"CombatAnimator",
-	"version":	5,
+	"version":	4,
 	"layers":	[{
 			"x":	98,
 			"y":	46,
-			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	19,
@@ -19,7 +18,6 @@
 		}, {
 			"x":	82,
 			"y":	43,
-			"framesActive":	[false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false],
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	13,
@@ -37,7 +35,6 @@
 		}, {
 			"x":	66,
 			"y":	47,
-			"framesActive":	[true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -50,7 +47,6 @@
 		}, {
 			"x":	70,
 			"y":	48,
-			"framesActive":	[false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -63,7 +59,6 @@
 		}, {
 			"x":	76,
 			"y":	47,
-			"framesActive":	[false, false, false, false, false, true, true, true, true, true, true, true, false, false, false, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -76,7 +71,6 @@
 		}, {
 			"x":	101,
 			"y":	54,
-			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -89,7 +83,6 @@
 		}, {
 			"x":	96,
 			"y":	54,
-			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -102,7 +95,6 @@
 		}, {
 			"x":	94,
 			"y":	50,
-			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -115,7 +107,6 @@
 		}, {
 			"x":	86,
 			"y":	48,
-			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -128,7 +119,6 @@
 		}, {
 			"x":	99,
 			"y":	37,
-			"framesActive":	[false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false],
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	2,
@@ -147,7 +137,6 @@
 		}, {
 			"x":	62,
 			"y":	39,
-			"framesActive":	[true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
 			"type":	"METADATA",
 			"metadataTag":	"SwordPos"
 		}],
@@ -231,5 +220,6 @@
 			"canCancel":	false,
 			"x":	88,
 			"y":	64
-		}]
+		}],
+	"layerActiveFrames":	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 }

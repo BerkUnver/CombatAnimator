@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,7 +15,6 @@ EditorState EditorStateNew(int frameCount) {
     return (EditorState) {
         .layerCount = 0,
         .layers = NULL,
-        ._layerActiveFrames = NULL,
         .frames = frames,
         .frameCount = frameCount,
         .frameIdx = 0,
@@ -23,77 +23,80 @@ EditorState EditorStateNew(int frameCount) {
 }
 
 void EditorStateFree(EditorState *state) {
+    for (int i = 0; i < state->layerCount; i++) {
+        LayerFree(state->layers + i);
+    }
     free(state->layers);
-    free(state->_layerActiveFrames);
     free(state->frames);
 }
 
-bool EditorStateLayerActiveGet(EditorState *state, int frameIdx, int layerIdx) {
-    return state->_layerActiveFrames[state->frameCount * layerIdx + frameIdx];
-}
-
-void EditorStateLayerActiveSet(EditorState *state, int frameIdx, int layerIdx, bool enabled) {
-    state->_layerActiveFrames[state->frameCount * layerIdx + frameIdx] = enabled;
-}
-
+// Takes ownership of layer
 void EditorStateLayerAdd(EditorState *state, Layer layer) {
-    int oldMax = state->layerCount * state->frameCount;
     state->layerCount++;
     state->layers = realloc(state->layers, sizeof(Layer) * state->layerCount);
     state->layers[state->layerCount - 1] = layer;
-    int newMax = state->layerCount * state->frameCount;
-    state->_layerActiveFrames = realloc(state->_layerActiveFrames, sizeof(bool) * newMax);
-    memset(state->_layerActiveFrames + oldMax, false, (newMax - oldMax) * sizeof(bool));
 }
 
 bool EditorStateLayerRemove(EditorState *state, int idx) {
     if (idx < 0 || idx >= state->layerCount) return false;
-    
+    LayerFree(state->layers + idx);    
     for (int layerIdx = idx + 1; layerIdx < state->layerCount; layerIdx++) {
         int newLayerIdx = layerIdx - 1;
         state->layers[newLayerIdx] = state->layers[layerIdx];
-
-        for (int frameIdx = 0; frameIdx < state->frameCount; frameIdx++) {
-            state->_layerActiveFrames[state->frameCount * newLayerIdx + frameIdx] = state->_layerActiveFrames[state->frameCount * layerIdx + frameIdx];
-        }
     }
     state->layerCount--;
     if (state->layerIdx >= state->layerCount) state->layerIdx = state->layerCount - 1;
     return true;
 }
 
-void EditorStateAddFrame(EditorState *state) {
+void EditorStateAddFrame(EditorState *state, int idx) {
+    if (idx < 0 || idx >= state->frameCount) assert(false);
     state->frameCount++; 
     state->frames = realloc(state->frames, sizeof(FrameInfo) * state->frameCount);
+
+    // Duplicate last frame to use as the new frame. It has no allocations so we can just assign it.
     state->frames[state->frameCount - 1] = state->frames[state->frameCount - 2];
-    state->_layerActiveFrames = realloc(state->_layerActiveFrames, sizeof(bool) * state->frameCount * state->layerCount);
-    for (int chunkIdx = state->layerCount - 1; chunkIdx >= 0; chunkIdx--) {
-        state->_layerActiveFrames[chunkIdx * state->frameCount + state->frameCount - 1] = false;
-        for (int i = state->frameCount - 2; i >= 0; i--) {
-            state->_layerActiveFrames[chunkIdx * state->frameCount + i] = state->_layerActiveFrames[chunkIdx * state->frameCount + i - chunkIdx];
-        }
+
+    // Resize each layer so it has the right amount of frames
+    for (int i = 0; i < state->layerCount; i++) {
+        assert(state->layers[i].frameCount == state->frameCount - 1);
+        state->layers[i].frameCount++;
+
+        state->layers[i].framesActive = realloc(state->layers[i].framesActive, sizeof(*state->layers[i].framesActive) * state->frameCount);
+        state->layers[i].framesActive[state->frameCount - 1] = false;
     }
 }
 
 bool EditorStateRemoveFrame(EditorState *state, int idx) {
     if (idx < 0 || idx >= state->frameCount || state->frameCount == 1) return false;
-    int activeLen = state->frameCount * state->layerCount;
-    for (int i = 0; i < activeLen; i++) {
-        int shift = (i + state->frameCount - 1 - idx) / state->frameCount; // get the index to move to
-        state->_layerActiveFrames[i - shift] = state->_layerActiveFrames[i];
+   
+    for (int i = idx + 1; i < state->frameCount; i++) {
+        state->frames[i - 1] = state->frames[i];
+    }
+
+    for (int layerIdx = 0; layerIdx < state->layerCount; layerIdx++) {
+        for (int frameIdx = idx + 1; frameIdx < state->frameCount; frameIdx++) {
+            state->layers[layerIdx].framesActive[frameIdx - 1] = state->layers[layerIdx].framesActive[frameIdx];
+        }
+        assert(state->layers[layerIdx].frameCount == state->frameCount);
+        state->layers[layerIdx].frameCount--;
     }
     state->frameCount--;
     return true;
 }
 
 EditorState EditorStateDeepCopy(EditorState *state) {
-    int activeFramesSize = sizeof(bool) * state->layerCount * state->frameCount;
-    bool *activeFramesCopy = malloc(activeFramesSize);
-    memcpy(activeFramesCopy, state->_layerActiveFrames, activeFramesSize);
-
     int layersSize = sizeof(Layer) * state->layerCount;
+
+    // Bulk copy everything from each layer, then replace the malloc'ed parts with copies. 
     Layer *layersCopy = malloc(layersSize);
     memcpy(layersCopy, state->layers, layersSize);
+    
+    for (int layerIdx = 0; layerIdx < state->layerCount; layerIdx++) {
+        bool *framesActive = malloc(sizeof(bool) * state->frameCount);
+        memcpy(framesActive, layersCopy[layerIdx].framesActive, sizeof(bool) * state->frameCount); 
+        layersCopy[layerIdx].framesActive = framesActive;
+    }
 
     int framesSize = sizeof(FrameInfo) * state->frameCount;
     FrameInfo *framesCopy = malloc(framesSize);
@@ -103,10 +106,8 @@ EditorState EditorStateDeepCopy(EditorState *state) {
         .layerCount = state->layerCount,
         .frameCount = state->frameCount,
         .layers = layersCopy,
-        ._layerActiveFrames = activeFramesCopy,
         .frames = framesCopy,
         .frameIdx = state->frameIdx,
-
         .layerIdx = state->layerIdx
     };
 }
@@ -177,15 +178,25 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
     //      Stopped inlining shape properties into each layer. Now shapes are a separate struct.
     //      Renamed "shapes" to "layers" and "shapeActiveFrames" to "layerActiveFrames".
     //      Renamed "boxType" to "type" in layer.
-    cJSON_AddNumberToObject(json, "version", 4);
+    // 5: moved the array of which layers are active from the saved object into each individual layer.
+
+    cJSON_AddNumberToObject(json, "version", FILE_VERSION_CURRENT);
 
     cJSON *layers = cJSON_CreateArray();
-    for (int i = 0; i < state->layerCount; i++) {
-        Layer *layer = state->layers + i;
+    for (int layerIdx = 0; layerIdx < state->layerCount; layerIdx++) {
+        Layer *layer = state->layers + layerIdx;
         cJSON *layerJson = cJSON_CreateObject();
         cJSON_AddNumberToObject(layerJson, "x", layer->transform.o.x);
         cJSON_AddNumberToObject(layerJson, "y", layer->transform.o.y);
-        switch (state->layers[i].type) {
+        
+        cJSON *framesActiveJson = cJSON_CreateArray();
+        for (int frameIdx = 0; frameIdx < layer->frameCount; frameIdx++) {
+            cJSON *val = cJSON_CreateBool(layer->framesActive[frameIdx]);
+            cJSON_AddItemToArray(framesActiveJson, val);
+        }
+        cJSON_AddItemToObject(layerJson, "framesActive", framesActiveJson);
+
+        switch (state->layers[layerIdx].type) {
             case LAYER_HITBOX:
                 cJSON_AddStringToObject(layerJson, "type", "HITBOX");
                 cJSON *hitbox = cJSON_CreateObject();
@@ -220,14 +231,6 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
         cJSON_AddItemToArray(frames, frame);
     }
     cJSON_AddItemToObject(json, "frames", frames);
-
-    cJSON *activeFrames = cJSON_CreateArray();
-    int activeCount = state->frameCount * state->layerCount;
-    for (int i = 0; i < activeCount; i++) {
-        cJSON *val = cJSON_CreateNumber(state->_layerActiveFrames[i]);
-        cJSON_AddItemToArray(activeFrames, val);
-    }
-    cJSON_AddItemToObject(json, "layerActiveFrames", activeFrames);
 
     FILE *file = fopen(path, "w+");
     if (!file) {
@@ -280,7 +283,13 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         version = (int) cJSON_GetNumberValue(versionJson);
     }
 
-    if (version < 0 || version > 4) goto delete_json;
+    if (version < 0 || version > FILE_VERSION_CURRENT) {
+        printf("Invalid version number %i\n", version);
+        goto delete_json;
+    } else if (version < FILE_VERSION_OLDEST) {
+        printf("Version %i no longer supported.\n", version);
+        goto delete_json;
+    }
 
     cJSON *frames = cJSON_GetObjectItem(json, "frames");
     if (!cJSON_IsArray(frames)) goto delete_json;
@@ -371,6 +380,28 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
 
         } else RETURN_FAIL;
+        
+        // Not going to initialize it because it will be initialized by the layerActiveFrames if the version is less than 5.
+        layer.frameCount = out->frameCount;
+        layer.framesActive = malloc(sizeof(*layer.framesActive) * out->frameCount);
+
+        if (version >= 5) {
+            cJSON *framesActive = cJSON_GetObjectItem(layerJson, "framesActive");
+            if (!cJSON_IsArray(framesActive)) {
+                free(layer.framesActive);
+                RETURN_FAIL;
+            }
+            int frameIdx = 0;
+            cJSON *frameActive;
+            cJSON_ArrayForEach(frameActive, framesActive) {
+                if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) {
+                    free(layer.framesActive);
+                    RETURN_FAIL;
+                }
+                layer.framesActive[frameIdx] = cJSON_IsTrue(frameActive);
+                frameIdx++;
+            }
+        }
 
         layer.transform = Transform2DIdentity();
         layer.transform.o = (Vector2) {
@@ -381,14 +412,17 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         EditorStateLayerAdd(out, layer);
     }
 
-    cJSON *activeFrames = cJSON_GetObjectItem(json, version >= 4 ? "layerActiveFrames" : "shapeActiveFrames");
-    if (!cJSON_IsArray(activeFrames)) RETURN_FAIL;
-    cJSON *active;
-    int activeFrameIdx = 0;
-    cJSON_ArrayForEach(active, activeFrames) {
-        if (!cJSON_IsNumber(active)) RETURN_FAIL;
-        out->_layerActiveFrames[activeFrameIdx] = cJSON_GetNumberValue(active) != 0;
-        activeFrameIdx++;
+    if (version < 5) {        
+        cJSON *activeFrames = cJSON_GetObjectItem(json, version >= 4 ? "layerActiveFrames" : "shapeActiveFrames");
+        if (!cJSON_IsArray(activeFrames)) RETURN_FAIL;
+        cJSON *active;
+        int activeFrameIdx = 0;
+        cJSON_ArrayForEach(active, activeFrames) {
+            if (activeFrameIdx >= out->frameCount * out->layerCount || !cJSON_IsNumber(active)) RETURN_FAIL;
+            int layerIdx = activeFrameIdx / out->frameCount;
+            out->layers[layerIdx].framesActive[activeFrameIdx % out->frameCount] = cJSON_GetNumberValue(active) != 0;
+            activeFrameIdx++;
+        }
     }
 
     cJSON_Delete(json);
