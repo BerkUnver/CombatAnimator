@@ -90,9 +90,9 @@ void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTrans
 
 void LayerFree(Layer *layer) {
     free(layer->framesActive);
-    // if (layer->type == LAYER_SPLINE) {
-    //    free(layer->splinePoints);
-    // }
+    if (layer->type == LAYER_SPLINE) {
+        free(layer->splinePoints);
+    }
 }
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {
@@ -118,7 +118,10 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             ShapeDraw(layer->hurtboxShape, layer->transform, color, handlesActive, colorOutline);
             break;
         case LAYER_METADATA:
-            colorOutline =  LAYER_METADATA_COLOR_OUTLINE;
+            colorOutline = LAYER_METADATA_COLOR_OUTLINE;
+            break;
+        case LAYER_SPLINE:
+            colorOutline = LAYER_SPLINE_COLOR_OUTLINE;
             break;
     }
     rlPopMatrix();
@@ -140,6 +143,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             ShapeDrawHandles(layer->hurtboxShape, transform, layer->transform, colorOutline);
             break;
         case LAYER_METADATA:
+            break;
+        case LAYER_SPLINE: 
             break;
     }
 
@@ -205,6 +210,7 @@ Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMous
         } break;
 
         case LAYER_METADATA:
+        case LAYER_SPLINE:
             break;
     }
     if (HandleIsColliding(transform, globalMousePos, layer->transform.o)) return HANDLE_CENTER;
@@ -264,6 +270,7 @@ bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos) {
         case LAYER_HURTBOX:
             return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
         case LAYER_METADATA:
+        case LAYER_SPLINE:
             return false;
     }
     assert(false);

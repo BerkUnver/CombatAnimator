@@ -325,9 +325,9 @@ int main(int argc, char **argv) {
                         layer.type = LAYER_METADATA;
                         layer.metadataTag[0] = '\0';
 
-                    // } else if (IsKeyPressed(KEY_C)) { // Splines
-                    //    layer.type = LAYER_SPLINE;
-                    //    layer.splinePoints = malloc
+                    } else if (IsKeyPressed(KEY_C)) { // Splines
+                        layer.type = LAYER_SPLINE;
+                        layer.splinePoints = malloc(sizeof *layer.splinePoints * state.frameCount);
 
                     } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox or Hitbox
                         Shape shape;
@@ -514,6 +514,9 @@ int main(int argc, char **argv) {
                         mode = MODE_EDIT_METADATA_TAG;
                     }
                 } break;
+
+                case LAYER_SPLINE:
+                    break;
             }
         }
         
@@ -547,6 +550,9 @@ int main(int argc, char **argv) {
                         break;
                     case LAYER_METADATA:
                         color = active ? LAYER_METADATA_COLOR_TIMELINE_ACTIVE : LAYER_METADATA_COLOR_TIMELINE_INACTIVE;
+                        break;
+                    case LAYER_SPLINE:
+                        color = active ? LAYER_SPLINE_COLOR_TIMELINE_ACTIVE : LAYER_SPLINE_COLOR_TIMELINE_INACTIVE;
                         break;
                 }
                 int layerY = hitboxRowY + (int) (LAYER_ROW_SIZE * ((float) j + 0.5f));

@@ -7,23 +7,25 @@
 
 #define SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
-// hitbox
-// hurtbox
-// knockback
-// Red
+
 #define LAYER_HITBOX_COLOR_OUTLINE (Color) {255, 0, 0, 255}
 #define LAYER_HITBOX_COLOR (Color) {255, 0, 0, 63}
 #define LAYER_HITBOX_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 0, 255}
 #define LAYER_HITBOX_COLOR_TIMELINE_ACTIVE LAYER_HITBOX_COLOR_OUTLINE
+
 #define LAYER_HURTBOX_COLOR_OUTLINE (Color) {0, 255, 255, 255}
 #define LAYER_HURTBOX_COLOR (Color) {0, 255, 255, 63}
 #define LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 63, 255}
 #define LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE LAYER_HURTBOX_COLOR_OUTLINE
+
 #define LAYER_METADATA_TAG_LENGTH 16
 #define LAYER_METADATA_COLOR_OUTLINE (Color) {255, 0, 255, 255}
 #define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
 #define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
 
+#define LAYER_SPLINE_COLOR_OUTLINE (Color) {0, 255, 0, 255}
+#define LAYER_SPLINE_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 0, 255}
+#define LAYER_SPLINE_COLOR_TIMELINE_ACTIVE LAYER_SPLINE_COLOR_OUTLINE
 
 typedef enum Handle {
     HANDLE_NONE,
@@ -62,7 +64,7 @@ typedef enum LayerType {
     LAYER_HURTBOX,
     LAYER_HITBOX,
     LAYER_METADATA,
-    // LAYER_SPLINE
+    LAYER_SPLINE
 } LayerType;
 
 typedef struct SplinePoints {
@@ -89,7 +91,7 @@ typedef struct Layer {
         } hitbox;
         char metadataTag[LAYER_METADATA_TAG_LENGTH]; // @TODO replace with string buffer
          
-        // SplinePoint *splinePoints; 
+        SplinePoints *splinePoints; 
         // Length is frameCount.
         // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.
     };

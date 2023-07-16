@@ -92,10 +92,16 @@ EditorState EditorStateDeepCopy(EditorState *state) {
     Layer *layersCopy = malloc(layersSize);
     memcpy(layersCopy, state->layers, layersSize);
     
-    for (int layerIdx = 0; layerIdx < state->layerCount; layerIdx++) {
+    for (int i = 0; i < state->layerCount; i++) {
         bool *framesActive = malloc(sizeof(bool) * state->frameCount);
-        memcpy(framesActive, layersCopy[layerIdx].framesActive, sizeof(bool) * state->frameCount); 
-        layersCopy[layerIdx].framesActive = framesActive;
+        memcpy(framesActive, layersCopy[i].framesActive, sizeof(bool) * state->frameCount); 
+        layersCopy[i].framesActive = framesActive;
+
+        if (layersCopy[i].type == LAYER_SPLINE) {
+            SplinePoints *splinePoints = malloc(sizeof(SplinePoints) * state->frameCount);
+            memcpy(splinePoints, layersCopy[i].splinePoints, sizeof(SplinePoints) * state->frameCount);
+            layersCopy[i].splinePoints = splinePoints;
+        }
     }
 
     int framesSize = sizeof(FrameInfo) * state->frameCount;
@@ -214,6 +220,9 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
             case LAYER_METADATA:
                 cJSON_AddStringToObject(layerJson, "type", "METADATA");
                 cJSON_AddStringToObject(layerJson, "metadataTag", layer->metadataTag);
+                break;
+            case LAYER_SPLINE:
+                cJSON_AddStringToObject(layerJson, "type", "SPLINE");
                 break;
         }
         cJSON_AddItemToArray(layers, layerJson);
@@ -378,6 +387,9 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             if (!tag || !cJSON_IsString(tag)) RETURN_FAIL;
             layer.type = LAYER_METADATA;
             strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
+
+        } else if (version >= 6 && !strcmp(typeString, "SPLINE")) {
+            layer.type = LAYER_SPLINE;
 
         } else RETURN_FAIL;
         
