@@ -353,7 +353,7 @@ int main(int argc, char **argv) {
                 } else if (IsKeyDown(KEY_LAYER_NEW_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
                     Layer layer;
                     layer.transform = Transform2DIdentity();
-                    layer.transform.o = (Vector2) { // spawn shape at center of frame.
+                    layer.transform.o = (Vector2) { // spawn at the center of the frame.
                             .x = (float) texture.width / (float) (state.frameCount * 2),
                             .y = (float) texture.height / 2.0f
                     };

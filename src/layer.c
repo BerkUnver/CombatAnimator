@@ -88,6 +88,22 @@ void ShapeDrawHandles(Shape shape, Transform2D transform, Transform2D layerTrans
     }
 }
 
+Vector2 BezierLerp(BezierPoint p0, BezierPoint p1, float lerp) {
+    assert(0 <= lerp && lerp <= 1);
+    
+    Vector2 control0 = Vector2Add(p0.position, Vector2Rotate((Vector2) {p0.extentsRight, 0.0f}, p0.rotation));
+    Vector2 control1 = Vector2Add(p1.position, Vector2Rotate((Vector2) {-p1.extentsLeft, 0.0f}, p1.rotation));
+    
+    Vector2 q0 = Vector2Lerp(p0.position, control0, lerp);
+    Vector2 q1 = Vector2Lerp(control0, control1, lerp);
+    Vector2 q2 = Vector2Lerp(control1, p1.position, lerp);
+
+    Vector2 r0 = Vector2Lerp(q0, q1, lerp);
+    Vector2 r1 = Vector2Lerp(q1, q2, lerp);
+
+    return Vector2Lerp(r0, r1, lerp);
+}
+
 void LayerFree(Layer *layer) {
     free(layer->framesActive);
     if (layer->type == LAYER_BEZIER) {
@@ -114,24 +130,33 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                      layer->transform.o.y + layer->hitbox.knockbackY,
                      colorOutline);
             break;
+        
         case LAYER_HURTBOX:
             colorOutline = LAYER_HURTBOX_COLOR_OUTLINE;
             color = LAYER_HURTBOX_COLOR;
             ShapeDraw(layer->hurtboxShape, layer->transform, color, handlesActive, colorOutline);
             break;
+        
         case LAYER_METADATA:
             colorOutline = LAYER_METADATA_COLOR_OUTLINE;
             break;
+        
         case LAYER_BEZIER:
             colorOutline = LAYER_BEZIER_COLOR_OUTLINE;
-            /*
-            for (int frameIdx = 0; framedIdx < layer->frameCount; frameIdx++) {
+            for (int frameIdx = 0; frameIdx < layer->frameCount - 1; frameIdx++) {
+                // Make sure both ends of the line segment are defined before we try to draw it.
+                if (!layer->framesActive[frameIdx] || !layer->framesActive[frameIdx + 1]) continue;
+                
+                BezierPoint p0 = layer->bezierPoints[frameIdx];
+                BezierPoint p1 = layer->bezierPoints[frameIdx + 1];
+                
                 Vector2 points[16];
-                for (int pointIdx = 0; i < 16; i++) {
-                    int pos = 
+                for (int pointIdx = 0; pointIdx < 16; pointIdx++) {
+                    float lerp = ((float) pointIdx) / ((float) (BEZIER_SEGMENTS  - 1));
+                    points[pointIdx] = BezierLerp(p0, p1, lerp); 
                 }
+                DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR);
             }
-            */
             break;
     }
     rlPopMatrix();
