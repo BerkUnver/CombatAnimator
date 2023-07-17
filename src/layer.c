@@ -225,32 +225,32 @@ bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vect
     return CheckCollisionPointRec(globalMousePos, rect);
 }
 
-Handle ShapeHandleSelect(Shape shape, Transform2D transform, Transform2D layerTransform, Vector2 globalMousePos) {
+Handle ShapeHandleSelect(Shape shape, Transform2D transform, Vector2 globalMousePos) {
     switch (shape.type) {
         case SHAPE_CIRCLE: {
-            Vector2 radiusPos = Transform2DToGlobal(layerTransform, (Vector2) {.x = (float) shape.circleRadius, .y = 0.0f});
+            Vector2 radiusPos = (Vector2) {(float) shape.circleRadius, 0.0f};
             if (HandleIsColliding(transform, globalMousePos, radiusPos)) return HANDLE_CIRCLE_RADIUS;
         } break;
 
         case SHAPE_RECTANGLE: {
-            Vector2 rectHandle = {
+            Vector2 cornerPos = {
                 .x = (float) shape.rectangle.rightX,
                 .y = (float) shape.rectangle.bottomY
             };
-            Vector2 cornerPos = Transform2DToGlobal(layerTransform, rectHandle);
             if (HandleIsColliding(transform, globalMousePos, cornerPos)) return HANDLE_RECTANGLE_CORNER;
         } break;
 
         case SHAPE_CAPSULE: {
-            Transform2D xform = Transform2DRotate(layerTransform, shape.capsule.rotation);
-            Vector2 radiusPos = Transform2DToGlobal(xform, (Vector2) {(float) shape.capsule.radius, 0.0f});
-            if (HandleIsColliding(transform, globalMousePos, radiusPos)) return HANDLE_CAPSULE_RADIUS;
+            Transform2D transformCapsule = Transform2DMultiply(transform, Transform2DFromRotation(shape.capsule.rotation));
+            
+            Vector2 radiusPos = {(float) shape.capsule.radius, 0.0f};
+            if (HandleIsColliding(transformCapsule, globalMousePos, radiusPos)) return HANDLE_CAPSULE_RADIUS;
 
-            Vector2 heightPos = Transform2DToGlobal(xform, (Vector2) {0.0f, (float) shape.capsule.height});
-            if (HandleIsColliding(transform, globalMousePos, heightPos)) return HANDLE_CAPSULE_HEIGHT;
+            Vector2 heightPos = {0.0f, (float) shape.capsule.height};
+            if (HandleIsColliding(transformCapsule, globalMousePos, heightPos)) return HANDLE_CAPSULE_HEIGHT;
 
-            Vector2 rotationPos = Transform2DToGlobal(xform, (Vector2) {0.0f, (float) -shape.capsule.height});
-            if (HandleIsColliding(transform, globalMousePos, rotationPos)) return HANDLE_CAPSULE_ROTATION;
+            Vector2 rotationPos = {0.0f, (float) -shape.capsule.height};
+            if (HandleIsColliding(transformCapsule, globalMousePos, rotationPos)) return HANDLE_CAPSULE_ROTATION;
         } break;
     }
     return HANDLE_NONE;
@@ -264,18 +264,19 @@ Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMous
                     .y = layer->transform.o.y + (float) layer->hitbox.knockbackY
             };
             if (HandleIsColliding(transform, globalMousePos, knockbackHandle)) return HANDLE_HITBOX_KNOCKBACK;
-            Handle handle = ShapeHandleSelect(layer->hitbox.shape, transform, layer->transform, globalMousePos);
+            Handle handle = ShapeHandleSelect(layer->hitbox.shape, Transform2DMultiply(transform, layer->transform), globalMousePos);
             if (handle != HANDLE_NONE) return handle;
         } break;
 
         case LAYER_HURTBOX: {
-            Handle handle = ShapeHandleSelect(layer->hurtboxShape, transform, layer->transform, globalMousePos);
+            Handle handle = ShapeHandleSelect(layer->hurtboxShape, Transform2DMultiply(transform, layer->transform), globalMousePos);
             if (handle != HANDLE_NONE) return handle;
         } break;
 
         case LAYER_METADATA:
-        case LAYER_BEZIER:
             break;
+        case LAYER_BEZIER: {
+        } break;
     }
     if (HandleIsColliding(transform, globalMousePos, layer->transform.o)) return HANDLE_CENTER;
     return HANDLE_NONE;
