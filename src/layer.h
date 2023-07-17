@@ -24,7 +24,8 @@
 #define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
 #define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
 
-#define LAYER_BEZIER_COLOR (Color) {0, 255, 0, 255}
+#define LAYER_BEZIER_COLOR_CURVE (Color) {0, 255, 0, 255}
+#define LAYER_BEZIER_COLOR_LINE (Color) {0, 63, 0, 255}
 #define LAYER_BEZIER_COLOR_OUTLINE (Color) {0, 255, 0, 255}
 #define LAYER_BEZIER_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 0, 255}
 #define LAYER_BEZIER_COLOR_TIMELINE_ACTIVE LAYER_BEZIER_COLOR_OUTLINE
@@ -110,8 +111,8 @@ bool HandleIsColliding(Transform2D globalTransform, Vector2 globalMousePos, Vect
 void HandleDraw(Vector2 pos, Color strokeColor);
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive);
-Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMousePos);
-bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos);
+Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2 globalMousePos);
+bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos);
 
 cJSON *ShapeSerialize(Shape shape);
 bool ShapeDeserialize(cJSON *json, Shape *shape, int version);

@@ -15,11 +15,23 @@ Vector2 Vector2Max(Vector2 vec, float max) {
     return (Vector2) {.x = Max(vec.x, max), .y = Max(vec.y, max)};
 }
 
+float Vector2Rotation(Vector2 vector) {
+    return atan2f(vector.y, vector.x);
+}
+
 Transform2D Transform2DIdentity() {
     return (Transform2D) {
         .o = {.x = 0, .y = 0},
         .x = {.x = 1, .y = 0},
         .y = {.x = 0, .y = 1}
+    };
+}
+
+Transform2D Transform2DFromPosition(Vector2 pos) {
+    return (Transform2D) {
+        .o = pos,
+        .x = {1.0f, 0.0f},
+        .y = {0.0f, 1.0f}
     };
 }
 

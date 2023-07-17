@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                    assert(LayerHandleSet(state.layers + state.layerIdx, draggingHandle, localMousePos));
+                    assert(LayerHandleSet(state.layers + state.layerIdx, state.frameIdx, draggingHandle, localMousePos));
                 }
                 break;
 
@@ -412,7 +412,12 @@ int main(int argc, char **argv) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
                         mode = MODE_DRAGGING_FRAME_POS;
                     } else {
-                        draggingHandle = state.layerIdx >= 0 ? LayerHandleSelect(&state.layers[state.layerIdx], transform, mousePos) : HANDLE_NONE;
+                        if (state.layerIdx >= 0) {
+                            draggingHandle = LayerHandleSelect(state.layers + state.layerIdx, state.frameIdx, transform, mousePos);
+                        } else {
+                            draggingHandle = HANDLE_NONE;
+                        }
+
                         if (draggingHandle != HANDLE_NONE) {
                             mode = MODE_DRAGGING_HANDLE;
                         } else {

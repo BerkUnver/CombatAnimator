@@ -156,7 +156,7 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                     float lerp = ((float) pointIdx) / ((float) (BEZIER_SEGMENTS  - 1));
                     points[pointIdx] = BezierLerp(p0, p1, lerp); 
                 }
-                DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR);
+                DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR_CURVE);
             }
 
             for (int i = 0; i < layer->frameCount; i++) {
@@ -166,8 +166,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                 left = Vector2Add(left, point.position);
                 Vector2 right = Vector2Rotate((Vector2) {point.extentsRight, 0.0f}, point.rotation);
                 right = Vector2Add(right, point.position);
-                DrawLineV(left, point.position, LAYER_BEZIER_COLOR);
-                DrawLineV(right, point.position, LAYER_BEZIER_COLOR);
+                DrawLineV(left, point.position, LAYER_BEZIER_COLOR_LINE);
+                DrawLineV(right, point.position, LAYER_BEZIER_COLOR_LINE);
             }
             rlPopMatrix();
             break;
@@ -256,29 +256,38 @@ Handle ShapeHandleSelect(Shape shape, Transform2D transform, Vector2 globalMouse
     return HANDLE_NONE;
 }
 
-Handle LayerHandleSelect(Layer *layer, Transform2D transform, Vector2 globalMousePos) {
+Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2 mousePos) {
+    assert(0 <= frame && frame < layer->frameCount);
     switch (layer->type) {
         case LAYER_HITBOX: {
             Vector2 knockbackHandle = {
-                    .x = layer->transform.o.x + (float) layer->hitbox.knockbackX,
-                    .y = layer->transform.o.y + (float) layer->hitbox.knockbackY
+                .x = layer->transform.o.x + (float) layer->hitbox.knockbackX,
+                .y = layer->transform.o.y + (float) layer->hitbox.knockbackY
             };
-            if (HandleIsColliding(transform, globalMousePos, knockbackHandle)) return HANDLE_HITBOX_KNOCKBACK;
-            Handle handle = ShapeHandleSelect(layer->hitbox.shape, Transform2DMultiply(transform, layer->transform), globalMousePos);
+            if (HandleIsColliding(transform, mousePos, knockbackHandle)) return HANDLE_HITBOX_KNOCKBACK;
+            Handle handle = ShapeHandleSelect(layer->hitbox.shape, Transform2DMultiply(transform, layer->transform), mousePos);
             if (handle != HANDLE_NONE) return handle;
         } break;
 
         case LAYER_HURTBOX: {
-            Handle handle = ShapeHandleSelect(layer->hurtboxShape, Transform2DMultiply(transform, layer->transform), globalMousePos);
+            Handle handle = ShapeHandleSelect(layer->hurtboxShape, Transform2DMultiply(transform, layer->transform), mousePos);
             if (handle != HANDLE_NONE) return handle;
         } break;
 
         case LAYER_METADATA:
             break;
         case LAYER_BEZIER: {
+            BezierPoint point = layer->bezierPoints[frame];
+            Transform2D transformLayer = Transform2DMultiply(transform, layer->transform);
+            Transform2D transformBezier = Transform2DFromRotation(point.rotation);
+            transformBezier.o = point.position;
+            Transform2D transformGlobal = Transform2DMultiply(transformLayer, transformBezier);
+            if (HandleIsColliding(transformGlobal, mousePos, (Vector2) {point.extentsRight, 0.0f})) return HANDLE_BEZIER_RIGHT;
+            if (HandleIsColliding(transformGlobal, mousePos, (Vector2) {-point.extentsLeft, 0.0f})) return HANDLE_BEZIER_LEFT;
+            if (HandleIsColliding(transformLayer, mousePos, point.position)) return HANDLE_BEZIER_CENTER;
         } break;
     }
-    if (HandleIsColliding(transform, globalMousePos, layer->transform.o)) return HANDLE_CENTER;
+    if (HandleIsColliding(transform, mousePos, layer->transform.o)) return HANDLE_CENTER;
     return HANDLE_NONE;
 }
 
@@ -298,7 +307,7 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
 
         case SHAPE_CAPSULE:
             if (handle == HANDLE_CAPSULE_ROTATION) {
-                shape->capsule.rotation = atan2f(handlePos.y, handlePos.x) + PI / 2.0f;
+                shape->capsule.rotation = Vector2Rotation(handlePos) + PI / 2.0f;
                 return true;
             }
             Vector2 handleRotated = Vector2Max(Vector2Rotate(handlePos, -shape->capsule.rotation), 0.0f);
@@ -315,13 +324,14 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
     assert(false);
 }
 
-bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos) {
+bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos) {
+    assert(0 <= frame && frame < layer->frameCount);
     if (handle == HANDLE_CENTER) {
         layer->transform.o = Vector2Round(localMousePos);
         return true;
     }
 
-    Vector2 handlePos = Vector2Subtract(localMousePos, layer->transform.o);
+    Vector2 handlePos = Transform2DToLocal(layer->transform, localMousePos);
 
     switch (layer->type) {
         case LAYER_HITBOX:
@@ -335,7 +345,24 @@ bool LayerHandleSet(Layer *layer, Handle handle, Vector2 localMousePos) {
         case LAYER_HURTBOX:
             return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
         case LAYER_METADATA:
+            return false;
         case LAYER_BEZIER:
+            BezierPoint *point = layer->bezierPoints + frame;
+
+            if (handle == HANDLE_BEZIER_CENTER) {
+                point->position = Vector2Round(handlePos);
+                return true;
+            } else if (handle == HANDLE_BEZIER_LEFT) {
+                Vector2 handleOffset = Vector2Subtract(handlePos, point->position);
+                point->rotation = Vector2Rotation(handleOffset) + PI;
+                point->extentsLeft = roundf(Vector2Length(handleOffset));
+                return true;
+            } else if (handle == HANDLE_BEZIER_RIGHT) {
+                Vector2 handleOffset = Vector2Subtract(handlePos, point->position);
+                point->rotation = Vector2Rotation(handleOffset);
+                point->extentsRight = roundf(Vector2Length(handleOffset));
+                return true;
+            }
             return false;
     }
     assert(false);
