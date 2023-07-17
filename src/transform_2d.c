@@ -40,6 +40,15 @@ Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector) {
     return Vector2Add(base, transform.o);
 }
 
+Transform2D Transform2DFromRotation(float rotation) {
+    float cosine = cosf(rotation);
+    float sine = sinf(rotation);
+    return (Transform2D) {
+        .x = (Vector2) {cosine, sine},
+        .y = (Vector2) {-sine, cosine},
+        .o = (Vector2) {0.0f, 0.0f}
+    };
+}
 
 Transform2D Transform2DRotate(Transform2D transform, float rot) {
     return (Transform2D) {

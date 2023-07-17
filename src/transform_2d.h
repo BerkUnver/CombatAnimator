@@ -23,6 +23,7 @@ Vector2 Transform2DToLocal(Transform2D transform, Vector2 vector);
 Vector2 Transform2DBasisXFormInv(Transform2D transform, Vector2 vector);
 Vector2 Transform2DToGlobal(Transform2D transform, Vector2 vector);
 
+Transform2D Transform2DFromRotation(float rotation);
 Transform2D Transform2DRotate(Transform2D transform, float rotation);
 float Transform2DGetRotation(Transform2D transform);
 

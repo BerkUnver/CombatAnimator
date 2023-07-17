@@ -158,6 +158,17 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                 }
                 DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR);
             }
+
+            for (int i = 0; i < layer->frameCount; i++) {
+                if (!layer->framesActive[i]) continue;
+                BezierPoint point = layer->bezierPoints[i];
+                Vector2 left = Vector2Rotate((Vector2) {-point.extentsLeft, 0.0f}, point.rotation);
+                left = Vector2Add(left, point.position);
+                Vector2 right = Vector2Rotate((Vector2) {point.extentsRight, 0.0f}, point.rotation);
+                right = Vector2Add(right, point.position);
+                DrawLineV(left, point.position, LAYER_BEZIER_COLOR);
+                DrawLineV(right, point.position, LAYER_BEZIER_COLOR);
+            }
             rlPopMatrix();
             break;
     }
@@ -186,9 +197,19 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
         
         case LAYER_METADATA:
             break;
-        case LAYER_BEZIER:
-
-            break;
+        case LAYER_BEZIER: {
+            if (!layer->framesActive[frame]) break;
+            BezierPoint point = layer->bezierPoints[frame];
+            
+            Transform2D transformBezier = Transform2DFromRotation(point.rotation);
+            transformBezier.o = point.position;
+            Transform2D transformLayer = Transform2DMultiply(layer->transform, transformBezier);
+            Transform2D transformGlobal = Transform2DMultiply(transform, transformLayer);
+            
+            HandleDraw(Transform2DToGlobal(transformGlobal, (Vector2) {0.0f, 0.0f}), colorOutline);
+            HandleDraw(Transform2DToGlobal(transformGlobal, (Vector2) {-point.extentsLeft, 0.0f}), colorOutline);
+            HandleDraw(Transform2DToGlobal(transformGlobal, (Vector2) {point.extentsRight, 0.0f}), colorOutline);
+        } break;
     }
 
 }
