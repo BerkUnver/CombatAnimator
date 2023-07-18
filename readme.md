@@ -24,7 +24,10 @@ Building: Linux only. Install cJson 1.7.15, raylib 4.2, and their respective dep
 |         New circle          |          Ctrl + 1          |
 |         New square          |          Ctrl + 2          |
 |        New rectangle        |          Ctrl + 3          |
-|        Remove shape         |      Ctrl + Backspace      |
-|         New hurtbox         |     New shape + Shift      |
+|      New hurtbox layer      |       New shape + H        |
+|      New hitbox layer       |       New shape + N        |
+|      New metadata layer     |         Ctrl + M           |
+|      New bezier layer       |         Ctrl + B           |
+|        Remove layer         |      Ctrl + Backspace      |
 |    Move through timeline    |         Arrow Keys         |
 |    Toggle timeline value    |         Space Bar          |
