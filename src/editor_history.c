@@ -185,6 +185,9 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
     //      Renamed "shapes" to "layers" and "shapeActiveFrames" to "layerActiveFrames".
     //      Renamed "boxType" to "type" in layer.
     // 5: moved the array of which layers are active from the saved object into each individual layer.
+    //      Non-breaking revision: Added bezier curve layer type.
+    //      Right now we are just serializing the data for frames where the layer is active as null.
+    //      This introduces a bunch of UB and should be improved. Because it is localized to this feature it should be okay for now.
 
     cJSON_AddNumberToObject(json, "version", FILE_VERSION_CURRENT);
 
@@ -202,7 +205,7 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
         }
         cJSON_AddItemToObject(layerJson, "framesActive", framesActiveJson);
 
-        switch (state->layers[layerIdx].type) {
+        switch (layer->type) {
             case LAYER_HITBOX:
                 cJSON_AddStringToObject(layerJson, "type", "HITBOX");
                 cJSON *hitbox = cJSON_CreateObject();
@@ -223,6 +226,20 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                 break;
             case LAYER_BEZIER:
                 cJSON_AddStringToObject(layerJson, "type", "BEZIER");
+                cJSON *bezierPointsJson = cJSON_CreateArray();
+                for (int frameIdx = 0; frameIdx < layer->frameCount; frameIdx++) {
+                    if (!layer->framesActive[frameIdx]) continue;
+                    BezierPoint bezier = layer->bezierPoints[frameIdx];
+                    cJSON *bezierJson = cJSON_CreateObject();
+                    cJSON_AddNumberToObject(bezierJson, "positionX", bezier.position.x);
+                    cJSON_AddNumberToObject(bezierJson, "positionY", bezier.position.y);
+                    cJSON_AddNumberToObject(bezierJson, "rotation", bezier.rotation);
+                    cJSON_AddNumberToObject(bezierJson, "extentsLeft", bezier.extentsLeft);
+                    cJSON_AddNumberToObject(bezierJson, "extentsRight", bezier.extentsRight);
+                    
+                    cJSON_AddItemToArray(bezierPointsJson, bezierJson);
+                }
+                cJSON_AddItemToObject(layerJson, "bezierPoints", bezierPointsJson);
                 break;
         }
         cJSON_AddItemToArray(layers, layerJson);
@@ -381,8 +398,7 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) RETURN_FAIL;
             layer.type = LAYER_HURTBOX;
 
-        } else if (!strcmp(typeString, "METADATA")) {
-            if (version < 4) RETURN_FAIL;
+        } else if (version >= 4 && !strcmp(typeString, "METADATA")) {
             cJSON *tag = cJSON_GetObjectItem(layerJson, "metadataTag");
             if (!tag || !cJSON_IsString(tag)) RETURN_FAIL;
             layer.type = LAYER_METADATA;
@@ -390,7 +406,38 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
 
         } else if (version >= 6 && !strcmp(typeString, "BEZIER")) {
             layer.type = LAYER_BEZIER;
+            
+            cJSON *bezierPointsJson = cJSON_GetObjectItem(layerJson, "bezierPoints");
+            if (!cJSON_IsArray(bezierPointsJson)) RETURN_FAIL;
+            BezierPoint *bezierPoints = malloc(sizeof(BezierPoint) * cJSON_GetArraySize(bezierPointsJson));
+            
+            int frameIdx = 0;
+            cJSON *bezierPointJson;
+#define RETURN_FAIL_BEZIER do { free(bezierPoints); RETURN_FAIL; } while (0)                
+            cJSON_ArrayForEach(bezierPointJson, bezierPointsJson) {
+                if (cJSON_IsNull(bezierPointJson)) continue;
+                if (!cJSON_IsObject(bezierPointJson)) RETURN_FAIL_BEZIER;
+                cJSON *positionX = cJSON_GetObjectItem(bezierPointJson, "positionX");
+                if (!cJSON_IsNumber(positionX)) RETURN_FAIL_BEZIER;
+                cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, "positionY");
+                if (!cJSON_IsNumber(positionY)) RETURN_FAIL_BEZIER;
+                cJSON *extentsLeft = cJSON_GetObjectItem(bezierPointJson, "extentsLeft");
+                if (!cJSON_IsNumber(extentsLeft)) RETURN_FAIL_BEZIER;
+                cJSON *extentsRight = cJSON_GetObjectItem(bezierPointJson, "extentsRight");
+                if (!cJSON_IsNumber(extentsRight)) RETURN_FAIL_BEZIER;
+                cJSON *rotation = cJSON_GetObjectItem(bezierPointJson, "rotation");
+                if (!cJSON_IsNumber(rotation)) RETURN_FAIL_BEZIER;
 
+                bezierPoints[frameIdx] = (BezierPoint) {
+                    .position = (Vector2) {cJSON_GetNumberValue(positionX), cJSON_GetNumberValue(positionY)},
+                    .extentsLeft = cJSON_GetNumberValue(extentsLeft),
+                    .extentsRight = cJSON_GetNumberValue(extentsRight),
+                    .rotation = cJSON_GetNumberValue(rotation)
+                };
+                frameIdx++;
+            }
+            layer.bezierPoints = bezierPoints;
+#undef RETURN_FAIL_BEZIER
         } else RETURN_FAIL;
         
         // Not going to initialize it because it will be initialized by the layerActiveFrames if the version is less than 5.

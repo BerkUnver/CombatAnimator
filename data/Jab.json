@@ -1,6 +1,6 @@
 {
 	"magic":	"CombatAnimator",
-	"version":	5,
+	"version":	6,
 	"layers":	[{
 			"x":	98,
 			"y":	46,
@@ -150,6 +150,108 @@
 			"framesActive":	[true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
 			"type":	"METADATA",
 			"metadataTag":	"SwordPos"
+		}, {
+			"x":	83,
+			"y":	36,
+			"framesActive":	[true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+			"type":	"BEZIER",
+			"bezierPoints":	[{
+					"positionX":	-21,
+					"positionY":	2,
+					"rotation":	-2.6817080974578857,
+					"extentsLeft":	9,
+					"extentsRight":	7
+				}, {
+					"positionX":	-32,
+					"positionY":	4,
+					"rotation":	3.1386234760284424,
+					"extentsLeft":	8,
+					"extentsRight":	4
+				}, {
+					"positionX":	-36,
+					"positionY":	1,
+					"rotation":	-0.38470190763473511,
+					"extentsLeft":	6,
+					"extentsRight":	5
+				}, {
+					"positionX":	19,
+					"positionY":	2,
+					"rotation":	5.0284242630004883,
+					"extentsLeft":	3,
+					"extentsRight":	2
+				}, {
+					"positionX":	11,
+					"positionY":	-2,
+					"rotation":	3.4242432117462158,
+					"extentsLeft":	3,
+					"extentsRight":	9
+				}, {
+					"positionX":	-10,
+					"positionY":	14,
+					"rotation":	1.7900086641311646,
+					"extentsLeft":	6,
+					"extentsRight":	10
+				}, {
+					"positionX":	11,
+					"positionY":	22,
+					"rotation":	-0.25218474864959717,
+					"extentsLeft":	10,
+					"extentsRight":	60
+				}, {
+					"positionX":	-14,
+					"positionY":	-14,
+					"rotation":	3.08716344833374,
+					"extentsLeft":	68,
+					"extentsRight":	3
+				}, {
+					"positionX":	-18,
+					"positionY":	-11,
+					"rotation":	2.47826361656189,
+					"extentsLeft":	2,
+					"extentsRight":	4
+				}, {
+					"positionX":	-25,
+					"positionY":	-9,
+					"rotation":	2.5206546783447266,
+					"extentsLeft":	3,
+					"extentsRight":	5
+				}, {
+					"positionX":	-30,
+					"positionY":	1,
+					"rotation":	1.187341570854187,
+					"extentsLeft":	3,
+					"extentsRight":	7
+				}, {
+					"positionX":	-24,
+					"positionY":	6,
+					"rotation":	-1.4223114252090454,
+					"extentsLeft":	1,
+					"extentsRight":	39
+				}, {
+					"positionX":	57,
+					"positionY":	28,
+					"rotation":	1.4157975912094116,
+					"extentsLeft":	70,
+					"extentsRight":	2
+				}, {
+					"positionX":	52,
+					"positionY":	28,
+					"rotation":	3.70855975151062,
+					"extentsLeft":	2,
+					"extentsRight":	9
+				}, {
+					"positionX":	38,
+					"positionY":	7,
+					"rotation":	3.7547039985656738,
+					"extentsLeft":	8,
+					"extentsRight":	10
+				}, {
+					"positionX":	7,
+					"positionY":	3,
+					"rotation":	2.8313310146331787,
+					"extentsLeft":	5,
+					"extentsRight":	10
+				}]
 		}],
 	"frames":	[{
 			"duration":	100,

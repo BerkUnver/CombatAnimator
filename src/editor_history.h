@@ -12,7 +12,7 @@
 
 // Oldest supported version of the file format
 #define FILE_VERSION_OLDEST 3
-#define FILE_VERSION_CURRENT 5
+#define FILE_VERSION_CURRENT 6
 
 typedef struct FrameInfo {
     int duration;
