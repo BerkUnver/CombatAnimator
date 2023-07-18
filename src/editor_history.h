@@ -11,7 +11,8 @@
 #define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false}
 
 // Oldest supported version of the file format
-#define FILE_VERSION_OLDEST 3
+#define FILE_VERSION_OLDEST 6
+// Most recent file version
 #define FILE_VERSION_CURRENT 6
 
 typedef struct FrameInfo {

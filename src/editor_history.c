@@ -345,41 +345,56 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         frameIdx++;
     }
 
-    cJSON *layers = cJSON_GetObjectItem(json, version >= 4 ? "layers" : "shapes");
+    cJSON *layers = cJSON_GetObjectItem(json, "layers");
     if (!cJSON_IsArray(layers)) RETURN_FAIL;
     cJSON *layerJson;
     cJSON_ArrayForEach(layerJson, layers) {
         if (!cJSON_IsObject(layerJson)) RETURN_FAIL;
+        
+        Layer layer;
+        
         cJSON *x = cJSON_GetObjectItem(layerJson, "x");
         if (!cJSON_IsNumber(x)) RETURN_FAIL;
         cJSON *y = cJSON_GetObjectItem(layerJson, "y");
-        if(!cJSON_IsNumber(y)) RETURN_FAIL;
-        cJSON *type = cJSON_GetObjectItem(layerJson, version >= 4 ? "type" : "boxType");
+        if (!cJSON_IsNumber(y)) RETURN_FAIL;
+        Vector2 position = {
+            (float) cJSON_GetNumberValue(x),
+            (float) cJSON_GetNumberValue(y)
+        };
+        layer.transform = Transform2DFromPosition(position);
+         
+        layer.frameCount = out->frameCount;
+        layer.framesActive = malloc(sizeof(*layer.framesActive) * out->frameCount);
+
+        cJSON *framesActive = cJSON_GetObjectItem(layerJson, "framesActive");
+        if (!cJSON_IsArray(framesActive)) {
+            free(layer.framesActive);
+            RETURN_FAIL;
+        }
+        int frameIdx = 0;
+        cJSON *frameActive;
+        cJSON_ArrayForEach(frameActive, framesActive) {
+            if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) {
+                free(layer.framesActive);
+                RETURN_FAIL;
+            }
+            layer.framesActive[frameIdx] = cJSON_IsTrue(frameActive);
+            frameIdx++;
+        }
+        
+        cJSON *type = cJSON_GetObjectItem(layerJson, "type");
         if (!cJSON_IsString(type)) RETURN_FAIL;
         const char *typeString = cJSON_GetStringValue(type);
-        Layer layer;
+        
         if (!strcmp(typeString, "HITBOX")) {
-            cJSON *knockbackX;
-            cJSON *knockbackY;
-            cJSON *damage;
-            cJSON *stun;
-            cJSON *shape;
-
-            if (version >= 4) {
-                cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
-                if (!cJSON_IsObject(hitbox)) RETURN_FAIL;
-                knockbackX = cJSON_GetObjectItem(hitbox, "knockbackX");
-                knockbackY = cJSON_GetObjectItem(hitbox, "knockbackY");
-                stun = cJSON_GetObjectItem(hitbox, "stun");
-                damage = cJSON_GetObjectItem(hitbox, "damage");
-                shape = cJSON_GetObjectItem(hitbox, "shape");
-            } else {
-                knockbackX = cJSON_GetObjectItem(layerJson, "hitboxKnockbackX");
-                knockbackY = cJSON_GetObjectItem(layerJson, "hitboxKnockbackY");
-                stun = cJSON_GetObjectItem(layerJson, "hitboxStun");
-                damage = cJSON_GetObjectItem(layerJson, "hitboxDamage");
-                shape = layerJson; // shape is inlined in old versions.
-            }
+            cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
+            if (!cJSON_IsObject(hitbox)) RETURN_FAIL;
+            
+            cJSON *knockbackX = cJSON_GetObjectItem(hitbox, "knockbackX");
+            cJSON *knockbackY = cJSON_GetObjectItem(hitbox, "knockbackY");
+            cJSON *stun = cJSON_GetObjectItem(hitbox, "stun");
+            cJSON *damage = cJSON_GetObjectItem(hitbox, "damage");
+            cJSON *shape = cJSON_GetObjectItem(hitbox, "shape");
 
             if (!cJSON_IsNumber(knockbackX)) RETURN_FAIL;
             if (!cJSON_IsNumber(knockbackY)) RETURN_FAIL;
@@ -394,29 +409,32 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             layer.hitbox.damage = (int) cJSON_GetNumberValue(damage);
 
         } else if (!strcmp(typeString, "HURTBOX")) {
-            cJSON *shape = version >= 4 ? cJSON_GetObjectItem(layerJson, "hurtboxShape") : layerJson;
+            cJSON *shape = cJSON_GetObjectItem(layerJson, "hurtboxShape");
             if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) RETURN_FAIL;
             layer.type = LAYER_HURTBOX;
 
-        } else if (version >= 4 && !strcmp(typeString, "METADATA")) {
+        } else if (!strcmp(typeString, "METADATA")) {
             cJSON *tag = cJSON_GetObjectItem(layerJson, "metadataTag");
             if (!tag || !cJSON_IsString(tag)) RETURN_FAIL;
             layer.type = LAYER_METADATA;
             strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
 
-        } else if (version >= 6 && !strcmp(typeString, "BEZIER")) {
+        } else if (!strcmp(typeString, "BEZIER")) {
             layer.type = LAYER_BEZIER;
             
             cJSON *bezierPointsJson = cJSON_GetObjectItem(layerJson, "bezierPoints");
             if (!cJSON_IsArray(bezierPointsJson)) RETURN_FAIL;
-            BezierPoint *bezierPoints = malloc(sizeof(BezierPoint) * cJSON_GetArraySize(bezierPointsJson));
+            layer.bezierPoints = malloc(sizeof(BezierPoint) * cJSON_GetArraySize(bezierPointsJson));
             
             int frameIdx = 0;
             cJSON *bezierPointJson;
-#define RETURN_FAIL_BEZIER do { free(bezierPoints); RETURN_FAIL; } while (0)                
+#define RETURN_FAIL_BEZIER do { free(layer.bezierPoints); free(layer.framesActive); RETURN_FAIL; } while (0)                
             cJSON_ArrayForEach(bezierPointJson, bezierPointsJson) {
-                if (cJSON_IsNull(bezierPointJson)) continue;
+                if (frameIdx >= layer.frameCount) RETURN_FAIL_BEZIER;
+                
+                if (cJSON_IsNull(bezierPointJson)) continue; 
                 if (!cJSON_IsObject(bezierPointJson)) RETURN_FAIL_BEZIER;
+                
                 cJSON *positionX = cJSON_GetObjectItem(bezierPointJson, "positionX");
                 if (!cJSON_IsNumber(positionX)) RETURN_FAIL_BEZIER;
                 cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, "positionY");
@@ -428,7 +446,7 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
                 cJSON *rotation = cJSON_GetObjectItem(bezierPointJson, "rotation");
                 if (!cJSON_IsNumber(rotation)) RETURN_FAIL_BEZIER;
 
-                bezierPoints[frameIdx] = (BezierPoint) {
+                layer.bezierPoints[frameIdx] = (BezierPoint) {
                     .position = (Vector2) {cJSON_GetNumberValue(positionX), cJSON_GetNumberValue(positionY)},
                     .extentsLeft = cJSON_GetNumberValue(extentsLeft),
                     .extentsRight = cJSON_GetNumberValue(extentsRight),
@@ -436,52 +454,10 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
                 };
                 frameIdx++;
             }
-            layer.bezierPoints = bezierPoints;
 #undef RETURN_FAIL_BEZIER
         } else RETURN_FAIL;
-        
-        // Not going to initialize it because it will be initialized by the layerActiveFrames if the version is less than 5.
-        layer.frameCount = out->frameCount;
-        layer.framesActive = malloc(sizeof(*layer.framesActive) * out->frameCount);
-
-        if (version >= 5) {
-            cJSON *framesActive = cJSON_GetObjectItem(layerJson, "framesActive");
-            if (!cJSON_IsArray(framesActive)) {
-                free(layer.framesActive);
-                RETURN_FAIL;
-            }
-            int frameIdx = 0;
-            cJSON *frameActive;
-            cJSON_ArrayForEach(frameActive, framesActive) {
-                if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) {
-                    free(layer.framesActive);
-                    RETURN_FAIL;
-                }
-                layer.framesActive[frameIdx] = cJSON_IsTrue(frameActive);
-                frameIdx++;
-            }
-        }
-
-        layer.transform = Transform2DIdentity();
-        layer.transform.o = (Vector2) {
-            .x = (float) cJSON_GetNumberValue(x),
-            .y = (float) cJSON_GetNumberValue(y)
-        };
 
         EditorStateLayerAdd(out, layer);
-    }
-
-    if (version < 5) {        
-        cJSON *activeFrames = cJSON_GetObjectItem(json, version >= 4 ? "layerActiveFrames" : "shapeActiveFrames");
-        if (!cJSON_IsArray(activeFrames)) RETURN_FAIL;
-        cJSON *active;
-        int activeFrameIdx = 0;
-        cJSON_ArrayForEach(active, activeFrames) {
-            if (activeFrameIdx >= out->frameCount * out->layerCount || !cJSON_IsNumber(active)) RETURN_FAIL;
-            int layerIdx = activeFrameIdx / out->frameCount;
-            out->layers[layerIdx].framesActive[activeFrameIdx % out->frameCount] = cJSON_GetNumberValue(active) != 0;
-            activeFrameIdx++;
-        }
     }
 
     cJSON_Delete(json);
