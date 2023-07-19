@@ -4,7 +4,7 @@ As such, this readme may not be up-to-date.
 
 <img src="screenshot.png">
 
-Building: Linux only. Install cJson 1.7.15, raylib 4.2, and their respective dependencies to `/usr/local/include`. Run `make build` to build.
+Building: Linux only. Go to the project directory, and run `cd src && make build`.
 
 ### Usage
 "cac [file].png": Edit the metadata for the given file. If no metadata exists, create it and edit that. Metadata is stored in a .json file with the same name as the image file.
