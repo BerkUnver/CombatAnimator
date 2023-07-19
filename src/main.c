@@ -204,7 +204,6 @@ int main(int argc, char **argv) {
         .y = (DEFAULT_SPRITE_WINDOW_Y - texture.height * startScale) / 2.0f
     };
     
-
     typedef enum Mode {
         MODE_IDLE,
         MODE_PLAYING,
@@ -212,9 +211,9 @@ int main(int argc, char **argv) {
         MODE_DRAGGING_FRAME_POS,
         MODE_PANNING_SPRITE,
         MODE_EDIT_FRAME_DURATION,
+        MODE_EDIT_METADATA_TAG,
         MODE_EDIT_HITBOX_DAMAGE,
         MODE_EDIT_HITBOX_STUN,
-        MODE_EDIT_METADATA_TAG
     } Mode;
     Mode mode = MODE_IDLE;
 
@@ -507,38 +506,33 @@ int main(int argc, char **argv) {
         HandleDraw(globalFramePos, COLOR_FRAME_POS_HANDLE);
 
         // draw frame duration value box
-        Rectangle rectFrameDurationLabel = { .x = 0, .y = 0, .width = 128, .height = (float) fontSize + 8};
-        GuiLabel(rectFrameDurationLabel, "Frame Duration (ms)");
-        Rectangle rectFrameDurationValue = rectFrameDurationLabel;
-        rectFrameDurationValue.x += rectFrameDurationValue.width;
-        rectFrameDurationValue.width = 128;
-        if (GuiValueBox(rectFrameDurationValue, NULL, &state.frames[state.frameIdx].duration, 1, INT_MAX, mode == MODE_EDIT_FRAME_DURATION)) {
+        float rectStroke = (float) (fontSize + 8);
+        Rectangle rectLabel = { 0.0f, 0.0f, 128.0f, rectStroke };
+        Rectangle rectValue = { 128.0f, 0.0f, 128.0f, rectStroke };
+
+        GuiLabel(rectLabel, "Frame Duration (ms)");
+        if (GuiValueBox(rectValue, NULL, &state.frames[state.frameIdx].duration, 1, INT_MAX, mode == MODE_EDIT_FRAME_DURATION)) {
             mode = MODE_EDIT_FRAME_DURATION;
         }
+
         
         // draw hitbox damage and stun value boxes if a hitbox is currently selected.
-        if (state.layerIdx >= 0) {
+        if (state.layerIdx >= 0) {    
+            rectLabel.y += rectStroke;
+            rectValue.y += rectStroke;
+            
             switch (state.layers[state.layerIdx].type) {
                 case LAYER_HITBOX: {
-                    Rectangle rectDamageLabel = rectFrameDurationLabel;
-                    rectDamageLabel.y += rectDamageLabel.height;
-                    GuiLabel(rectDamageLabel, "Hitbox Damage");
-
-                    Rectangle rectDamageValue = rectDamageLabel;
-                    rectDamageValue.x += rectDamageValue.width;
-                    rectDamageValue.width = rectFrameDurationValue.width;
-                    if (GuiValueBox(rectDamageValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                    GuiLabel(rectLabel, "Hitbox Damage");
+                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
                         mode = MODE_EDIT_HITBOX_DAMAGE;
                     }
+                    
+                    rectLabel.y += rectStroke;
+                    rectValue.y += rectStroke;
 
-                    Rectangle rectStunLabel = rectDamageLabel;
-                    rectStunLabel.y += rectStunLabel.height;
-                    GuiLabel(rectStunLabel, "Hitbox Stun (ms)");
-
-                    Rectangle rectStunValue = rectStunLabel;
-                    rectStunValue.x += rectStunValue.width;
-                    rectStunValue.width = rectFrameDurationValue.width;
-                    if (GuiValueBox(rectStunValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
+                    GuiLabel(rectLabel, "Hitbox Stun (ms)");
+                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
                         mode = MODE_EDIT_HITBOX_STUN;
                     }
                 } break;
@@ -547,12 +541,8 @@ int main(int argc, char **argv) {
                     break;
 
                 case LAYER_METADATA: {
-                    Rectangle rectTagLabel = rectFrameDurationLabel;
-                    rectTagLabel.y += rectTagLabel.height;
-                    GuiLabel(rectTagLabel, "Metadata Tag");
-                    Rectangle rectTagValue = rectFrameDurationValue;
-                    rectTagValue.y += rectTagLabel.height;
-                    if (GuiTextBox(rectTagValue, state.layers[state.layerIdx].metadataTag, LAYER_METADATA_TAG_LENGTH, mode == MODE_EDIT_METADATA_TAG)) {
+                    GuiLabel(rectLabel, "Metadata Tag");
+                    if (GuiTextBox(rectValue, state.layers[state.layerIdx].metadataTag, LAYER_METADATA_TAG_LENGTH, mode == MODE_EDIT_METADATA_TAG)) {
                         mode = MODE_EDIT_METADATA_TAG;
                     }
                 } break;
