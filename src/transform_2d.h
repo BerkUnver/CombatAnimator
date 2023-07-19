@@ -1,7 +1,7 @@
 #ifndef TRANSFORM_2D_H
 #define TRANSFORM_2D_H
 
-#include "raylib.h"
+#include "raylib/raylib.h"
 
 #define VECTOR2_ZERO (Vector2) {0.0f, 0.0f}
 

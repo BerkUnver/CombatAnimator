@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "raylib.h"
-#include "raymath.h"
-#include "rlgl.h"
+#include "raylib/raylib.h"
+#include "raylib/raymath.h"
+#include "raylib/rlgl.h"
 #include "layer.h"
 #include "transform_2d.h"
 
