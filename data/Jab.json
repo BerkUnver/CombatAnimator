@@ -1,10 +1,11 @@
 {
 	"magic":	"CombatAnimator",
-	"version":	6,
+	"version":	7,
 	"layers":	[{
 			"x":	98,
 			"y":	46,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
+			"name":	"Layer 0",
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	19,
@@ -20,6 +21,7 @@
 			"x":	82,
 			"y":	43,
 			"framesActive":	[false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false],
+			"name":	"Layer 1",
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	13,
@@ -38,6 +40,7 @@
 			"x":	66,
 			"y":	47,
 			"framesActive":	[true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false],
+			"name":	"Layer 2",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -51,6 +54,7 @@
 			"x":	70,
 			"y":	48,
 			"framesActive":	[false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false],
+			"name":	"Layer 3",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -64,6 +68,7 @@
 			"x":	76,
 			"y":	47,
 			"framesActive":	[false, false, false, false, false, true, true, true, true, true, true, true, false, false, false, false],
+			"name":	"Layer 4",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -77,6 +82,7 @@
 			"x":	101,
 			"y":	54,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
+			"name":	"Layer 5",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -90,6 +96,7 @@
 			"x":	96,
 			"y":	54,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false],
+			"name":	"Layer 6",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -103,6 +110,7 @@
 			"x":	94,
 			"y":	50,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
+			"name":	"Layer 7",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -116,6 +124,7 @@
 			"x":	86,
 			"y":	48,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
+			"name":	"Layer 8",
 			"type":	"HURTBOX",
 			"hurtboxShape":	{
 				"type":	"CAPSULE",
@@ -129,6 +138,7 @@
 			"x":	99,
 			"y":	37,
 			"framesActive":	[false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false],
+			"name":	"Layer 9",
 			"type":	"HITBOX",
 			"hitbox":	{
 				"knockbackX":	2,
@@ -148,106 +158,107 @@
 			"x":	62,
 			"y":	39,
 			"framesActive":	[true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-			"type":	"METADATA",
-			"metadataTag":	"SwordPos"
+			"name":	"SwordPos",
+			"type":	"EMPTY"
 		}, {
 			"x":	83,
 			"y":	36,
 			"framesActive":	[true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+			"name":	"Layer 11",
 			"type":	"BEZIER",
 			"bezierPoints":	[{
-					"positionX":	-21,
-					"positionY":	2,
+					"x":	-21,
+					"y":	2,
 					"rotation":	-2.6817080974578857,
 					"extentsLeft":	9,
 					"extentsRight":	7
 				}, {
-					"positionX":	-32,
-					"positionY":	4,
+					"x":	-32,
+					"y":	4,
 					"rotation":	3.1386234760284424,
 					"extentsLeft":	8,
 					"extentsRight":	4
 				}, {
-					"positionX":	-36,
-					"positionY":	1,
+					"x":	-36,
+					"y":	1,
 					"rotation":	-0.38470190763473511,
 					"extentsLeft":	6,
 					"extentsRight":	5
 				}, {
-					"positionX":	19,
-					"positionY":	2,
+					"x":	19,
+					"y":	2,
 					"rotation":	5.0284242630004883,
 					"extentsLeft":	3,
 					"extentsRight":	2
 				}, {
-					"positionX":	11,
-					"positionY":	-2,
+					"x":	11,
+					"y":	-2,
 					"rotation":	3.4242432117462158,
 					"extentsLeft":	3,
 					"extentsRight":	9
 				}, {
-					"positionX":	-10,
-					"positionY":	14,
+					"x":	-10,
+					"y":	14,
 					"rotation":	1.7900086641311646,
 					"extentsLeft":	6,
 					"extentsRight":	10
 				}, {
-					"positionX":	11,
-					"positionY":	22,
+					"x":	11,
+					"y":	22,
 					"rotation":	-0.25218474864959717,
 					"extentsLeft":	10,
 					"extentsRight":	60
 				}, {
-					"positionX":	-14,
-					"positionY":	-14,
+					"x":	-14,
+					"y":	-14,
 					"rotation":	3.08716344833374,
 					"extentsLeft":	68,
 					"extentsRight":	3
 				}, {
-					"positionX":	-18,
-					"positionY":	-11,
+					"x":	-18,
+					"y":	-11,
 					"rotation":	2.47826361656189,
 					"extentsLeft":	2,
 					"extentsRight":	4
 				}, {
-					"positionX":	-25,
-					"positionY":	-9,
+					"x":	-25,
+					"y":	-9,
 					"rotation":	2.5206546783447266,
 					"extentsLeft":	3,
 					"extentsRight":	5
 				}, {
-					"positionX":	-30,
-					"positionY":	1,
+					"x":	-30,
+					"y":	1,
 					"rotation":	1.187341570854187,
 					"extentsLeft":	3,
 					"extentsRight":	7
 				}, {
-					"positionX":	-24,
-					"positionY":	6,
+					"x":	-24,
+					"y":	6,
 					"rotation":	-1.4223114252090454,
 					"extentsLeft":	1,
 					"extentsRight":	39
 				}, {
-					"positionX":	57,
-					"positionY":	28,
+					"x":	57,
+					"y":	28,
 					"rotation":	1.4157975912094116,
 					"extentsLeft":	70,
 					"extentsRight":	2
 				}, {
-					"positionX":	52,
-					"positionY":	28,
+					"x":	52,
+					"y":	28,
 					"rotation":	3.70855975151062,
 					"extentsLeft":	2,
 					"extentsRight":	9
 				}, {
-					"positionX":	38,
-					"positionY":	7,
+					"x":	38,
+					"y":	7,
 					"rotation":	3.7547039985656738,
 					"extentsLeft":	8,
 					"extentsRight":	10
 				}, {
-					"positionX":	7,
-					"positionY":	3,
+					"x":	7,
+					"y":	3,
 					"rotation":	2.8313310146331787,
 					"extentsLeft":	5,
 					"extentsRight":	10

@@ -104,6 +104,7 @@ Vector2 BezierLerp(BezierPoint p0, BezierPoint p1, float lerp) {
 
 void LayerFree(Layer *layer) {
     free(layer->framesActive);
+    free(layer->name);
     if (layer->type == LAYER_BEZIER) {
         free(layer->bezierPoints);
     }
@@ -136,8 +137,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             ShapeDraw(layer->hurtboxShape, layer->transform, color, handlesActive, colorOutline);
             break;
         
-        case LAYER_METADATA:
-            colorOutline = LAYER_METADATA_COLOR_OUTLINE;
+        case LAYER_EMPTY:
+            colorOutline = LAYER_EMPTY_COLOR_OUTLINE;
             break;
         
         case LAYER_BEZIER:
@@ -195,7 +196,7 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             ShapeDrawHandles(layer->hurtboxShape, layerTransform, colorOutline);
         } break;
         
-        case LAYER_METADATA:
+        case LAYER_EMPTY:
             break;
         case LAYER_BEZIER: {
             if (!layer->framesActive[frame]) break;
@@ -274,7 +275,7 @@ Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2
             if (handle != HANDLE_NONE) return handle;
         } break;
 
-        case LAYER_METADATA:
+        case LAYER_EMPTY:
             break;
         case LAYER_BEZIER: {
             BezierPoint point = layer->bezierPoints[frame];
@@ -344,7 +345,7 @@ bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePo
             return ShapeHandleSet(&layer->hitbox.shape, handle, handlePos);
         case LAYER_HURTBOX:
             return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
-        case LAYER_METADATA:
+        case LAYER_EMPTY:
             return false;
         case LAYER_BEZIER:
             BezierPoint *point = layer->bezierPoints + frame;

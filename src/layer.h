@@ -9,6 +9,9 @@
 #define HANDLE_RADIUS 8.0f
 #define BEZIER_SEGMENTS 16
 
+#define LAYER_NAME_BUFFER_INITIAL_SIZE 32
+#define LAYER_NAME_BUFFER_RESIZE_MULTIPLIER 1.5f
+
 #define LAYER_HITBOX_COLOR (Color) {255, 0, 0, 63}
 #define LAYER_HITBOX_COLOR_OUTLINE (Color) {255, 0, 0, 255}
 #define LAYER_HITBOX_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 0, 255}
@@ -19,16 +22,15 @@
 #define LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 63, 255}
 #define LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE LAYER_HURTBOX_COLOR_OUTLINE
 
-#define LAYER_METADATA_TAG_LENGTH 16
-#define LAYER_METADATA_COLOR_OUTLINE (Color) {255, 0, 255, 255}
-#define LAYER_METADATA_COLOR_TIMELINE_INACTIVE (Color) {63, 0, 63, 255}
-#define LAYER_METADATA_COLOR_TIMELINE_ACTIVE LAYER_METADATA_COLOR_OUTLINE
-
 #define LAYER_BEZIER_COLOR_CURVE (Color) {0, 255, 0, 255}
 #define LAYER_BEZIER_COLOR_LINE (Color) {0, 63, 0, 255}
 #define LAYER_BEZIER_COLOR_OUTLINE (Color) {0, 255, 0, 255}
 #define LAYER_BEZIER_COLOR_TIMELINE_INACTIVE (Color) {0, 63, 0, 255}
 #define LAYER_BEZIER_COLOR_TIMELINE_ACTIVE LAYER_BEZIER_COLOR_OUTLINE
+
+#define LAYER_EMPTY_COLOR_OUTLINE (Color) {63, 63, 63, 255}
+#define LAYER_EMPTY_COLOR_TIMELINE_INACTIVE (Color) {63, 63, 63, 255}
+#define LAYER_EMPTY_COLOR_TIMELINE_ACTIVE (Color) {255, 255, 255, 255}
 
 typedef enum Handle {
     HANDLE_NONE,
@@ -69,8 +71,8 @@ typedef struct Shape {
 typedef enum LayerType {
     LAYER_HURTBOX,
     LAYER_HITBOX,
-    LAYER_METADATA,
-    LAYER_BEZIER
+    LAYER_BEZIER,
+    LAYER_EMPTY
 } LayerType;
 
 typedef struct BezierPoint {
@@ -85,6 +87,9 @@ Vector2 BezierLerp(BezierPoint p0, BezierPoint p1, float lerp);
 typedef struct Layer {
     Transform2D transform;
     LayerType type;
+    
+    char *name;
+    int nameBufferLength; // byte length of the buffer
 
     int frameCount;
     bool *framesActive;
@@ -97,8 +102,6 @@ typedef struct Layer {
             int stun;
             Shape shape;
         } hitbox;
-        char metadataTag[LAYER_METADATA_TAG_LENGTH]; // @TODO replace with string buffer
-         
         BezierPoint *bezierPoints; 
         // Length is frameCount.
         // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.

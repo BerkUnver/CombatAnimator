@@ -86,24 +86,32 @@ bool EditorStateRemoveFrame(EditorState *state, int idx) {
 }
 
 EditorState EditorStateDeepCopy(EditorState *state) {
-    int layersSize = sizeof(Layer) * state->layerCount;
+    Layer *layersCopy = NULL;
+    if (state->layerCount > 0) {
+        // Bulk copy everything from each layer, then replace the malloc'ed parts with copies. 
+        int layersSize = sizeof(Layer) * state->layerCount;
+        layersCopy = malloc(layersSize);
+        memcpy(layersCopy, state->layers, layersSize);
+        
+        for (int i = 0; i < state->layerCount; i++) {
+            Layer *layer = layersCopy + i;
 
-    // Bulk copy everything from each layer, then replace the malloc'ed parts with copies. 
-    Layer *layersCopy = malloc(layersSize);
-    memcpy(layersCopy, state->layers, layersSize);
-    
-    for (int i = 0; i < state->layerCount; i++) {
-        bool *framesActive = malloc(sizeof(bool) * state->frameCount);
-        memcpy(framesActive, layersCopy[i].framesActive, sizeof(bool) * state->frameCount); 
-        layersCopy[i].framesActive = framesActive;
+            char *name = malloc(layer->nameBufferLength);
+            memcpy(name, layer->name, layer->nameBufferLength);
+            layer->name = name;
 
-        if (layersCopy[i].type == LAYER_BEZIER) {
-            BezierPoint *points = malloc(sizeof(BezierPoint) * state->frameCount);
-            memcpy(points, layersCopy[i].bezierPoints, sizeof(BezierPoint) * state->frameCount);
-            layersCopy[i].bezierPoints = points;
+            bool *framesActive = malloc(sizeof(bool) * state->frameCount);
+            memcpy(framesActive, layer->framesActive, sizeof(bool) * state->frameCount); 
+            layer->framesActive = framesActive;
+
+            if (layer->type == LAYER_BEZIER) {
+                BezierPoint *points = malloc(sizeof(BezierPoint) * state->frameCount);
+                memcpy(points, layer->bezierPoints, sizeof(BezierPoint) * state->frameCount);
+                layer->bezierPoints = points;
+            }
         }
     }
-
+    
     int framesSize = sizeof(FrameInfo) * state->frameCount;
     FrameInfo *framesCopy = malloc(framesSize);
     memcpy(framesCopy, state->frames, framesSize);
@@ -175,20 +183,6 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "magic", "CombatAnimator");
 
-    // no version: initial version. Treated as 0 internally.
-    // 1: changed frameDurations array to frames array. Each frame is a struct containing whether it is cancellable and its duration in ms.
-    // 2: Added position Vector2 for each frame that indicates the root movement of the character doing the animation.
-    // 3: Added hitbox stun and hitbox damage to CombatShape.
-    // 4: Very large rework.
-    //      Added metadata layer type.
-    //      Stopped inlining shape properties into each layer. Now shapes are a separate struct.
-    //      Renamed "shapes" to "layers" and "shapeActiveFrames" to "layerActiveFrames".
-    //      Renamed "boxType" to "type" in layer.
-    // 5: moved the array of which layers are active from the saved object into each individual layer.
-    //      Non-breaking revision: Added bezier curve layer type.
-    //      Right now we are just serializing the data for frames where the layer is active as null.
-    //      This introduces a bunch of UB and should be improved. Because it is localized to this feature it should be okay for now.
-
     cJSON_AddNumberToObject(json, "version", FILE_VERSION_CURRENT);
 
     cJSON *layers = cJSON_CreateArray();
@@ -204,6 +198,10 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
             cJSON_AddItemToArray(framesActiveJson, val);
         }
         cJSON_AddItemToObject(layerJson, "framesActive", framesActiveJson);
+        
+        // We can create a direct reference because we are going to free the json object right afterwards.
+        cJSON *nameJson = cJSON_CreateStringReference(layer->name); 
+        cJSON_AddItemToObject(layerJson, "name", nameJson);
 
         switch (layer->type) {
             case LAYER_HITBOX:
@@ -220,10 +218,6 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                 cJSON_AddStringToObject(layerJson, "type", "HURTBOX");
                 cJSON_AddItemToObject(layerJson, "hurtboxShape", ShapeSerialize(layer->hurtboxShape));
                 break;
-            case LAYER_METADATA:
-                cJSON_AddStringToObject(layerJson, "type", "METADATA");
-                cJSON_AddStringToObject(layerJson, "metadataTag", layer->metadataTag);
-                break;
             case LAYER_BEZIER:
                 cJSON_AddStringToObject(layerJson, "type", "BEZIER");
                 cJSON *bezierPointsJson = cJSON_CreateArray();
@@ -231,8 +225,8 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                     if (!layer->framesActive[frameIdx]) continue;
                     BezierPoint bezier = layer->bezierPoints[frameIdx];
                     cJSON *bezierJson = cJSON_CreateObject();
-                    cJSON_AddNumberToObject(bezierJson, "positionX", bezier.position.x);
-                    cJSON_AddNumberToObject(bezierJson, "positionY", bezier.position.y);
+                    cJSON_AddNumberToObject(bezierJson, "x", bezier.position.x);
+                    cJSON_AddNumberToObject(bezierJson, "y", bezier.position.y);
                     cJSON_AddNumberToObject(bezierJson, "rotation", bezier.rotation);
                     cJSON_AddNumberToObject(bezierJson, "extentsLeft", bezier.extentsLeft);
                     cJSON_AddNumberToObject(bezierJson, "extentsRight", bezier.extentsRight);
@@ -240,6 +234,9 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                     cJSON_AddItemToArray(bezierPointsJson, bezierJson);
                 }
                 cJSON_AddItemToObject(layerJson, "bezierPoints", bezierPointsJson);
+                break;
+            case LAYER_EMPTY:
+                cJSON_AddStringToObject(layerJson, "type", "EMPTY");
                 break;
         }
         cJSON_AddItemToArray(layers, layerJson);
@@ -297,43 +294,42 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         return false;
     }
 
+#define ERROR_GOTO(label) do {printf("Failed to parse file %s. Error: %s at line %i.\n", path, __FILE__, __LINE__); goto label;} while (0)
     cJSON *magic = cJSON_GetObjectItem(json, "magic");
-    if (!magic || !cJSON_IsString(magic)) goto delete_json;
+    if (!cJSON_IsString(magic)) ERROR_GOTO(delete_json);
     cJSON *versionJson = cJSON_GetObjectItem(json, "version");
     int version;
     if (!versionJson) {
         version = 0;
     } else if (!cJSON_IsNumber(versionJson)) {
-        goto delete_json;
+        ERROR_GOTO(delete_json);
     } else {
         version = (int) cJSON_GetNumberValue(versionJson);
     }
 
     if (version < 0 || version > FILE_VERSION_CURRENT) {
         printf("Invalid version number %i\n", version);
-        goto delete_json;
+        ERROR_GOTO(delete_json);
     } else if (version < FILE_VERSION_OLDEST) {
         printf("Version %i no longer supported.\n", version);
-        goto delete_json;
+        ERROR_GOTO(delete_json);
     }
 
     cJSON *frames = cJSON_GetObjectItem(json, "frames");
-    if (!cJSON_IsArray(frames)) goto delete_json;
+    if (!cJSON_IsArray(frames)) ERROR_GOTO(delete_json);
     *out = EditorStateNew(cJSON_GetArraySize(frames));
 
-#define RETURN_FAIL do { printf("Failed to parse file %s. Error: %s at line %i.\n", path, __FILE__, __LINE__); goto delete_editor_state; } while(0)
-    
     cJSON *frameJson;
     int frameIdx = 0;
     cJSON_ArrayForEach(frameJson, frames) {
         cJSON *x = cJSON_GetObjectItem(frameJson, "x");
-        if (!cJSON_IsNumber(x)) RETURN_FAIL;
+        if (!cJSON_IsNumber(x)) ERROR_GOTO(delete_editor_state);
         cJSON *y = cJSON_GetObjectItem(frameJson, "y");
-        if (!cJSON_IsNumber(y)) RETURN_FAIL;
+        if (!cJSON_IsNumber(y)) ERROR_GOTO(delete_editor_state);
         cJSON *duration = cJSON_GetObjectItem(frameJson, "duration");
-        if (!cJSON_IsNumber(duration)) RETURN_FAIL;
+        if (!cJSON_IsNumber(duration)) ERROR_GOTO(delete_editor_state);
         cJSON *canCancel = cJSON_GetObjectItem(frameJson, "canCancel");
-        if (!cJSON_IsBool(canCancel)) RETURN_FAIL;
+        if (!cJSON_IsBool(canCancel)) ERROR_GOTO(delete_editor_state);
         out->frames[frameIdx] = (FrameInfo) {
             .pos = (Vector2) {
                     .x = (float) cJSON_GetNumberValue(x),
@@ -346,17 +342,17 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
     }
 
     cJSON *layers = cJSON_GetObjectItem(json, "layers");
-    if (!cJSON_IsArray(layers)) RETURN_FAIL;
+    if (!cJSON_IsArray(layers)) ERROR_GOTO(delete_editor_state);
     cJSON *layerJson;
     cJSON_ArrayForEach(layerJson, layers) {
-        if (!cJSON_IsObject(layerJson)) RETURN_FAIL;
+        if (!cJSON_IsObject(layerJson)) ERROR_GOTO(delete_editor_state);
         
         Layer layer;
         
         cJSON *x = cJSON_GetObjectItem(layerJson, "x");
-        if (!cJSON_IsNumber(x)) RETURN_FAIL;
+        if (!cJSON_IsNumber(x)) ERROR_GOTO(delete_editor_state);
         cJSON *y = cJSON_GetObjectItem(layerJson, "y");
-        if (!cJSON_IsNumber(y)) RETURN_FAIL;
+        if (!cJSON_IsNumber(y)) ERROR_GOTO(delete_editor_state);
         Vector2 position = {
             (float) cJSON_GetNumberValue(x),
             (float) cJSON_GetNumberValue(y)
@@ -367,28 +363,50 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         layer.framesActive = malloc(sizeof(*layer.framesActive) * out->frameCount);
 
         cJSON *framesActive = cJSON_GetObjectItem(layerJson, "framesActive");
-        if (!cJSON_IsArray(framesActive)) {
-            free(layer.framesActive);
-            RETURN_FAIL;
-        }
+        if (!cJSON_IsArray(framesActive)) ERROR_GOTO(delete_frames_active);
+        
         int frameIdx = 0;
         cJSON *frameActive;
         cJSON_ArrayForEach(frameActive, framesActive) {
-            if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) {
-                free(layer.framesActive);
-                RETURN_FAIL;
-            }
+            if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) ERROR_GOTO(delete_frames_active);
             layer.framesActive[frameIdx] = cJSON_IsTrue(frameActive);
             frameIdx++;
         }
         
         cJSON *type = cJSON_GetObjectItem(layerJson, "type");
-        if (!cJSON_IsString(type)) RETURN_FAIL;
+        if (!cJSON_IsString(type)) ERROR_GOTO(delete_frames_active);
         const char *typeString = cJSON_GetStringValue(type);
+     
+        char *name = NULL;
+     
+        if (version <= 6) {
+            if (!strcmp(typeString, "METADATA")) {
+                cJSON *nameJson = cJSON_GetObjectItem(layerJson, "metadataTag");
+                if (!cJSON_IsString(nameJson)) ERROR_GOTO(delete_frames_active);
+                name = cJSON_GetStringValue(nameJson);
+            }
+        } else {
+            cJSON *nameJson = cJSON_GetObjectItem(layerJson, "name");
+            if (!cJSON_IsString(nameJson)) ERROR_GOTO(delete_frames_active);
+            name = cJSON_GetStringValue(nameJson);
+        }
+
+
+        if (name) {
+            layer.nameBufferLength = strlen(name) + 1;
+            if (layer.nameBufferLength < LAYER_NAME_BUFFER_INITIAL_SIZE) layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
+            layer.name = malloc(layer.nameBufferLength);
+            strcpy(layer.name, name);
+        } else {
+            // Create a name if one doesn't exist
+            layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
+            layer.name = malloc(layer.nameBufferLength);
+            snprintf(layer.name, layer.nameBufferLength, "Layer %i", out->layerCount);
+        }
         
         if (!strcmp(typeString, "HITBOX")) {
             cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
-            if (!cJSON_IsObject(hitbox)) RETURN_FAIL;
+            if (!cJSON_IsObject(hitbox)) ERROR_GOTO(delete_name);
             
             cJSON *knockbackX = cJSON_GetObjectItem(hitbox, "knockbackX");
             cJSON *knockbackY = cJSON_GetObjectItem(hitbox, "knockbackY");
@@ -396,55 +414,50 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             cJSON *damage = cJSON_GetObjectItem(hitbox, "damage");
             cJSON *shape = cJSON_GetObjectItem(hitbox, "shape");
 
-            if (!cJSON_IsNumber(knockbackX)) RETURN_FAIL;
-            if (!cJSON_IsNumber(knockbackY)) RETURN_FAIL;
-            if (!cJSON_IsNumber(stun)) RETURN_FAIL;
-            if (!cJSON_IsNumber(damage)) RETURN_FAIL;
-            if (!ShapeDeserialize(shape, &layer.hitbox.shape, version)) RETURN_FAIL;
+            if (!cJSON_IsNumber(knockbackX))    ERROR_GOTO(delete_name);
+            if (!cJSON_IsNumber(knockbackY))    ERROR_GOTO(delete_name);
+            if (!cJSON_IsNumber(stun))          ERROR_GOTO(delete_name);
+            if (!cJSON_IsNumber(damage))        ERROR_GOTO(delete_name);
+            if (!ShapeDeserialize(shape, &layer.hitbox.shape, version)) ERROR_GOTO(delete_name);
 
             layer.type = LAYER_HITBOX;
             layer.hitbox.knockbackX = (int) cJSON_GetNumberValue(knockbackX);
             layer.hitbox.knockbackY = (int) cJSON_GetNumberValue(knockbackY);
             layer.hitbox.stun = (int) cJSON_GetNumberValue(stun);
             layer.hitbox.damage = (int) cJSON_GetNumberValue(damage);
-
         } else if (!strcmp(typeString, "HURTBOX")) {
             cJSON *shape = cJSON_GetObjectItem(layerJson, "hurtboxShape");
-            if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) RETURN_FAIL;
+            if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) ERROR_GOTO(delete_name);
             layer.type = LAYER_HURTBOX;
 
-        } else if (!strcmp(typeString, "METADATA")) {
-            cJSON *tag = cJSON_GetObjectItem(layerJson, "metadataTag");
-            if (!tag || !cJSON_IsString(tag)) RETURN_FAIL;
-            layer.type = LAYER_METADATA;
-            strncpy(layer.metadataTag, cJSON_GetStringValue(tag), LAYER_METADATA_TAG_LENGTH - 1);
-
+        } else if (!strcmp(typeString, "EMPTY") || (version <= 6 && !strcmp(typeString, "METADATA"))) {
+            layer.type = LAYER_EMPTY;
+        
         } else if (!strcmp(typeString, "BEZIER")) {
             layer.type = LAYER_BEZIER;
             
             cJSON *bezierPointsJson = cJSON_GetObjectItem(layerJson, "bezierPoints");
-            if (!cJSON_IsArray(bezierPointsJson)) RETURN_FAIL;
+            if (!cJSON_IsArray(bezierPointsJson)) ERROR_GOTO(delete_name);
             layer.bezierPoints = malloc(sizeof(BezierPoint) * cJSON_GetArraySize(bezierPointsJson));
             
             int frameIdx = 0;
             cJSON *bezierPointJson;
-#define RETURN_FAIL_BEZIER do { free(layer.bezierPoints); free(layer.framesActive); RETURN_FAIL; } while (0)                
             cJSON_ArrayForEach(bezierPointJson, bezierPointsJson) {
-                if (frameIdx >= layer.frameCount) RETURN_FAIL_BEZIER;
+                if (frameIdx >= layer.frameCount) ERROR_GOTO(delete_bezier_points);
                 
                 if (cJSON_IsNull(bezierPointJson)) continue; 
-                if (!cJSON_IsObject(bezierPointJson)) RETURN_FAIL_BEZIER;
-                
-                cJSON *positionX = cJSON_GetObjectItem(bezierPointJson, "positionX");
-                if (!cJSON_IsNumber(positionX)) RETURN_FAIL_BEZIER;
-                cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, "positionY");
-                if (!cJSON_IsNumber(positionY)) RETURN_FAIL_BEZIER;
+                if (!cJSON_IsObject(bezierPointJson)) ERROR_GOTO(delete_bezier_points);
+               
+                cJSON *positionX = cJSON_GetObjectItem(bezierPointJson, version <= 6 ? "positionX" : "x");
+                if (!cJSON_IsNumber(positionX)) ERROR_GOTO(delete_bezier_points);
+                cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, version <= 6 ? "positionY" : "y");
+                if (!cJSON_IsNumber(positionY)) ERROR_GOTO(delete_bezier_points);
                 cJSON *extentsLeft = cJSON_GetObjectItem(bezierPointJson, "extentsLeft");
-                if (!cJSON_IsNumber(extentsLeft)) RETURN_FAIL_BEZIER;
+                if (!cJSON_IsNumber(extentsLeft)) ERROR_GOTO(delete_bezier_points);
                 cJSON *extentsRight = cJSON_GetObjectItem(bezierPointJson, "extentsRight");
-                if (!cJSON_IsNumber(extentsRight)) RETURN_FAIL_BEZIER;
+                if (!cJSON_IsNumber(extentsRight)) ERROR_GOTO(delete_bezier_points);
                 cJSON *rotation = cJSON_GetObjectItem(bezierPointJson, "rotation");
-                if (!cJSON_IsNumber(rotation)) RETURN_FAIL_BEZIER;
+                if (!cJSON_IsNumber(rotation)) ERROR_GOTO(delete_bezier_points);
 
                 layer.bezierPoints[frameIdx] = (BezierPoint) {
                     .position = (Vector2) {cJSON_GetNumberValue(positionX), cJSON_GetNumberValue(positionY)},
@@ -453,20 +466,32 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
                     .rotation = cJSON_GetNumberValue(rotation)
                 };
                 frameIdx++;
+                
+                while (false) {
+delete_bezier_points:
+                    free(layer.bezierPoints);
+                    goto delete_name;
+                }
             }
-#undef RETURN_FAIL_BEZIER
-        } else RETURN_FAIL;
-
+        } else ERROR_GOTO(delete_name);
+    
         EditorStateLayerAdd(out, layer);
+        continue;
+
+delete_name:
+        free(layer.name);
+delete_frames_active:
+        free(layer.framesActive);
+        goto delete_editor_state;
     }
 
     cJSON_Delete(json);
     return true;
 
-#undef RETURN_FAIL
-    delete_editor_state:
+delete_editor_state:
     EditorStateFree(out);
-    delete_json:
+delete_json:
     cJSON_Delete(json);
     return false;
+#undef ERROR_GOTO
 }

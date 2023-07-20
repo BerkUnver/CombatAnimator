@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
         MODE_DRAGGING_FRAME_POS,
         MODE_PANNING_SPRITE,
         MODE_EDIT_FRAME_DURATION,
-        MODE_EDIT_METADATA_TAG,
+        MODE_EDIT_LAYER_NAME,
         MODE_EDIT_HITBOX_DAMAGE,
         MODE_EDIT_HITBOX_STUN,
     } Mode;
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
             case MODE_EDIT_FRAME_DURATION:
             case MODE_EDIT_HITBOX_DAMAGE:
             case MODE_EDIT_HITBOX_STUN:
-            case MODE_EDIT_METADATA_TAG:
+            case MODE_EDIT_LAYER_NAME:
                 if (IsKeyPressed(KEY_ENTER)) {
                     EditorHistoryCommitState(&history, &state);
                     mode = MODE_IDLE;
@@ -356,10 +356,10 @@ int main(int argc, char **argv) {
                             .x = (float) texture.width / (float) (state.frameCount * 2),
                             .y = (float) texture.height / 2.0f
                     };
+                    
 
-                    if (IsKeyPressed(KEY_M)) { // Metadata
-                        layer.type = LAYER_METADATA;
-                        layer.metadataTag[0] = '\0';
+                    if (IsKeyPressed(KEY_E)) { // Empty
+                        layer.type = LAYER_EMPTY;
 
                     } else if (IsKeyPressed(KEY_B)) { // Bezier
                         layer.type = LAYER_BEZIER;
@@ -396,7 +396,12 @@ int main(int argc, char **argv) {
                     } else {
                         goto layerNotInstanced;
                     }
-                    
+                
+                    layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
+                    layer.name = malloc(layer.nameBufferLength);                    
+                    // Right now we are not enforcing the uniqueness of layer names.
+                    snprintf(layer.name, layer.nameBufferLength, "Layer%i", state.layerCount);
+
                     layer.frameCount = state.frameCount;
                     layer.framesActive = malloc(sizeof(bool) * state.frameCount);
                     memset(layer.framesActive, 0, sizeof(bool) * state.frameCount);
@@ -521,34 +526,34 @@ int main(int argc, char **argv) {
             rectLabel.y += rectStroke;
             rectValue.y += rectStroke;
             
-            switch (state.layers[state.layerIdx].type) {
-                case LAYER_HITBOX: {
-                    GuiLabel(rectLabel, "Hitbox Damage");
-                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
-                        mode = MODE_EDIT_HITBOX_DAMAGE;
-                    }
-                    
-                    rectLabel.y += rectStroke;
-                    rectValue.y += rectStroke;
+            GuiLabel(rectLabel, "Layer Name");
+            Layer *layer = state.layers + state.layerIdx;
+            if (GuiTextBox(rectValue, layer->name, layer->nameBufferLength, mode == MODE_EDIT_LAYER_NAME)) {
+                mode = MODE_EDIT_LAYER_NAME;
+            }
+            
+            // If the user has filled up the name buffer, reallocate it.
+            if (mode == MODE_EDIT_LAYER_NAME && strlen(layer->name) == layer->nameBufferLength - 1) {
+                layer->nameBufferLength = (int) (((float) layer->nameBufferLength) * LAYER_NAME_BUFFER_RESIZE_MULTIPLIER);
+                layer->name = realloc(layer->name, layer->nameBufferLength);
+            }
 
-                    GuiLabel(rectLabel, "Hitbox Stun (ms)");
-                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
-                        mode = MODE_EDIT_HITBOX_STUN;
-                    }
-                } break;
+            if (state.layers[state.layerIdx].type == LAYER_HITBOX) {
+                rectLabel.y += rectStroke;
+                rectValue.y += rectStroke;
+                
+                GuiLabel(rectLabel, "Hitbox Damage");
+                if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                    mode = MODE_EDIT_HITBOX_DAMAGE;
+                }
+                
+                rectLabel.y += rectStroke;
+                rectValue.y += rectStroke;
 
-                case LAYER_HURTBOX:
-                    break;
-
-                case LAYER_METADATA: {
-                    GuiLabel(rectLabel, "Metadata Tag");
-                    if (GuiTextBox(rectValue, state.layers[state.layerIdx].metadataTag, LAYER_METADATA_TAG_LENGTH, mode == MODE_EDIT_METADATA_TAG)) {
-                        mode = MODE_EDIT_METADATA_TAG;
-                    }
-                } break;
-
-                case LAYER_BEZIER:
-                    break;
+                GuiLabel(rectLabel, "Hitbox Stun (ms)");
+                if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
+                    mode = MODE_EDIT_HITBOX_STUN;
+                }
             }
         }
         
@@ -580,8 +585,8 @@ int main(int argc, char **argv) {
                     case LAYER_HURTBOX:
                         color = active ? LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE : LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE;
                         break;
-                    case LAYER_METADATA:
-                        color = active ? LAYER_METADATA_COLOR_TIMELINE_ACTIVE : LAYER_METADATA_COLOR_TIMELINE_INACTIVE;
+                    case LAYER_EMPTY:
+                        color = active ? LAYER_EMPTY_COLOR_TIMELINE_ACTIVE : LAYER_EMPTY_COLOR_TIMELINE_INACTIVE;
                         break;
                     case LAYER_BEZIER:
                         color = active ? LAYER_BEZIER_COLOR_TIMELINE_ACTIVE : LAYER_BEZIER_COLOR_TIMELINE_INACTIVE;
