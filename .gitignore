@@ -2,3 +2,5 @@ build
 .idea
 .exrc
 .vs
+**/*.swp
+**/.DS_Store

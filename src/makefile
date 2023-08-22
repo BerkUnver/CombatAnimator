@@ -1,6 +1,18 @@
 APP = ../build/cac
 FILES = main.c layer.c editor_history.c string_buffer.c transform_2d.c
-LIBRARIES = ../lib/cJSON/libcjson.a ../lib/raylib/libraylib.a
+
+OS_NAME := $(shell uname -s)
+
+ifeq ($(OS_NAME),Darwin)
+    OS_LIBRARY_FOLDER := macos
+    COMPILER := clang
+    FRAMEWORKS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
+else ifeq ($(OS_NAME),Linux)
+    OS_LIBRARY_FOLDER := linux
+    COMPILER := gcc
+endif
+
+LIBRARIES := ../lib/$(OS_LIBRARY_FOLDER)/cJSON/libcjson.a ../lib/$(OS_LIBRARY_FOLDER)/raylib/libraylib.a
 
 run:
 	make build
@@ -13,4 +25,4 @@ all: run
 
 build: ${FILES}
 	mkdir -p "../build"
-	gcc ${FILES} ${LIBRARIES} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -fsanitize=address -fsanitize=undefined -static-libsan -I../include/raylib -I../include/cJSON
+	${COMPILER} ${FILES} ${LIBRARIES} ${FRAMEWORKS} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -fsanitize=address -fsanitize=undefined -static-libsan -I../include/raylib -I../include/cJSON
