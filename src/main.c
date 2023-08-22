@@ -48,7 +48,7 @@
 
 #define KEY_SAVE KEY_S
 #define KEY_SAVE_MODIFIER KEY_LEFT_CONTROL
-#define SCALE_SPEED 0.75f
+#define SCALE_SPEED 0.9375f
 #define TEXTURE_HEIGHT_IN_WINDOW 0.5f
 
 #define COLOR_BACKGROUND GRAY
@@ -186,8 +186,14 @@ int main(int argc, char **argv) {
     EditorHistory history = EditorHistoryNew(&state);
 
     const float startScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
-    Transform2D transform = Transform2DIdentity();
+    
+	Transform2D transform = Transform2DIdentity();
     transform = Transform2DSetScale(transform, (Vector2) {.x = startScale, .y = startScale});
+	transform.o = (Vector2) {
+        .x = (DEFAULT_SPRITE_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
+        .y = (DEFAULT_SPRITE_WINDOW_Y - texture.height * startScale) / 2.0f
+    };
+
     const int guiInitialHeight = state.layerCount * FRAME_ROW_SIZE + FRAME_ROW_SIZE;
     
 	int initialWindowWidth = DEFAULT_SPRITE_WINDOW_X;
@@ -198,11 +204,6 @@ int main(int argc, char **argv) {
 	int initialWindowX = (GetMonitorWidth(monitor) - initialWindowWidth) / 2;
 	int initialWindowY = (GetMonitorHeight(monitor) - initialWindowHeight) / 2;
 	SetWindowPosition(initialWindowX, initialWindowY);
-
-	transform.o = (Vector2) {
-        .x = (DEFAULT_SPRITE_WINDOW_X - texture.width / state.frameCount * startScale) / 2.0f,
-        .y = (DEFAULT_SPRITE_WINDOW_Y - texture.height * startScale) / 2.0f
-    };
     
     typedef enum Mode {
         MODE_IDLE,
