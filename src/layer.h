@@ -1,8 +1,8 @@
 #ifndef LAYER_H
 #define LAYER_H
 
-#include "raylib/raylib.h"
-#include "cjson/cJSON.h"
+#include "raylib.h"
+#include "cJSON.h"
 #include "transform_2d.h"
 
 #define SHAPE_SEGMENTS 16

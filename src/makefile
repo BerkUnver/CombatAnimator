@@ -13,4 +13,4 @@ all: run
 
 build: ${FILES}
 	mkdir -p "../build"
-	gcc ${FILES} ${LIBRARIES} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -fsanitize=address -fsanitize=undefined -static-libasan -I../include
+	gcc ${FILES} ${LIBRARIES} -o ${APP} -g -Wall -Werror -std=c99 -Wno-missing-braces -fsanitize=address -fsanitize=undefined -static-libsan -I../include/raylib -I../include/cJSON

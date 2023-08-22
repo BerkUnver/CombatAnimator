@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "cjson/cJSON.h"
+#include "cJSON.h"
 #include "layer.h"
 #include "string_buffer.h"
 #include "editor_history.h"

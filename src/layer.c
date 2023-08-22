@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "raylib/raylib.h"
-#include "raylib/raymath.h"
-#include "raylib/rlgl.h"
+#include "raylib.h"
+#include "raymath.h"
+#include "rlgl.h"
 #include "layer.h"
 #include "transform_2d.h"
 
@@ -347,7 +347,7 @@ bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePo
             return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
         case LAYER_EMPTY:
             return false;
-        case LAYER_BEZIER:
+        case LAYER_BEZIER: {
             BezierPoint *point = layer->bezierPoints + frame;
 
             if (handle == HANDLE_BEZIER_CENTER) {
@@ -365,6 +365,7 @@ bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePo
                 return true;
             }
             return false;
+        }
     }
     assert(false);
 }

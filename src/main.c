@@ -9,7 +9,7 @@
 #define RAYGUI_IMPLEMENTATION
 
 #include "raygui.h"
-#include "raylib/raylib.h"
+#include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
 #include "layer.h"
@@ -400,7 +400,7 @@ int main(int argc, char **argv) {
                     layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
                     layer.name = malloc(layer.nameBufferLength);                    
                     // Right now we are not enforcing the uniqueness of layer names.
-                    snprintf(layer.name, layer.nameBufferLength, "Layer%i", state.layerCount);
+                    snprintf(layer.name, layer.nameBufferLength, "Layer %i", state.layerCount);
 
                     layer.frameCount = state.frameCount;
                     layer.framesActive = malloc(sizeof(bool) * state.frameCount);

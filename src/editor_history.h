@@ -2,7 +2,7 @@
 #define EDITOR_HISTORY_H
 
 #include <stdlib.h>
-#include "cjson/cJSON.h"
+#include "cJSON.h"
 #include "layer.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
