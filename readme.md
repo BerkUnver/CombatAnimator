@@ -4,8 +4,6 @@ As such, this readme may not be up-to-date.
 
 <img src="screenshot.png">
 
-Building: Linux only. Go to the project directory, and run `cd src && make build`.
-
 ### Usage
 "cac [file].png": Edit the metadata for the given file. If no metadata exists, create it and edit that. Metadata is stored in a .json file with the same name as the image file.
 
@@ -31,3 +29,20 @@ Building: Linux only. Go to the project directory, and run `cd src && make build
 |        Remove layer         |      Ctrl + Backspace      |
 |    Move through timeline    |         Arrow Keys         |
 |    Toggle timeline value    |         Space Bar          |
+
+## Building:
+I only know it works 100% in the current OS I'm developing in.
+It might work for others as I've gone from Linux to Macos to Windows. Currently on Windows.
+
+### Setup
+
+#### Windows
+Install https://github.com/skeeto/w64devkit (MinGW) and make sure it is in the PATH.
+
+#### MacOS
+Install clang via XCode.
+
+### Compilation
+Run make in the src directory as an admin. The executable will be in the build directory.
+You run it as an admin so it is copied into a directory where it can be run from the terminal.
+C:/Windows/cac.exe for Windows and /usr/local/bin for MacOS and Linux.

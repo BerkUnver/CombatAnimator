@@ -86,7 +86,7 @@ char *ChangeFileExtension(const char *fileName, const char *newExt) {
         newStr[fileNameLen] = '.';
         strcpy(newStr + fileNameLen + 1, newExt);
     } else {
-        int fileBaseLen = (int) (((unsigned long) dotIdx - (unsigned long) fileName) / sizeof(char) + 1);
+        int fileBaseLen = (int) (((unsigned long long) dotIdx - (unsigned long long) fileName) / sizeof(char) + 1);
         newStr = malloc(sizeof(char) * (fileBaseLen + 1 + newExtLen + 1));
         memcpy(newStr, fileName, sizeof(char) * fileBaseLen);
         strcpy(newStr + fileBaseLen, newExt);
