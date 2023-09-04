@@ -10,6 +10,14 @@
 #include "layer.h"
 #include "transform_2d.h"
 
+Color layerColors[] = {
+    (Color) {0, 255, 255, 255},
+    (Color) {255, 0, 0, 255},
+    (Color) {0, 255, 0, 255},
+    (Color) {255, 255, 255, 255},
+};
+
+
 void HandleDraw(Vector2 pos, Color strokeColor) {
     DrawCircle((int) pos.x, (int) pos.y, HANDLE_RADIUS, strokeColor);
     DrawCircle((int) pos.x, (int) pos.y, 6.0f, RAYWHITE);
@@ -113,38 +121,36 @@ void LayerFree(Layer *layer) {
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {
     if (layer->type != LAYER_BEZIER && !layer->framesActive[frame]) return;
     
-    Color colorOutline;
-    Color color;
+    Color colorOutline = layerColors[layer->type];
+    
     rlPushMatrix();
     rlTransform2DXForm(transform);
 
     // Draw shapes
     switch (layer->type) {
-        case LAYER_HITBOX:
-            colorOutline = LAYER_HITBOX_COLOR_OUTLINE;
-            color = LAYER_HITBOX_COLOR;
+        case LAYER_HITBOX: {
+            Color color = colorOutline;
+            color.a /= 4;
             ShapeDraw(layer->hitbox.shape, layer->transform, color, handlesActive, colorOutline);
             DrawLine(layer->transform.o.x,
                      layer->transform.o.y,
                      layer->transform.o.x + layer->hitbox.knockbackX,
                      layer->transform.o.y + layer->hitbox.knockbackY,
                      colorOutline);
-            break;
-        
-        case LAYER_HURTBOX:
-            colorOutline = LAYER_HURTBOX_COLOR_OUTLINE;
-            color = LAYER_HURTBOX_COLOR;
+        } break;
+
+        case LAYER_HURTBOX: {
+            Color color = colorOutline;
+            color.a /= 4;
             ShapeDraw(layer->hurtboxShape, layer->transform, color, handlesActive, colorOutline);
-            break;
+        } break;
         
         case LAYER_EMPTY:
-            colorOutline = LAYER_EMPTY_COLOR_OUTLINE;
             break;
         
         case LAYER_BEZIER:
             rlPushMatrix();
             rlTransform2DXForm(layer->transform);
-            colorOutline = LAYER_BEZIER_COLOR_OUTLINE;
             for (int frameIdx = 0; frameIdx < layer->frameCount - 1; frameIdx++) {
                 // Make sure both ends of the line segment are defined before we try to draw it.
                 if (!layer->framesActive[frameIdx] || !layer->framesActive[frameIdx + 1]) continue;
@@ -157,8 +163,11 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                     float lerp = ((float) pointIdx) / ((float) (BEZIER_SEGMENTS  - 1));
                     points[pointIdx] = BezierLerp(p0, p1, lerp); 
                 }
-                DrawLineStrip(points, BEZIER_SEGMENTS, LAYER_BEZIER_COLOR_CURVE);
+                DrawLineStrip(points, BEZIER_SEGMENTS, colorOutline);
             }
+            
+            Color colorLine = colorOutline;
+            colorLine.g /= 4;
 
             for (int i = 0; i < layer->frameCount; i++) {
                 if (!layer->framesActive[i]) continue;
@@ -167,8 +176,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                 left = Vector2Add(left, point.position);
                 Vector2 right = Vector2Rotate((Vector2) {point.extentsRight, 0.0f}, point.rotation);
                 right = Vector2Add(right, point.position);
-                DrawLineV(left, point.position, LAYER_BEZIER_COLOR_LINE);
-                DrawLineV(right, point.position, LAYER_BEZIER_COLOR_LINE);
+                DrawLineV(left, point.position, colorLine);
+                DrawLineV(right, point.position, colorLine);
             }
             rlPopMatrix();
             break;

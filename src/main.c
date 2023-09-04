@@ -163,8 +163,11 @@ int main(int argc, char **argv) {
     }
 
     const char *texturePath = argv[1];
-
-    InitWindow(1, 1, APP_NAME); // We set the window size later so we can expand to have the right number of rows.
+    
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    // We set the window size later so we can expand to have the right number of rows.
+    // We need to init the window first so we can load the texture.
+    InitWindow(1, 1, APP_NAME); 
     SetTargetFPS(60);
 
     Texture2D texture = LoadTexture(texturePath);
@@ -577,21 +580,11 @@ int main(int argc, char **argv) {
             int textY = (int) (frameCenter.y - (float) fontSize / 2.0f);
             DrawText(text, textX, textY, fontSize, FRAME_ROW_TEXT_COLOR);
             for (int j = 0; j < state.layerCount; j++) {
-                Color color;
-                bool active = state.layers[j].framesActive[i];
-                switch (state.layers[j].type) {
-                    case LAYER_HITBOX:
-                        color = active ? LAYER_HITBOX_COLOR_TIMELINE_ACTIVE : LAYER_HITBOX_COLOR_TIMELINE_INACTIVE;
-                        break;
-                    case LAYER_HURTBOX:
-                        color = active ? LAYER_HURTBOX_COLOR_TIMELINE_ACTIVE : LAYER_HURTBOX_COLOR_TIMELINE_INACTIVE;
-                        break;
-                    case LAYER_EMPTY:
-                        color = active ? LAYER_EMPTY_COLOR_TIMELINE_ACTIVE : LAYER_EMPTY_COLOR_TIMELINE_INACTIVE;
-                        break;
-                    case LAYER_BEZIER:
-                        color = active ? LAYER_BEZIER_COLOR_TIMELINE_ACTIVE : LAYER_BEZIER_COLOR_TIMELINE_INACTIVE;
-                        break;
+                Color color = layerColors[state.layers[j].type];
+                if (!state.layers[j].framesActive[i]) {
+                    color.r /= 4;
+                    color.g /= 4;
+                    color.b /= 4;
                 }
                 int layerY = hitboxRowY + (int) (LAYER_ROW_SIZE * ((float) j + 0.5f));
                 DrawCircle(xPos, layerY, LAYER_ICON_CIRCLE_RADIUS, color);
