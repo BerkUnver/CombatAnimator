@@ -48,9 +48,10 @@ typedef struct Shape {
     };
 } Shape;
 
+// When you update this pls make sure to update the layer colors.
 typedef enum LayerType {
-    LAYER_HURTBOX,
     LAYER_HITBOX,
+    LAYER_SHAPE,
     LAYER_BEZIER,
     LAYER_EMPTY
 } LayerType;
@@ -76,7 +77,6 @@ typedef struct Layer {
     int frameCount;
     bool *framesActive;
     union {
-        Shape hurtboxShape;
         struct {
             int knockbackX;
             int knockbackY;
@@ -84,6 +84,10 @@ typedef struct Layer {
             int stun;
             Shape shape;
         } hitbox;
+        struct {
+            unsigned int flags;
+            Shape shape;
+        } shape;
         BezierPoint *bezierPoints; 
         // Length is frameCount.
         // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.

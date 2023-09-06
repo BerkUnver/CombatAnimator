@@ -11,8 +11,8 @@
 #include "transform_2d.h"
 
 Color layerColors[] = {
-    (Color) {0, 255, 255, 255},
     (Color) {255, 0, 0, 255},
+    (Color) {0, 255, 255, 255},
     (Color) {0, 255, 0, 255},
     (Color) {255, 255, 255, 255},
 };
@@ -138,11 +138,11 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
                      layer->transform.o.y + layer->hitbox.knockbackY,
                      colorOutline);
         } break;
-
-        case LAYER_HURTBOX: {
+       
+        case LAYER_SHAPE: {
             Color color = colorOutline;
             color.a /= 4;
-            ShapeDraw(layer->hurtboxShape, layer->transform, color, handlesActive, colorOutline);
+            ShapeDraw(layer->shape.shape, layer->transform, color, handlesActive, colorOutline);
         } break;
         
         case LAYER_EMPTY:
@@ -200,9 +200,9 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             HandleDraw(knockbackGlobal, colorOutline);
         } break;
         
-        case LAYER_HURTBOX: {
+        case LAYER_SHAPE: {
             Transform2D layerTransform = Transform2DMultiply(transform, layer->transform);
-            ShapeDrawHandles(layer->hurtboxShape, layerTransform, colorOutline);
+            ShapeDrawHandles(layer->shape.shape, layerTransform, colorOutline);
         } break;
         
         case LAYER_EMPTY:
@@ -279,8 +279,8 @@ Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2
             if (handle != HANDLE_NONE) return handle;
         } break;
 
-        case LAYER_HURTBOX: {
-            Handle handle = ShapeHandleSelect(layer->hurtboxShape, Transform2DMultiply(transform, layer->transform), mousePos);
+        case LAYER_SHAPE: {
+            Handle handle = ShapeHandleSelect(layer->shape.shape, Transform2DMultiply(transform, layer->transform), mousePos);
             if (handle != HANDLE_NONE) return handle;
         } break;
 
@@ -352,8 +352,8 @@ bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePo
                 return true;
             }
             return ShapeHandleSet(&layer->hitbox.shape, handle, handlePos);
-        case LAYER_HURTBOX:
-            return ShapeHandleSet(&layer->hurtboxShape, handle, handlePos);
+        case LAYER_SHAPE:
+            return ShapeHandleSet(&layer->shape.shape, handle, handlePos);
         case LAYER_EMPTY:
             return false;
         case LAYER_BEZIER: {

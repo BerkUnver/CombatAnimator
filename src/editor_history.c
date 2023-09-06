@@ -214,9 +214,12 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
                 cJSON_AddItemToObject(hitbox, "shape", ShapeSerialize(layer->hitbox.shape));
                 cJSON_AddItemToObject(layerJson, "hitbox", hitbox);
                 break;
-            case LAYER_HURTBOX:
-                cJSON_AddStringToObject(layerJson, "type", "HURTBOX");
-                cJSON_AddItemToObject(layerJson, "hurtboxShape", ShapeSerialize(layer->hurtboxShape));
+            case LAYER_SHAPE:
+                cJSON_AddStringToObject(layerJson, "type", "SHAPE");
+                cJSON *shape = cJSON_CreateObject();
+                cJSON_AddItemToObject(shape, "shape", ShapeSerialize(layer->shape.shape));
+                cJSON_AddNumberToObject(shape, "flags", layer->shape.flags);
+                cJSON_AddItemToObject(layerJson, "shape", shape);
                 break;
             case LAYER_BEZIER:
                 cJSON_AddStringToObject(layerJson, "type", "BEZIER");
@@ -377,33 +380,15 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         if (!cJSON_IsString(type)) ERROR_GOTO(delete_frames_active);
         const char *typeString = cJSON_GetStringValue(type);
      
-        char *name = NULL;
-     
-        if (version <= 6) {
-            if (!strcmp(typeString, "METADATA")) {
-                cJSON *nameJson = cJSON_GetObjectItem(layerJson, "metadataTag");
-                if (!cJSON_IsString(nameJson)) ERROR_GOTO(delete_frames_active);
-                name = cJSON_GetStringValue(nameJson);
-            }
-        } else {
-            cJSON *nameJson = cJSON_GetObjectItem(layerJson, "name");
-            if (!cJSON_IsString(nameJson)) ERROR_GOTO(delete_frames_active);
-            name = cJSON_GetStringValue(nameJson);
-        }
-
-
-        if (name) {
-            layer.nameBufferLength = strlen(name) + 1;
-            if (layer.nameBufferLength < LAYER_NAME_BUFFER_INITIAL_SIZE) layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
-            layer.name = malloc(layer.nameBufferLength);
-            strcpy(layer.name, name);
-        } else {
-            // Create a name if one doesn't exist
-            layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
-            layer.name = malloc(layer.nameBufferLength);
-            snprintf(layer.name, layer.nameBufferLength, "Layer %i", out->layerCount);
-        }
+        cJSON *nameJson = cJSON_GetObjectItem(layerJson, "name");
+        if (!cJSON_IsString(nameJson)) ERROR_GOTO(delete_frames_active);
+        char *name = cJSON_GetStringValue(nameJson);
         
+        layer.nameBufferLength = strlen(name) + 1;
+        if (layer.nameBufferLength < LAYER_NAME_BUFFER_INITIAL_SIZE) layer.nameBufferLength = LAYER_NAME_BUFFER_INITIAL_SIZE;
+        layer.name = malloc(layer.nameBufferLength);
+        strcpy(layer.name, name);
+
         if (!strcmp(typeString, "HITBOX")) {
             cJSON *hitbox = cJSON_GetObjectItem(layerJson, "hitbox");
             if (!cJSON_IsObject(hitbox)) ERROR_GOTO(delete_name);
@@ -425,12 +410,24 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             layer.hitbox.knockbackY = (int) cJSON_GetNumberValue(knockbackY);
             layer.hitbox.stun = (int) cJSON_GetNumberValue(stun);
             layer.hitbox.damage = (int) cJSON_GetNumberValue(damage);
-        } else if (!strcmp(typeString, "HURTBOX")) {
+        
+        } else if (!strcmp(typeString, "HURTBOX") && version <= 7) {
+            layer.type = LAYER_SHAPE;
             cJSON *shape = cJSON_GetObjectItem(layerJson, "hurtboxShape");
-            if (!shape || !ShapeDeserialize(shape, &layer.hurtboxShape, version)) ERROR_GOTO(delete_name);
-            layer.type = LAYER_HURTBOX;
-
-        } else if (!strcmp(typeString, "EMPTY") || (version <= 6 && !strcmp(typeString, "METADATA"))) {
+            if (!shape || !ShapeDeserialize(shape, &layer.shape.shape, version)) ERROR_GOTO(delete_name);
+            layer.shape.flags = 1;
+        
+        } else if (!strcmp(typeString, "SHAPE") && version >= 8) {
+            layer.type = LAYER_SHAPE;
+            cJSON *shapeLayer = cJSON_GetObjectItem(layerJson, "shape");
+            if (!cJSON_IsObject(shapeLayer)) ERROR_GOTO(delete_name);
+            cJSON *shape = cJSON_GetObjectItem(shapeLayer, "shape");
+            if (!shape || !ShapeDeserialize(shape, &layer.shape.shape, version)) ERROR_GOTO(delete_name);
+            cJSON *flags = cJSON_GetObjectItem(shapeLayer, "flags");
+            if (!cJSON_IsNumber(flags)) ERROR_GOTO(delete_name);
+            layer.shape.flags = cJSON_GetNumberValue(flags);
+        
+        } else if (!strcmp(typeString, "EMPTY")) {
             layer.type = LAYER_EMPTY;
         
         } else if (!strcmp(typeString, "BEZIER")) {
@@ -448,9 +445,9 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
                 if (cJSON_IsNull(bezierPointJson)) continue; 
                 if (!cJSON_IsObject(bezierPointJson)) ERROR_GOTO(delete_bezier_points);
                
-                cJSON *positionX = cJSON_GetObjectItem(bezierPointJson, version <= 6 ? "positionX" : "x");
+                cJSON *positionX = cJSON_GetObjectItem(bezierPointJson,"x");
                 if (!cJSON_IsNumber(positionX)) ERROR_GOTO(delete_bezier_points);
-                cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, version <= 6 ? "positionY" : "y");
+                cJSON *positionY = cJSON_GetObjectItem(bezierPointJson, "y");
                 if (!cJSON_IsNumber(positionY)) ERROR_GOTO(delete_bezier_points);
                 cJSON *extentsLeft = cJSON_GetObjectItem(bezierPointJson, "extentsLeft");
                 if (!cJSON_IsNumber(extentsLeft)) ERROR_GOTO(delete_bezier_points);

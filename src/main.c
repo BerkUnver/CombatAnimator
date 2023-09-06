@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
     } else if (!strcmp(argv[1], "-t")) {
 
         for (int i = FILE_VERSION_OLDEST; i < FILE_VERSION_CURRENT; i++) { // make sure each version can still deserialize
-            char fileName[sizeof("tests/Jab_.json") / sizeof(char)];
+            char fileName[sizeof("tests/Jab.json") + 10];
             sprintf(fileName, "tests/Jab%i.json", i); // idk how to make this work when the application is not being run from its home directory
             EditorState state;
             bool success = EditorStateDeserialize(&state, fileName);
@@ -386,8 +386,9 @@ int main(int argc, char **argv) {
                         } else goto layerNotInstanced;
 
                         if (IsKeyDown(KEY_H)) {
-                            layer.type = LAYER_HURTBOX;
-                            layer.hurtboxShape = shape;
+                            layer.type = LAYER_SHAPE;
+                            layer.shape.shape = shape;
+                            layer.shape.flags = 1;
                         } else {
                             layer.type = LAYER_HITBOX;
                             layer.hitbox.shape = shape;

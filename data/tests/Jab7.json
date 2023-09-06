@@ -1,6 +1,6 @@
 {
 	"magic":	"CombatAnimator",
-	"version":	8,
+	"version":	7,
 	"layers":	[{
 			"x":	98,
 			"y":	46,
@@ -41,119 +41,98 @@
 			"y":	47,
 			"framesActive":	[true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false],
 			"name":	"Layer 2",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	11,
-						"radius":	10,
-						"rotation":	0
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	11,
+					"radius":	10,
+					"rotation":	0
+				}
 			}
 		}, {
 			"x":	70,
 			"y":	48,
 			"framesActive":	[false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false],
 			"name":	"Layer 3",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	11,
-						"radius":	9,
-						"rotation":	-0.61286771297454834
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	11,
+					"radius":	9,
+					"rotation":	-0.61286771297454834
+				}
 			}
 		}, {
 			"x":	76,
 			"y":	47,
 			"framesActive":	[false, false, false, false, false, true, true, true, true, true, true, true, false, false, false, false],
 			"name":	"Layer 4",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	9,
-						"radius":	10,
-						"rotation":	0
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	9,
+					"radius":	10,
+					"rotation":	0
+				}
 			}
 		}, {
 			"x":	101,
 			"y":	54,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
 			"name":	"Layer 5",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	13,
-						"radius":	7,
-						"rotation":	1.2523922920227051
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	13,
+					"radius":	7,
+					"rotation":	1.2523922920227051
+				}
 			}
 		}, {
 			"x":	96,
 			"y":	54,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false],
 			"name":	"Layer 6",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	13,
-						"radius":	7,
-						"rotation":	0.98875504732131958
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	13,
+					"radius":	7,
+					"rotation":	0.98875504732131958
+				}
 			}
 		}, {
 			"x":	94,
 			"y":	50,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
 			"name":	"Layer 7",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	10,
-						"radius":	10,
-						"rotation":	0.53628480434417725
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	10,
+					"radius":	10,
+					"rotation":	0.53628480434417725
+				}
 			}
 		}, {
 			"x":	86,
 			"y":	48,
 			"framesActive":	[false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
 			"name":	"Layer 8",
-			"type":	"SHAPE",
-			"shape":	{
-				"shape":	{
-					"type":	"CAPSULE",
-					"capsule":	{
-						"height":	12,
-						"radius":	9,
-						"rotation":	0.33904671669006348
-					}
-				},
-				"flags":	1
+			"type":	"HURTBOX",
+			"hurtboxShape":	{
+				"type":	"CAPSULE",
+				"capsule":	{
+					"height":	12,
+					"radius":	9,
+					"rotation":	0.33904671669006348
+				}
 			}
 		}, {
 			"x":	99,
