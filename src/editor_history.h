@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "cJSON.h"
 #include "layer.h"
+#include "list.h"
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
@@ -53,10 +54,9 @@ typedef struct EditorState {
 } EditorState;
 
 typedef struct EditorHistory {
-    EditorState *_states;
+    LIST(EditorState) _states;
     int _currentStateIdx;
     int _mostRecentStateIdx;
-    int _statesLength;
 } EditorHistory;
 
 typedef enum ChangeOptions {

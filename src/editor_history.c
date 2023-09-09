@@ -118,9 +118,8 @@ EditorState EditorStateDeepCopy(EditorState *state) {
 /// clones everything passed in, is safe.
 EditorHistory EditorHistoryNew(EditorState *initial) {
     EditorHistory history;
-    history._states = malloc(sizeof(EditorState) * HISTORY_BUFFER_SIZE_INCREMENT);
+    history._states = LIST_NEW_SIZED(EditorState, 1024);
     history._states[0] = EditorStateDeepCopy(initial);
-    history._statesLength = HISTORY_BUFFER_SIZE_INCREMENT;
     history._currentStateIdx = 0;
     history._mostRecentStateIdx = 0;
     return history;
@@ -130,7 +129,7 @@ void EditorHistoryFree(EditorHistory *history) {
     for (int i = 0; i <= history->_mostRecentStateIdx; i++) {
         EditorStateFree(&history->_states[i]);
     }
-    free(history->_states);
+    LIST_FREE(history->_states);
 }
 
 void EditorHistoryCommitState(EditorHistory *history, EditorState *state) {
@@ -141,13 +140,11 @@ void EditorHistoryCommitState(EditorHistory *history, EditorState *state) {
     history->_currentStateIdx++;
     history->_mostRecentStateIdx = history->_currentStateIdx;
     
-    if (history->_currentStateIdx >= history->_statesLength) {
-        // array pointers are copied over so it works.
-        history->_states = realloc(history->_states, sizeof(EditorState) * (history->_statesLength + HISTORY_BUFFER_SIZE_INCREMENT)); 
-        history->_statesLength += HISTORY_BUFFER_SIZE_INCREMENT;
+    if (history->_currentStateIdx >= LIST_COUNT(history->_states)) {
+        LIST_ADD(&history->_states, EditorStateDeepCopy(state));
+    } else {
+        history->_states[history->_currentStateIdx] = EditorStateDeepCopy(state);
     }
-
-    history->_states[history->_currentStateIdx] = EditorStateDeepCopy(state);
 }
 
 /// @brief

@@ -11,6 +11,7 @@ typedef struct ListHeader {
     int count;
     int countAllocated;
     int itemSize;
+    int ___; // @todo: This is so asan won't complain about the members of the list being misaligned.
     // Might want a custom allocator here in the future.
 } ListHeader;
 
@@ -28,7 +29,7 @@ void *listClone(void *list);
 #define LIST_FREE(list) free(LIST_HEADER(list))
 #define LIST_CLONE(T, list) ((T *) listClone(list))
 
-// We evaluate the list just to make sure no goofy stuff happens when people pass in an expression.
+// I'm pretty sure that 'item' won't be evaluated twice because of the sizeof operator.
 #define LIST_ADD(listPtr, item) \
 do {\
     ListHeader *header = LIST_HEADER(*(listPtr));\
