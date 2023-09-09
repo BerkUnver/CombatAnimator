@@ -13,9 +13,9 @@
 #include "raymath.h"
 #include "rlgl.h"
 
+#include "editor_history.h"
 #include "layer.h"
 #include "list.h"
-#include "editor_history.h"
 #include "string_buffer.h"
 #include "transform_2d.h"
 
@@ -55,8 +55,13 @@
 
 #define COLOR_BACKGROUND GRAY
 #define COLOR_SELECTED (Color) {123, 123, 123, 255}
+
+#define PANEL_WIDTH 256.0f
+#define PANEL_COLOR (Color) {75, 75, 75, 255}
+
 #define TIMELINE_COLOR (Color) {50, 50, 50, 255}
 #define TIMELINE_HEADER_COLOR (Color) {40, 40, 40, 255}
+
 #define FRAME_ROW_SIZE 32
 #define FRAME_RHOMBUS_RADIUS 12
 #define FRAME_RHOMBUS_CANNOT_CANCEL_COLOR (Color) {63, 63, 63, 255}
@@ -66,6 +71,39 @@
 #define LAYER_ROW_SIZE 32
 #define LAYER_ICON_CIRCLE_RADIUS 12
 
+// These functions are miscellaneous, I'm just putting them here for now.
+
+// return true when the state of the flags changed
+bool GuiFlags(Rectangle rect, unsigned int *flags) {
+    int width = rect.width / 8;
+    int height = rect.height / 4;
+    bool flagsChanged = false;
+
+    for (int x = 0; x < 8; x++)
+    for (int y = 0; y < 4; y++) {
+        Rectangle rectToggle = {
+            .x = rect.x + x * width,
+            .y = rect.y + y * height,
+            .width = width,
+            .height = height,
+        };
+        char name[3];
+        int idx = x * 4 + y;
+        sprintf(name, "%i", idx);
+        unsigned int mask = 1 << idx;
+        unsigned int flagsOld = *flags;
+
+        if (GuiToggle(rectToggle, name, *flags & mask)) {
+            *flags |= mask; 
+        } else {
+            *flags &= ~mask;
+        }
+
+        if (*flags != flagsOld) flagsChanged = true;
+    }
+
+    return flagsChanged;
+}
 
 void DrawRhombus(Vector2 pos, float xSize, float ySize, Color color) {
     Vector2 topPoint = {pos.x, pos.y - ySize};
@@ -181,6 +219,8 @@ int main(int argc, char **argv) {
    
     GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(RAYWHITE));
     GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+    GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+
     const int fontSize = GetFontDefault().baseSize;
 
     // load state from file or create new state if load failed
@@ -526,8 +566,8 @@ int main(int argc, char **argv) {
             mode = MODE_EDIT_FRAME_DURATION;
         }
 
-        
-        // draw hitbox damage and stun value boxes if a hitbox is currently selected.
+       
+        // Draw gui
         if (state.layerIdx >= 0) {    
             rectLabel.y += rectStroke;
             rectValue.y += rectStroke;
@@ -549,32 +589,51 @@ int main(int argc, char **argv) {
                 layer->name = realloc(layer->name, layer->nameBufferLength);
             }
 
-            if (state.layers[state.layerIdx].type == LAYER_HITBOX) {
-                rectLabel.y += rectStroke;
-                rectValue.y += rectStroke;
-                
-                GuiLabel(rectLabel, "Hitbox Damage");
-                if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
-                    if (mode == MODE_EDIT_HITBOX_DAMAGE) {
-                        EditorHistoryCommitState(&history, &state);
-                        mode = MODE_IDLE;
-                    } else {
-                        mode = MODE_EDIT_HITBOX_DAMAGE;
+            rectLabel.y += rectStroke;
+            rectValue.y += rectStroke;
+            
+            switch (state.layers[state.layerIdx].type) {
+                case LAYER_HITBOX:
+                    GuiLabel(rectLabel, "Hitbox Damage");
+                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
+                        if (mode == MODE_EDIT_HITBOX_DAMAGE) {
+                            EditorHistoryCommitState(&history, &state);
+                            mode = MODE_IDLE;
+                        } else {
+                            mode = MODE_EDIT_HITBOX_DAMAGE;
+                        }
                     }
-                }
-                
-                rectLabel.y += rectStroke;
-                rectValue.y += rectStroke;
+                    
+                    rectLabel.y += rectStroke;
+                    rectValue.y += rectStroke;
 
-                GuiLabel(rectLabel, "Hitbox Stun (ms)");
-                if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
-                    if (mode == MODE_EDIT_HITBOX_STUN) {
-                        EditorHistoryCommitState(&history, &state);
-                        mode = MODE_IDLE;
-                    } else {
-                        mode = MODE_EDIT_HITBOX_STUN;
+                    GuiLabel(rectLabel, "Hitbox Stun (ms)");
+                    if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
+                        if (mode == MODE_EDIT_HITBOX_STUN) {
+                            EditorHistoryCommitState(&history, &state);
+                            mode = MODE_IDLE;
+                        } else {
+                            mode = MODE_EDIT_HITBOX_STUN;
+                        }
                     }
-                }
+                    break;
+
+                case LAYER_SHAPE:
+                    Rectangle rectFlagsLabel = rectLabel;
+                    Rectangle rectFlagsValue = rectValue;
+                    
+                    rectFlagsLabel.height *= 3;
+                    rectFlagsValue.height *= 3;
+
+                    GuiLabel(rectFlagsLabel, "Shape type");
+                    if (GuiFlags(rectFlagsValue, &state.layers[state.layerIdx].shape.flags)) {
+                        EditorHistoryCommitState(&history, &state);
+                    }
+                    break;
+
+                case LAYER_BEZIER:
+                case LAYER_EMPTY:
+                    break;
             }
         }
         
