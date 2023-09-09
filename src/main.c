@@ -12,7 +12,9 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
+
 #include "layer.h"
+#include "list.h"
 #include "editor_history.h"
 #include "string_buffer.h"
 #include "transform_2d.h"
@@ -367,7 +369,7 @@ int main(int argc, char **argv) {
 
                     } else if (IsKeyPressed(KEY_B)) { // Bezier
                         layer.type = LAYER_BEZIER;
-                        layer.bezierPoints = malloc(sizeof *layer.bezierPoints * state.frameCount);
+                        layer.bezierPoints = LIST_NEW_SIZED(BezierPoint, state.frameCount);
 
                     } else if (IsKeyDown(KEY_H) || IsKeyDown(KEY_N)) { // Hurtbox or Hitbox
                         Shape shape;
@@ -407,8 +409,7 @@ int main(int argc, char **argv) {
                     // Right now we are not enforcing the uniqueness of layer names.
                     snprintf(layer.name, layer.nameBufferLength, "Layer %i", state.layerCount);
 
-                    layer.frameCount = state.frameCount;
-                    layer.framesActive = malloc(sizeof(bool) * state.frameCount);
+                    layer.framesActive = LIST_NEW_SIZED(bool, state.frameCount);
                     memset(layer.framesActive, 0, sizeof(bool) * state.frameCount);
                     
                     EditorStateLayerAdd(&state, layer);

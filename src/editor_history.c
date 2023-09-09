@@ -58,13 +58,7 @@ void EditorStateAddFrame(EditorState *state, int idx) {
     state->frames[state->frameCount - 1] = state->frames[state->frameCount - 2];
 
     // Resize each layer so it has the right amount of frames
-    for (int i = 0; i < state->layerCount; i++) {
-        assert(state->layers[i].frameCount == state->frameCount - 1);
-        state->layers[i].frameCount++;
-
-        state->layers[i].framesActive = realloc(state->layers[i].framesActive, sizeof(*state->layers[i].framesActive) * state->frameCount);
-        state->layers[i].framesActive[state->frameCount - 1] = false;
-    }
+    for (int i = 0; i < state->layerCount; i++) LIST_ADD(&state->layers[i].framesActive, false); 
 }
 
 bool EditorStateRemoveFrame(EditorState *state, int idx) {
@@ -78,8 +72,8 @@ bool EditorStateRemoveFrame(EditorState *state, int idx) {
         for (int frameIdx = idx + 1; frameIdx < state->frameCount; frameIdx++) {
             state->layers[layerIdx].framesActive[frameIdx - 1] = state->layers[layerIdx].framesActive[frameIdx];
         }
-        assert(state->layers[layerIdx].frameCount == state->frameCount);
-        state->layers[layerIdx].frameCount--;
+        assert(LIST_COUNT(state->layers[layerIdx].framesActive) == state->frameCount);
+        LIST_POP(state->layers[layerIdx].framesActive);
     }
     state->frameCount--;
     return true;
@@ -99,15 +93,10 @@ EditorState EditorStateDeepCopy(EditorState *state) {
             char *name = malloc(layer->nameBufferLength);
             memcpy(name, layer->name, layer->nameBufferLength);
             layer->name = name;
-
-            bool *framesActive = malloc(sizeof(bool) * state->frameCount);
-            memcpy(framesActive, layer->framesActive, sizeof(bool) * state->frameCount); 
-            layer->framesActive = framesActive;
+            layer->framesActive = LIST_CLONE(bool, layer->framesActive);
 
             if (layer->type == LAYER_BEZIER) {
-                BezierPoint *points = malloc(sizeof(BezierPoint) * state->frameCount);
-                memcpy(points, layer->bezierPoints, sizeof(BezierPoint) * state->frameCount);
-                layer->bezierPoints = points;
+                layer->bezierPoints = LIST_CLONE(BezierPoint, layer->bezierPoints);
             }
         }
     }
@@ -193,7 +182,7 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
         cJSON_AddNumberToObject(layerJson, "y", layer->transform.o.y);
         
         cJSON *framesActiveJson = cJSON_CreateArray();
-        for (int frameIdx = 0; frameIdx < layer->frameCount; frameIdx++) {
+        for (int frameIdx = 0; frameIdx < LIST_COUNT(layer->framesActive); frameIdx++) {
             cJSON *val = cJSON_CreateBool(layer->framesActive[frameIdx]);
             cJSON_AddItemToArray(framesActiveJson, val);
         }
@@ -224,7 +213,8 @@ bool EditorStateSerialize(EditorState *state, const char *path) {
             case LAYER_BEZIER:
                 cJSON_AddStringToObject(layerJson, "type", "BEZIER");
                 cJSON *bezierPointsJson = cJSON_CreateArray();
-                for (int frameIdx = 0; frameIdx < layer->frameCount; frameIdx++) {
+                int frameCount = LIST_COUNT(layer->bezierPoints);
+                for (int frameIdx = 0; frameIdx < frameCount; frameIdx++) {
                     if (!layer->framesActive[frameIdx]) continue;
                     BezierPoint bezier = layer->bezierPoints[frameIdx];
                     cJSON *bezierJson = cJSON_CreateObject();
@@ -362,16 +352,14 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
         };
         layer.transform = Transform2DFromPosition(position);
          
-        layer.frameCount = out->frameCount;
-        layer.framesActive = malloc(sizeof(*layer.framesActive) * out->frameCount);
-
+        layer.framesActive = LIST_NEW_SIZED(bool, out->frameCount);
         cJSON *framesActive = cJSON_GetObjectItem(layerJson, "framesActive");
         if (!cJSON_IsArray(framesActive)) ERROR_GOTO(delete_frames_active);
         
         int frameIdx = 0;
         cJSON *frameActive;
         cJSON_ArrayForEach(frameActive, framesActive) {
-            if (frameIdx >= layer.frameCount || !cJSON_IsBool(frameActive)) ERROR_GOTO(delete_frames_active);
+            if (frameIdx >= LIST_COUNT(layer.framesActive) || !cJSON_IsBool(frameActive)) ERROR_GOTO(delete_frames_active);
             layer.framesActive[frameIdx] = cJSON_IsTrue(frameActive);
             frameIdx++;
         }
@@ -435,13 +423,13 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
             
             cJSON *bezierPointsJson = cJSON_GetObjectItem(layerJson, "bezierPoints");
             if (!cJSON_IsArray(bezierPointsJson)) ERROR_GOTO(delete_name);
-            layer.bezierPoints = malloc(sizeof(BezierPoint) * cJSON_GetArraySize(bezierPointsJson));
+            int bezierPointCount = cJSON_GetArraySize(bezierPointsJson);
+            if (bezierPointCount != LIST_COUNT(layer.framesActive)) ERROR_GOTO(delete_bezier_points);
+            layer.bezierPoints = LIST_NEW_SIZED(BezierPoint, bezierPointCount);
             
             int frameIdx = 0;
             cJSON *bezierPointJson;
             cJSON_ArrayForEach(bezierPointJson, bezierPointsJson) {
-                if (frameIdx >= layer.frameCount) ERROR_GOTO(delete_bezier_points);
-                
                 if (cJSON_IsNull(bezierPointJson)) continue; 
                 if (!cJSON_IsObject(bezierPointJson)) ERROR_GOTO(delete_bezier_points);
                
@@ -466,7 +454,7 @@ bool EditorStateDeserialize(EditorState *out, const char *path) {
                 
                 while (false) {
 delete_bezier_points:
-                    free(layer.bezierPoints);
+                    LIST_FREE(layer.bezierPoints);
                     goto delete_name;
                 }
             }

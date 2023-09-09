@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include "cJSON.h"
 #include "transform_2d.h"
+#include "list.h"
 
 #define SHAPE_SEGMENTS 16
 #define HANDLE_RADIUS 8.0f
@@ -74,8 +75,7 @@ typedef struct Layer {
     char *name;
     int nameBufferLength; // byte length of the buffer
 
-    int frameCount;
-    bool *framesActive;
+    LIST(bool) framesActive;
     union {
         struct {
             int knockbackX;
@@ -84,11 +84,13 @@ typedef struct Layer {
             int stun;
             Shape shape;
         } hitbox;
+        
         struct {
             unsigned int flags;
             Shape shape;
         } shape;
-        BezierPoint *bezierPoints; 
+
+        LIST(BezierPoint) bezierPoints;
         // Length is frameCount.
         // A specific index is assumed to be undefined when its equivalent framesActive index is undefined.
     };

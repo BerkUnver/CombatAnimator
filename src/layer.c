@@ -111,11 +111,9 @@ Vector2 BezierLerp(BezierPoint p0, BezierPoint p1, float lerp) {
 }
 
 void LayerFree(Layer *layer) {
-    free(layer->framesActive);
+    LIST_FREE(layer->framesActive);
     free(layer->name);
-    if (layer->type == LAYER_BEZIER) {
-        free(layer->bezierPoints);
-    }
+    if (layer->type == LAYER_BEZIER) LIST_FREE(layer->bezierPoints);
 }
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive) {
@@ -151,7 +149,8 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
         case LAYER_BEZIER:
             rlPushMatrix();
             rlTransform2DXForm(layer->transform);
-            for (int frameIdx = 0; frameIdx < layer->frameCount - 1; frameIdx++) {
+            int frameCount = LIST_COUNT(layer->framesActive) - 1;
+            for (int frameIdx = 0; frameIdx < frameCount; frameIdx++) {
                 // Make sure both ends of the line segment are defined before we try to draw it.
                 if (!layer->framesActive[frameIdx] || !layer->framesActive[frameIdx + 1]) continue;
                 
@@ -169,7 +168,7 @@ void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActiv
             Color colorLine = colorOutline;
             colorLine.g /= 4;
 
-            for (int i = 0; i < layer->frameCount; i++) {
+            for (int i = 0; i < LIST_COUNT(layer->framesActive); i++) {
                 if (!layer->framesActive[i]) continue;
                 BezierPoint point = layer->bezierPoints[i];
                 Vector2 left = Vector2Rotate((Vector2) {-point.extentsLeft, 0.0f}, point.rotation);
@@ -267,7 +266,7 @@ Handle ShapeHandleSelect(Shape shape, Transform2D transform, Vector2 globalMouse
 }
 
 Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2 mousePos) {
-    assert(0 <= frame && frame < layer->frameCount);
+    assert(0 <= frame && frame < LIST_COUNT(layer->framesActive));
     switch (layer->type) {
         case LAYER_HITBOX: {
             Vector2 knockbackHandle = {
@@ -335,7 +334,7 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
 }
 
 bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos) {
-    assert(0 <= frame && frame < layer->frameCount);
+    assert(0 <= frame && frame < LIST_COUNT(layer->framesActive));
     if (handle == HANDLE_CENTER) {
         layer->transform.o = Vector2Round(localMousePos);
         return true;
