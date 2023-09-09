@@ -187,7 +187,8 @@ int main(int argc, char **argv) {
     char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
     EditorState state;
     if (!EditorStateDeserialize(&state, savePath)) state = EditorStateNew(1);
-    Editor editor = EditorNew(&state);
+
+    EditorHistory history = EditorHistoryNew(&state);
 
     const float startScale = DEFAULT_SPRITE_WINDOW_Y * TEXTURE_HEIGHT_IN_WINDOW / texture.height;
     
@@ -208,7 +209,20 @@ int main(int argc, char **argv) {
 	int initialWindowX = (GetMonitorWidth(monitor) - initialWindowWidth) / 2;
 	int initialWindowY = (GetMonitorHeight(monitor) - initialWindowHeight) / 2;
 	SetWindowPosition(initialWindowX, initialWindowY);
-   
+    
+    typedef enum Mode {
+        MODE_IDLE,
+        MODE_PLAYING,
+        MODE_DRAGGING_HANDLE,
+        MODE_DRAGGING_FRAME_POS,
+        MODE_PANNING_SPRITE,
+        MODE_EDIT_FRAME_DURATION,
+        MODE_EDIT_LAYER_NAME,
+        MODE_EDIT_HITBOX_DAMAGE,
+        MODE_EDIT_HITBOX_STUN,
+    } Mode;
+    Mode mode = MODE_IDLE;
+
     int playingFrameTime = 0;
     Handle draggingHandle = HANDLE_NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
@@ -225,77 +239,75 @@ int main(int argc, char **argv) {
             transform.o = Vector2Subtract(mousePos, Transform2DBasisXFormInv(transform, localMousePos));
         }
         
-        switch (editor.mode) {
-            case EDITOR_MODE_EDITING:
+        switch (mode) {
+            case MODE_EDIT_FRAME_DURATION:
+            case MODE_EDIT_HITBOX_DAMAGE:
+            case MODE_EDIT_HITBOX_STUN:
+            case MODE_EDIT_LAYER_NAME:
                 if (IsKeyPressed(KEY_ENTER)) {
-                    EditorCommitState(&editor, &state);
-                    EditorSetMode(&editor, EDITOR_MODE_IDLE);
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 }
                 break;
 
-            case EDITOR_MODE_DRAGGING_HANDLE:
+            case MODE_DRAGGING_HANDLE:
                 if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                    EditorCommitState(&editor, &state);
-                    EditorSetMode
-                    editor.editingField = FIELD_NONE;
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
                     assert(LayerHandleSet(state.layers + state.layerIdx, state.frameIdx, draggingHandle, localMousePos));
                 }
                 break;
 
-            case EDITOR_MODE_DRAGGING_FRAME_POS:
+            case MODE_DRAGGING_FRAME_POS:
                 if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                    EditorCommitState(&editor, &state);
-                    EditorSetMode(&editor, EDITOR_MODE_IDLE);
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
                     state.frames[state.frameIdx].pos = Vector2Round(localMousePos);
                 }
                 break;
 
-            case EDITOR_MODE_PANNING_SPRITE:
+            case MODE_PANNING_SPRITE:
                 if (IsMouseButtonReleased(MOUSE_BUTTON_SELECT)) {
-                    EditorSetMode(&editor, EDITOR_MODE_IDLE);
+                    mode = MODE_IDLE;
                 } else {
                     Vector2 globalPan = Transform2DToGlobal(transform, panningSpriteLocalPos);
                     transform.o = Vector2Add(transform.o, Vector2Subtract(mousePos, globalPan));
                 }
                 break;
-            
-            case EDITOR_MODE_PLAYING:
-                editor.playingFrameMilliseconds += (int) (GetFrameTime() * FRAME_DURATION_UNIT_PER_SECOND);
-                int frameDuration = state.frames[state.frameIdx].duration;
-                if (editor.playingFrameMilliseconds >= frameDuration)
-                {
-                    editor.playingFrameMilliseconds -= frameDuration;
-                    int newFrameIdx = state.frameIdx + 1;
-                    state.frameIdx = newFrameIdx >= state.frameCount ? 0 : newFrameIdx;
-                }
-                // Intentionally falling through.
-            case EDITOR_MODE_IDLE:
+
+            case MODE_PLAYING:
+            case MODE_IDLE:
                 if (IsKeyPressed(KEY_SAVE) && IsKeyDown(KEY_SAVE_MODIFIER)) {
                     if (!EditorStateSerialize(&state, savePath)) {
                         puts("Failed to save file for unknown reason.");
                     }
                 } else if (IsKeyPressed(KEY_UNDO) && IsKeyDown(KEY_UNDO_MODIFIER)) {
+                    mode = MODE_IDLE;
                     ChangeOptions option = CHANGE_UNDO;
                     if (IsKeyDown(KEY_REDO_MODIFIER)) option = CHANGE_REDO;
-                    EditorChangeState(state, &state, option);
+
+                    EditorHistoryChangeState(&history, &state, option);
 
                 } else if (IsKeyPressed(KEY_FRAME_NEW) && IsKeyDown(KEY_FRAME_NEW_MODIFIER)) {
                     EditorStateAddFrame(&state, state.frameIdx);
                     state.frameIdx = state.frameCount - 1;
-                    EditorCommitState(&editor, &state);
-               
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+                
                 } else if (IsKeyPressed(KEY_FRAME_REMOVE) && IsKeyDown(KEY_FRAME_REMOVE_MODIFIER) && state.frameCount > 1) {
                     EditorStateRemoveFrame(&state, state.frameIdx);
                     if (state.frameIdx >= state.frameCount) state.frameIdx = state.frameCount - 1;
-                    EditorCommitState(&editor, &state);
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
 
                 } else if (IsKeyPressed(KEY_LAYER_REMOVE) && IsKeyDown(KEY_LAYER_REMOVE_MODIFIER) && state.layerIdx >= 0) {
                     EditorStateLayerRemove(&state, state.layerIdx);
-                    EditorCommitState(&editor, &state);
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
                 
                 } else if (IsKeyPressed(KEY_FRAME_TOGGLE)) {
                     if (state.layerIdx < 0) {
@@ -338,9 +350,10 @@ int main(int argc, char **argv) {
                             }
 
                             layer->bezierPoints[state.frameIdx] = point;
-                        }
+                        }     
                     }
-                    EditorCommitState(&editor, &state);
+                    mode = MODE_IDLE;
+                    EditorHistoryCommitState(&history, &state);
                 
                 } else if (IsKeyDown(KEY_LAYER_NEW_MODIFIER)) { // VERY IMPORTANT THAT THIS IS THE LAST CALL THAT CHECKS KEY_LEFT_CTRL
                     Layer layer;
@@ -401,32 +414,38 @@ int main(int argc, char **argv) {
                     
                     EditorStateLayerAdd(&state, layer);
                     state.layerIdx = state.layerCount - 1;
-                    EditorCommitState(&editor, &state);
-                    layerNotInstanced:;// don't add the layer.
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
 
+                    layerNotInstanced:;// don't add the layer.
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_SELECT)) {
                     if (HandleIsColliding(transform, mousePos, state.frames[state.frameIdx].pos)) {
-                        EditorSetMode(&editor, EDITOR_MODE_DRAGGING_FRAME_POS);
+                        mode = MODE_DRAGGING_FRAME_POS;
                     } else {
                         if (state.layerIdx >= 0) {
-                            editor.draggingHandle = LayerHandleSelect(state.layers + state.layerIdx, state.frameIdx, transform, mousePos);
+                            draggingHandle = LayerHandleSelect(state.layers + state.layerIdx, state.frameIdx, transform, mousePos);
                         } else {
-                            editor.draggingHandle = HANDLE_NONE;
+                            draggingHandle = HANDLE_NONE;
                         }
 
                         if (draggingHandle != HANDLE_NONE) {
-                            EditorSetMode(EDITOR_MODE_DRAGGING_HANDLE);
+                            mode = MODE_DRAGGING_HANDLE;
                         } else {
                             panningSpriteLocalPos = Transform2DToLocal(transform, mousePos);
-                            EditorSetMode(EDITOR_MODE_PANNING_SPRITE);
+                            mode = MODE_PANNING_SPRITE;
                         }
                     }
                 } else if (IsKeyPressed(KEY_PLAY_ANIMATION)) {
-                    EditorSetMode(editor.mode == EDITOR_MODE_IDLE ? EDITOR_MODE_PLAYING : EDITOR_MODE_IDLE);
-                
+                    if (mode == MODE_PLAYING) {
+                        mode = MODE_IDLE;
+                    } else {
+                        mode = MODE_PLAYING;
+                        playingFrameTime = 0;
+                    }
                 } else {
                     int frameDir = (IsKeyPressed(KEY_FRAME_NEXT) ? 1 : 0) - (IsKeyPressed(KEY_FRAME_PREVIOUS) ? 1 : 0);
                     if (frameDir) {
+                        mode = MODE_IDLE;
                         int newFrame = state.frameIdx + frameDir;
 
                         if (newFrame < 0) state.frameIdx = state.frameCount - 1;
@@ -436,12 +455,25 @@ int main(int argc, char **argv) {
 
                     int layerDir = (IsKeyPressed(KEY_LAYER_NEXT) ? 1 : 0) - (IsKeyPressed(KEY_LAYER_PREVIOUS) ? 1 : 0);
                     if (layerDir) {
+                        mode = MODE_IDLE;
                         state.layerIdx = Clamp(state.layerIdx + layerDir, -1, state.layerCount - 1);
                     }
                 }
                 break;
         }
 
+        // playing tick update (not related to model)
+        if (mode == MODE_PLAYING) {
+            playingFrameTime += (int) (GetFrameTime() * FRAME_DURATION_UNIT_PER_SECOND);
+            int frameDuration = state.frames[state.frameIdx].duration;
+            if (playingFrameTime >= frameDuration)
+            {
+                playingFrameTime -= frameDuration;
+                int newFrameIdx = state.frameIdx + 1;
+                state.frameIdx = newFrameIdx >= state.frameCount ? 0 : newFrameIdx;
+            }
+        }
+        
         // drawing
         BeginDrawing();
         ClearBackground(COLOR_BACKGROUND);
@@ -503,7 +535,12 @@ int main(int argc, char **argv) {
             GuiLabel(rectLabel, "Layer Name");
             Layer *layer = state.layers + state.layerIdx;
             if (GuiTextBox(rectValue, layer->name, layer->nameBufferLength, mode == MODE_EDIT_LAYER_NAME)) {
-                mode = MODE_EDIT_LAYER_NAME;
+                if (mode == MODE_EDIT_LAYER_NAME) {
+                    EditorHistoryCommitState(&history, &state);
+                    mode = MODE_IDLE;
+                } else {
+                    mode = MODE_EDIT_LAYER_NAME;
+                }
             }
             
             // If the user has filled up the name buffer, reallocate it.
@@ -518,7 +555,12 @@ int main(int argc, char **argv) {
                 
                 GuiLabel(rectLabel, "Hitbox Damage");
                 if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.damage, 0, INT_MAX, mode == MODE_EDIT_HITBOX_DAMAGE)) {
-                    mode = MODE_EDIT_HITBOX_DAMAGE;
+                    if (mode == MODE_EDIT_HITBOX_DAMAGE) {
+                        EditorHistoryCommitState(&history, &state);
+                        mode = MODE_IDLE;
+                    } else {
+                        mode = MODE_EDIT_HITBOX_DAMAGE;
+                    }
                 }
                 
                 rectLabel.y += rectStroke;
@@ -526,7 +568,12 @@ int main(int argc, char **argv) {
 
                 GuiLabel(rectLabel, "Hitbox Stun (ms)");
                 if (GuiValueBox(rectValue, NULL, &state.layers[state.layerIdx].hitbox.stun, 0, INT_MAX, mode == MODE_EDIT_HITBOX_STUN)) {
-                    mode = MODE_EDIT_HITBOX_STUN;
+                    if (mode == MODE_EDIT_HITBOX_STUN) {
+                        EditorHistoryCommitState(&history, &state);
+                        mode = MODE_IDLE;
+                    } else {
+                        mode = MODE_EDIT_HITBOX_STUN;
+                    }
                 }
             }
         }
