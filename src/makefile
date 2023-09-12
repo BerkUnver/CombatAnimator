@@ -1,4 +1,4 @@
-FILES = main.c layer.c editor_history.c string_buffer.c transform_2d.c list.c
+FILES = main.c layer.c editor_history.c string_buffer.c transform_2d.c list.c gui.c
 
 ifeq (${OS},Windows_NT)
     BUILD_NAME := cac.exe

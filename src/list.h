@@ -1,6 +1,8 @@
 #ifndef LIST_H
 #define LIST_H
 
+#include <stdlib.h>
+
 #define LIST_ALLOC_MINIMUM 4
 
 // List consists of a header followed immediately by the data in the list.
@@ -15,19 +17,17 @@ typedef struct ListHeader {
     // Might want a custom allocator here in the future.
 } ListHeader;
 
-// Internal functions used by macros.
-void *listNew(int itemSize, int count);
-void *listClone(void *list);
-
 #define LIST(T) T *
-#define LIST_NEW(T) ((T *) listNew(sizeof(T), 0))
-#define LIST_NEW_SIZED(T, count) ((T *) listNew(sizeof(T), count))
+void *ListNew(int itemSize, int count);
+#define LIST_NEW(T) ((T *) ListNew(sizeof(T), 0))
+#define LIST_NEW_SIZED(T, count) ((T *) ListNew(sizeof(T), count))
 
 #define LIST_HEADER(list) (((ListHeader *) (list)) - 1)
 #define LIST_COUNT(list) LIST_HEADER(list)->count
-#define LIST_FOR_EACH(list, i) for (int i = 0; i < LIST_HEADER(list)->count; i++)
 #define LIST_FREE(list) free(LIST_HEADER(list))
-#define LIST_CLONE(T, list) ((T *) listClone(list))
+
+void *ListClone(LIST(void) list);
+#define LIST_CLONE(T, list) ((T *) ListClone(list))
 
 // I'm pretty sure that 'item' won't be evaluated twice because of the sizeof operator.
 #define LIST_ADD(listPtr, item) \
@@ -43,10 +43,7 @@ do {\
     header->count++;\
 } while (0)
 
-#define LIST_SHRINK(list, count) \
-do {\
-    LIST_HEADER(list)->count = (count);\
-} while (0)
+#define LIST_SHRINK(list, countNew) LIST_HEADER(list)->count = (countNew);
 
 #define LIST_POP(list) \
 do {\
@@ -54,3 +51,8 @@ do {\
     if (header->count > 0) header->count--;\
 } while (0)
 #endif
+
+void ListAddMany(LIST(void) * list, LIST(void) listEnd);
+#define LIST_ADD_MANY(listPtr, listEnd) ListAddMany((LIST(void) *) listPtr, (LIST(void)) listEnd);
+
+

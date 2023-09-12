@@ -18,6 +18,7 @@
 #include "list.h"
 #include "string_buffer.h"
 #include "transform_2d.h"
+#include "gui.h"
 
 #define FILE_EXTENSION "json"
 #define APP_NAME "Combat Animator"
@@ -90,7 +91,7 @@ bool GuiFlags(Rectangle rect, unsigned int *flags) {
         char name[3];
         int idx = x * 4 + y;
         sprintf(name, "%i", idx);
-        unsigned int mask = 1 << idx;
+        unsigned int mask = 1u << idx;
         unsigned int flagsOld = *flags;
 
         if (GuiToggle(rectToggle, name, *flags & mask)) {
@@ -180,6 +181,10 @@ void RecursiveUpdate(const char *path) {
     closedir(dir);
 }
 
+void WindowUpdate(Window *window) {
+    WindowButton(window, "test button");
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         puts("Please put the name of the png file to make an animation for as the argument to this application.");
@@ -221,7 +226,8 @@ int main(int argc, char **argv) {
     GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
     GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
 
-    const int fontSize = GetFontDefault().baseSize;
+    Font fontDefault = GetFontDefault();
+    const int fontSize = fontDefault.baseSize;
 
     // load state from file or create new state if load failed
     char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
@@ -266,6 +272,27 @@ int main(int argc, char **argv) {
     int playingFrameTime = 0;
     Handle draggingHandle = HANDLE_NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
+     
+
+    WindowTheme windowTheme = {
+        .font = &fontDefault,
+        .fontSize = fontSize,
+        .margin = 10,
+        .titleColor = PURPLE,
+        .bodyColor = BLUE,
+
+        .fontColor = RAYWHITE,
+        .fontHoveredColor = WHITE,
+        .fontClickedColor = GRAY,
+
+        .elementColor = DARKBLUE,
+        .elementHoveredColor = BLUE,
+        .elementClickedColor = DARKBLUE
+    };
+
+    Window window = WindowNew((Vector2) {100, 100}, "Test", &windowTheme, &WindowUpdate);
+    LIST(Window *) windows = LIST_NEW_SIZED(Window *, 1);
+    windows[0] = &window;
 
     while (!WindowShouldClose()) {
 
@@ -561,13 +588,13 @@ int main(int argc, char **argv) {
         Rectangle rectLabel = { 0.0f, 0.0f, 128.0f, rectStroke };
         Rectangle rectValue = { 128.0f, 0.0f, 128.0f, rectStroke };
 
+        // Draw gui
+        
         GuiLabel(rectLabel, "Frame Duration (ms)");
         if (GuiValueBox(rectValue, NULL, &state.frames[state.frameIdx].duration, 1, INT_MAX, mode == MODE_EDIT_FRAME_DURATION)) {
             mode = MODE_EDIT_FRAME_DURATION;
         }
 
-       
-        // Draw gui
         if (state.layerIdx >= 0) {    
             rectLabel.y += rectStroke;
             rectValue.y += rectStroke;
@@ -668,7 +695,14 @@ int main(int argc, char **argv) {
         }
 
         EndDrawing();
+
+        bool mouseEnabled = false;
+        LIST(DrawCommand) commands = WindowsUpdate(windows, &mouseEnabled);
+        DrawCommandsDraw(commands);
+        LIST_FREE(commands);
     }
+    
+    LIST_FREE(windows);
 
     EditorHistoryFree(&history);
     EditorStateFree(&state);
