@@ -281,18 +281,25 @@ int main(int argc, char **argv) {
         .titleColor = PURPLE,
         .bodyColor = BLUE,
 
-        .fontColor = RAYWHITE,
-        .fontHoveredColor = WHITE,
-        .fontClickedColor = GRAY,
+        .fontColor = (Color) {255, 255, 255, 255},
+        .fontHoveredColor = (Color) {255, 255, 255, 255},
+        .fontClickedColor = (Color) {235, 235, 235, 255},
 
         .elementColor = DARKBLUE,
         .elementHoveredColor = BLUE,
-        .elementClickedColor = DARKBLUE
+        .elementClickedColor = DARKBLUE,
+
+        .entryFieldColor = (Color) {245, 245, 245, 255},
+        .entryFieldHoveredColor = (Color) {255, 255, 255, 255},
+        .entryFieldClickedColor = (Color) {235, 235, 235, 255},
+
+        .entryFieldFontColor = (Color) {0, 0, 0, 255},
+        .entryFieldClickedFontColor = (Color) {0, 0, 0, 255},
+        .entryFieldHoveredFontColor = (Color) {25, 25, 25, 255}
     };
 
-    Window window = WindowNew((Vector2) {100, 100}, "Test", &windowTheme, &WindowUpdate);
-    LIST(Window *) windows = LIST_NEW_SIZED(Window *, 1);
-    windows[0] = &window;
+    WindowManager manager = WindowManagerNew();
+    WindowManagerAddWindow(&manager, "Test", &windowTheme, (Vector2) {100, 100}, 0);
 
     while (!WindowShouldClose()) {
 
@@ -694,15 +701,19 @@ int main(int argc, char **argv) {
             }
         }
 
+        
+        WindowManagerStart(&manager);
+        Window *window;
+        while ((window = WindowManagerNext(&manager))) {
+            WindowButton(window, "Test");
+            WindowButton(window, "Test2");
+        }
+        WindowManagerEnd(&manager);
+            
         EndDrawing();
-
-        bool mouseEnabled = false;
-        LIST(DrawCommand) commands = WindowsUpdate(windows, &mouseEnabled);
-        DrawCommandsDraw(commands);
-        LIST_FREE(commands);
     }
     
-    LIST_FREE(windows);
+    WindowManagerFree(&manager);
 
     EditorHistoryFree(&history);
     EditorStateFree(&state);

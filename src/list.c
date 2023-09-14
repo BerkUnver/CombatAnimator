@@ -38,20 +38,20 @@ void ListAddMany(LIST(void) *list, LIST(void) listEnd) {
     
     int headerCountNew = header->count + headerEnd->count;
     if (headerCountNew > header->countAllocated) {
-        if (headerCountNew <= 0) {
-            header->countAllocated = 0;
-        } else if (headerCountNew < LIST_ALLOC_MINIMUM) {
-            header->countAllocated = LIST_ALLOC_MINIMUM;
+        int alloc = 0;
+        
+        if (headerCountNew < LIST_ALLOC_MINIMUM) {
+            alloc = LIST_ALLOC_MINIMUM;
         } else if (headerCountNew < ((float) header->countAllocated) * 1.5f) {
-            header->countAllocated = ((float) header->countAllocated) * 1.5f;
+            alloc = ((float) header->countAllocated) * 1.5f;
         } else {
-            header->countAllocated = header->count;
+            alloc = headerCountNew;
         }
 
-        header = realloc(header, header->itemSize * header->countAllocated);
+        header = realloc(header, sizeof(ListHeader) + header->itemSize * alloc);
+        header->countAllocated = alloc;
         *list = (void *) (header + 1);
-    }
-    
+    } 
     memcpy(*list + header->itemSize * header->count, listEnd, headerEnd->count * headerEnd->itemSize);
     header->count = headerCountNew;
 }

@@ -54,33 +54,58 @@ typedef struct WindowTheme {
     Color elementColor;
     Color elementHoveredColor;
     Color elementClickedColor;
+
+    Color entryFieldColor;
+    Color entryFieldHoveredColor;
+    Color entryFieldClickedColor;
+    
+    Color entryFieldFontColor;
+    Color entryFieldClickedFontColor;
+    Color entryFieldHoveredFontColor;
 } WindowTheme;
 
+struct Window;
+
+typedef struct WindowManager {
+    LIST(struct Window) windows;
+    LIST(DrawCommand) commands; // window's current commands
+    LIST(DrawCommand) commandsAll; // all commands
+
+    bool mousePresent;
+    Vector2 mousePos;
+    bool mousePressed;
+    bool mouseDown;
+    char charPressed;
+    
+    int windowIdx;
+} WindowManager;
+
 typedef struct Window {
-    WindowTheme *theme;
-    LIST(DrawCommand) commands;
-    
-    void (*update)(struct Window *self);
-    
-    Rectangle rect;
-    
+    int id;
     char *title;
+    
+    WindowTheme *theme;
+    WindowManager *manager;
+    
+    Rectangle rect; 
     
     // @todo: Add these
     // bool closed;
     // bool closable;
-    
-    bool mousePresent;
-    Vector2 mousePos;
-    bool mousePressed;
 } Window;
 
 DrawCommand DrawCommandRect(Rectangle rect, Color color);
 DrawCommand DrawCommandString(Vector2 pos, char *text, Font *font, int fontSize, Color color);
 void DrawCommandsDraw(LIST(DrawCommand) commands);
 
-Window WindowNew(Vector2 pos, char *title, WindowTheme *theme, void (*update)(Window *window));
-LIST(DrawCommand) WindowsUpdate(LIST(Window *) windows, bool *mouseEnabled);
 bool WindowButton(Window *window, char *text);
+void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled);
+
+WindowManager WindowManagerNew();
+void WindowManagerFree(WindowManager *manager);
+void WindowManagerAddWindow(WindowManager *manager, char *title, WindowTheme *theme, Vector2 pos, int id);
+void WindowManagerStart(WindowManager *manager);
+Window *WindowManagerNext(WindowManager *manager);
+void WindowManagerEnd(WindowManager *manager);
 
 #endif
