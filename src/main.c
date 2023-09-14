@@ -181,10 +181,6 @@ void RecursiveUpdate(const char *path) {
     closedir(dir);
 }
 
-void WindowUpdate(Window *window) {
-    WindowButton(window, "test button");
-}
-
 int main(int argc, char **argv) {
     if (argc < 2) {
         puts("Please put the name of the png file to make an animation for as the argument to this application.");
@@ -276,26 +272,42 @@ int main(int argc, char **argv) {
 
     WindowTheme windowTheme = {
         .font = &fontDefault,
-        .fontSize = fontSize,
-        .margin = 10,
+        .fontSize = fontSize * 2,
+        .margin = 5,
+
         .titleColor = PURPLE,
         .bodyColor = BLUE,
+        .fontColor = (Color) {255, 255, 255, 255}
+    };
 
+    ButtonTheme buttonTheme = {
         .fontColor = (Color) {255, 255, 255, 255},
         .fontHoveredColor = (Color) {255, 255, 255, 255},
         .fontClickedColor = (Color) {235, 235, 235, 255},
 
-        .elementColor = DARKBLUE,
-        .elementHoveredColor = BLUE,
-        .elementClickedColor = DARKBLUE,
+        .color = DARKBLUE,
+        .hoveredColor = (Color) {0, 100, 200, 255},
+        .clickedColor = DARKBLUE
+    };
+    
+    bool textFieldEnabled = false;
+    StringBuffer textFieldBuffer = StringBufferNew();
+    StringBufferAddString(&textFieldBuffer, "Text");
+    TextFieldTheme textFieldTheme = {
+        .fieldWidthMin = 40,
+        .fieldMargin = 3,
 
-        .entryFieldColor = (Color) {245, 245, 245, 255},
-        .entryFieldHoveredColor = (Color) {255, 255, 255, 255},
-        .entryFieldClickedColor = (Color) {235, 235, 235, 255},
+        .color = buttonTheme.color,
+        .hoveredColor = buttonTheme.hoveredColor,
+        .clickedColor = buttonTheme.clickedColor,
 
-        .entryFieldFontColor = (Color) {0, 0, 0, 255},
-        .entryFieldClickedFontColor = (Color) {0, 0, 0, 255},
-        .entryFieldHoveredFontColor = (Color) {25, 25, 25, 255}
+        .fieldColor = (Color) {245, 245, 245, 255},
+        .fieldHoveredColor = (Color) {255, 255, 255, 255},
+        .fieldClickedColor = (Color) {235, 235, 235, 255},
+
+        .fontColor = (Color) {0, 0, 0, 255},
+        .fontHoveredColor = (Color) {0, 0, 0, 255},
+        .fontClickedColor = (Color) {25, 25, 25, 255}
     };
 
     WindowManager manager = WindowManagerNew();
@@ -705,14 +717,15 @@ int main(int argc, char **argv) {
         WindowManagerStart(&manager);
         Window *window;
         while ((window = WindowManagerNext(&manager))) {
-            WindowButton(window, "Test");
-            WindowButton(window, "Test2");
+            WindowButton(window, "Test", &buttonTheme);
+            WindowButton(window, "Test2", &buttonTheme);
+            WindowTextField(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
         }
         WindowManagerEnd(&manager);
             
         EndDrawing();
     }
-    
+    StringBufferFree(&textFieldBuffer); 
     WindowManagerFree(&manager);
 
     EditorHistoryFree(&history);

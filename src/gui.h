@@ -5,17 +5,6 @@
 
 #include "list.h"
 
-typedef struct ButtonTheme {
-    Font *font;
-    int fontSize;
-    Color colorIdleRect;
-    Color colorIdleText;
-    Color colorHoveredRect;
-    Color colorHoveredText;
-    Color colorClickedRect;
-    Color colorClickedText;
-} ButtonTheme;
-
 typedef struct DrawCommand {
     // Ideally this would be vertex information and texture handles but we'll just do this for now
     enum {
@@ -39,6 +28,16 @@ typedef struct DrawCommand {
     };
 } DrawCommand;
 
+typedef struct ButtonTheme {
+    Color color;
+    Color clickedColor;
+    Color hoveredColor; 
+
+    Color fontColor;
+    Color fontHoveredColor;
+    Color fontClickedColor;
+} ButtonTheme;
+
 typedef struct WindowTheme {
     Font *font;
     int fontSize;
@@ -46,23 +45,25 @@ typedef struct WindowTheme {
     
     Color titleColor;
     Color bodyColor;
+    Color fontColor;
+} WindowTheme;
+
+typedef struct TextFieldTheme {
+    int fieldWidthMin;
+    int fieldMargin;
+
+    Color color;
+    Color hoveredColor;
+    Color clickedColor;
+    
+    Color fieldColor;
+    Color fieldHoveredColor;
+    Color fieldClickedColor;
 
     Color fontColor;
     Color fontHoveredColor;
     Color fontClickedColor;
-
-    Color elementColor;
-    Color elementHoveredColor;
-    Color elementClickedColor;
-
-    Color entryFieldColor;
-    Color entryFieldHoveredColor;
-    Color entryFieldClickedColor;
-    
-    Color entryFieldFontColor;
-    Color entryFieldClickedFontColor;
-    Color entryFieldHoveredFontColor;
-} WindowTheme;
+} TextFieldTheme;
 
 struct Window;
 
@@ -75,8 +76,7 @@ typedef struct WindowManager {
     Vector2 mousePos;
     bool mousePressed;
     bool mouseDown;
-    char charPressed;
-    
+
     int windowIdx;
 } WindowManager;
 
@@ -98,8 +98,8 @@ DrawCommand DrawCommandRect(Rectangle rect, Color color);
 DrawCommand DrawCommandString(Vector2 pos, char *text, Font *font, int fontSize, Color color);
 void DrawCommandsDraw(LIST(DrawCommand) commands);
 
-bool WindowButton(Window *window, char *text);
-void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled);
+bool WindowButton(Window *window, char *text, ButtonTheme *theme);
+void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme);
 
 WindowManager WindowManagerNew();
 void WindowManagerFree(WindowManager *manager);

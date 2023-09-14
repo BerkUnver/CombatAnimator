@@ -30,7 +30,7 @@ DrawCommand DrawCommandString(Vector2 pos, char *text, Font *font, int fontSize,
     };
 }
 
-bool WindowButton(Window *window, char *text) {
+bool WindowButton(Window *window, char *text, ButtonTheme *theme) {
     int textWidth = MeasureText(text, window->theme->fontSize) + window->theme->margin * 2;
     int textHeight = window->theme->fontSize + window->theme->margin * 2;
     
@@ -46,22 +46,23 @@ bool WindowButton(Window *window, char *text) {
         window->rect.y + window->rect.height + window->theme->margin 
     };
     
-    if (window->rect.width < textWidth) window->rect.width = textWidth + window->theme->margin * 2; 
-    window->rect.height += window->theme->fontSize + window->theme->margin * 2;
+    int rowWidth = textWidth + window->theme->margin * 2;
+    if (window->rect.width < rowWidth) window->rect.width = rowWidth; 
+    window->rect.height += window->theme->fontSize + window->theme->margin * 3;
     
-    Color colorRect = window->theme->elementColor;
-    Color colorText = window->theme->fontColor;
+    Color colorRect = theme->color;
+    Color colorText = theme->fontColor;
     bool pressed = false;
 
     WindowManager *m = window->manager;
     if (m->mousePresent && CheckCollisionPointRec(m->mousePos, rect)) {
         if (m->mousePressed || m->mouseDown) { 
-            colorRect = window->theme->elementClickedColor;
-            colorText = window->theme->fontClickedColor;
+            colorRect = theme->clickedColor;
+            colorText = theme->fontClickedColor;
             if (m->mousePressed) pressed = true;
         } else {
-            colorRect = window->theme->elementHoveredColor;
-            colorText = window->theme->fontHoveredColor;
+            colorRect = theme->hoveredColor;
+            colorText = theme->fontHoveredColor;
         }
     }
     
@@ -71,68 +72,71 @@ bool WindowButton(Window *window, char *text) {
     return pressed;
 }
 
-/*
-void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled) {
-    Color elementColor;
-    Color fieldColor;
-    Color fontColor;
- 
+void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme) {
     if (*enabled) {
-        char c = window->charPressed;
+        char c = GetCharPressed();
         if (' ' <= c && c <= '~') {
             StringBufferAddChar(buffer, c);
-        } else if (c == 127 && buffer->length > 0) { // delete
-            StringBufferRemoveChar(buffer);
-        }  
+        }
+        
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) *enabled = false;
+        if (IsKeyPressed(KEY_BACKSPACE)) StringBufferRemoveChar(buffer);
     }
-
-    int textWidth = MeasureText(buffer->raw, window->theme->fontSize) + window->theme->margin * 2;
-    int textHeight = window->theme->fontSize + window->theme->margin * 2;
+    
+    int textWidth = MeasureText(buffer->raw, window->theme->fontSize);
+    int fieldWidth = textWidth < theme->fieldWidthMin ? theme->fieldWidthMin : textWidth;
 
     Rectangle rect = {
         window->rect.x + window->theme->margin,
         window->rect.y + window->rect.height,
-        textWidth,
-        textHeight
+        fieldWidth + window->theme->margin * 2 + theme->fieldMargin * 2,
+        window->theme->fontSize + window->theme->margin * 2 + theme->fieldMargin * 2
+    };   
+    
+    Rectangle fieldRect = {
+        rect.x + window->theme->margin,
+        rect.y + window->theme->margin,
+        fieldWidth + theme->fieldMargin * 2,
+        window->theme->fontSize + theme->fieldMargin * 2
+    };
+
+    Vector2 textPos = {
+        fieldRect.x + theme->fieldMargin,
+        fieldRect.y + theme->fieldMargin
     };
     
-    if (window->mousePresent && window->mousePressed && CheckCollisionPointRec(window->mousePos, rect)) {
-        if (window->mousePressed) {
-            elementColor = window->theme->elementClickedColor;
-            fieldColor = window->theme->entryFieldClickedColor;
-            fontColor = window->theme->entryFieldClickedFontColor;
-        } else {
-            elementColor = window->theme->elementHoveredColor;
-            fieldColor = window->theme->entryFieldHoveredColor;
-            fontColor = window->theme->entryFieldClickedFontColor;
-        }
+    Color color;
+    Color fieldColor;
+    Color fontColor;
+   
+    WindowManager *m = window->manager;
+    if (*enabled) {
+        color = theme->clickedColor;
+        fieldColor = theme->fieldClickedColor;
+        fontColor = theme->fontClickedColor;
+    } else if (m->mousePresent && CheckCollisionPointRec(m->mousePos, rect)) {
+        color = theme->hoveredColor;
+        fieldColor = theme->fieldHoveredColor;
+        fontColor = theme->fontHoveredColor;
     } else {
-        elementColor = window->theme->elementColor;
-        fieldColor = window->theme->entryFieldColor;
-        fontColor = window->theme->entryFieldFontColor;
+        color = theme->color;
+        fieldColor = theme->fieldColor;
+        fontColor = theme->fontColor;
     }
 
-    if (enabled) {
-        if (window->mousePresent && window->mousePressed && !CheckCollisionPointRec(window->mousePos, rect)) {
+    if (*enabled) {
+        if (m->mousePresent && m->mousePressed && !CheckCollisionPointRec(m->mousePos, rect)) {
             *enabled = false;
         }
     } else {
-        if (window->mousePresent && window->mousePressed && CheckCollisionPointRec(window->mousePos, rect)) {
+        if (m->mousePresent && m->mousePressed && CheckCollisionPointRec(m->mousePos, rect)) {
             *enabled = true;
         } 
     }
-
-    Vector2 textPos = {
-        window->rect.x + window->theme->margin * 2,
-        window->rect.y + window->theme->margin + window->rect.height
-    };
-
-    Rectangle fieldRect = {
-        textPos.x,
-        window->rect.y + window->theme->margin,
-        textWidth,
-        window->theme->fontSize
-    };
+ 
+    int rowWidth = rect.width + window->theme->margin * 2;
+    if (window->rect.width < rowWidth) window->rect.width = rowWidth;
+    window->rect.height += rect.height + window->theme->margin;
     
     DrawCommand textCmd = DrawCommandString(
         textPos, 
@@ -141,12 +145,11 @@ void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled) {
         window->theme->fontSize,
         fontColor
     );
-
-    LIST_ADD(&window->commands, DrawCommandRect(rect, elementColor));
-    LIST_ADD(&window->commands, DrawCommandRect(fieldRect, fieldColor));
-    LIST_ADD(&window->commands, textCmd);
+    
+    LIST_ADD(&m->commands, DrawCommandRect(rect, color));
+    LIST_ADD(&m->commands, DrawCommandRect(fieldRect, fieldColor));
+    LIST_ADD(&m->commands, textCmd);
 }
-*/
 
 WindowManager WindowManagerNew() {
     return (WindowManager) {
@@ -183,7 +186,6 @@ void WindowManagerStart(WindowManager *manager) {
     manager->mousePos = GetMousePosition();
     manager->mousePressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     manager->mouseDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-    manager->charPressed = GetCharPressed();
 }
 
 Window *WindowManagerNext(WindowManager *manager) {
@@ -225,7 +227,7 @@ Window *WindowManagerNext(WindowManager *manager) {
     Window *window = manager->windows + manager->windowIdx;
     manager->windowIdx++;
     window->rect.width = 0;
-    window->rect.height = window->theme->margin * 2 + window->theme->fontSize;
+    window->rect.height = window->theme->fontSize + window->theme->margin * 3; 
 
     return window;
 }
@@ -243,7 +245,7 @@ void WindowManagerEnd(WindowManager *manager) {
                     command->string.text, 
                     command->string.pos, 
                     command->string.fontSize,
-                    1.0f,
+                    ((float) command->string.fontSize / (float) command->string.font->baseSize),
                     command->string.color
                 );
                 break;
