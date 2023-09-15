@@ -100,6 +100,7 @@ void DrawCommandsDraw(LIST(DrawCommand) commands);
 
 bool WindowButton(Window *window, char *text, ButtonTheme *theme);
 void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme);
+void WindowNumberField(Window *window, int *number, bool *enabed, TextFieldTheme *theme);
 
 WindowManager WindowManagerNew();
 void WindowManagerFree(WindowManager *manager);

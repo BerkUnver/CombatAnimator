@@ -293,6 +293,10 @@ int main(int argc, char **argv) {
     bool textFieldEnabled = false;
     StringBuffer textFieldBuffer = StringBufferNew();
     StringBufferAddString(&textFieldBuffer, "Text");
+
+    bool numberFieldEnabled = false;
+    int numberFieldNumber = 69420;
+
     TextFieldTheme textFieldTheme = {
         .fieldWidthMin = 40,
         .fieldMargin = 3,
@@ -720,6 +724,7 @@ int main(int argc, char **argv) {
             WindowButton(window, "Test", &buttonTheme);
             WindowButton(window, "Test2", &buttonTheme);
             WindowTextField(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
+            WindowNumberField(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme); 
         }
         WindowManagerEnd(&manager);
             

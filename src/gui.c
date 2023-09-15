@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "raylib.h"
 #include "raygui.h"
@@ -30,8 +31,12 @@ DrawCommand DrawCommandString(Vector2 pos, char *text, Font *font, int fontSize,
     };
 }
 
+static int WindowMeasureText(Window *window, char *text) {
+    return (int) MeasureTextEx(*window->theme->font, text, window->theme->fontSize, window->theme->fontSize / window->theme->font->baseSize).x;
+}
+
 bool WindowButton(Window *window, char *text, ButtonTheme *theme) {
-    int textWidth = MeasureText(text, window->theme->fontSize) + window->theme->margin * 2;
+    int textWidth = WindowMeasureText(window, text) + window->theme->margin * 2;
     int textHeight = window->theme->fontSize + window->theme->margin * 2;
     
     Rectangle rect = { 
@@ -67,23 +72,26 @@ bool WindowButton(Window *window, char *text, ButtonTheme *theme) {
     }
     
     LIST_ADD(&m->commands, DrawCommandRect(rect, colorRect));
-    LIST_ADD(&m->commands, DrawCommandString(textPos, text, window->theme->font, window->theme->fontSize, colorText));
+    LIST_ADD(&m->commands, DrawCommandString(textPos, strdup(text), window->theme->font, window->theme->fontSize, colorText));
     
     return pressed;
 }
 
-void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme) {
-    if (*enabled) {
-        char c = GetCharPressed();
-        if (' ' <= c && c <= '~') {
-            StringBufferAddChar(buffer, c);
+static void RectToggle(WindowManager *m, Rectangle rect, bool *enabled) {
+    if(*enabled) {
+        if (m->mousePresent && m->mousePressed && !CheckCollisionPointRec(m->mousePos, rect)) {
+            *enabled = false;
         }
-        
-        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) *enabled = false;
-        if (IsKeyPressed(KEY_BACKSPACE)) StringBufferRemoveChar(buffer);
+    } else {
+        if (m->mousePresent && m->mousePressed && CheckCollisionPointRec(m->mousePos, rect)) {
+            *enabled = true;
+        } 
     }
-    
-    int textWidth = MeasureText(buffer->raw, window->theme->fontSize);
+
+}
+
+static void WindowField(Window *window, char *text, bool *enabled, TextFieldTheme *theme) { 
+    int textWidth = WindowMeasureText(window, text);
     int fieldWidth = textWidth < theme->fieldWidthMin ? theme->fieldWidthMin : textWidth;
 
     Rectangle rect = {
@@ -123,16 +131,8 @@ void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFi
         fieldColor = theme->fieldColor;
         fontColor = theme->fontColor;
     }
-
-    if (*enabled) {
-        if (m->mousePresent && m->mousePressed && !CheckCollisionPointRec(m->mousePos, rect)) {
-            *enabled = false;
-        }
-    } else {
-        if (m->mousePresent && m->mousePressed && CheckCollisionPointRec(m->mousePos, rect)) {
-            *enabled = true;
-        } 
-    }
+    
+    RectToggle(m, rect, enabled);
  
     int rowWidth = rect.width + window->theme->margin * 2;
     if (window->rect.width < rowWidth) window->rect.width = rowWidth;
@@ -140,7 +140,7 @@ void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFi
     
     DrawCommand textCmd = DrawCommandString(
         textPos, 
-        buffer->raw, // This is sus as hell 
+        strdup(text),
         window->theme->font, 
         window->theme->fontSize,
         fontColor
@@ -149,6 +149,41 @@ void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFi
     LIST_ADD(&m->commands, DrawCommandRect(rect, color));
     LIST_ADD(&m->commands, DrawCommandRect(fieldRect, fieldColor));
     LIST_ADD(&m->commands, textCmd);
+
+}
+
+void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme) {
+    if (*enabled) {
+        char c = GetCharPressed();
+        if (' ' <= c && c <= '~') {
+            StringBufferAddChar(buffer, c);
+        }
+        
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) *enabled = false;
+        if (IsKeyPressed(KEY_BACKSPACE)) StringBufferRemoveChar(buffer);
+    }
+    
+    WindowField(window, buffer->raw, enabled, theme);
+}
+
+void WindowNumberField(Window *window, int *number, bool *enabled, TextFieldTheme *theme) {
+    if (*enabled) {
+        int c = ((int) GetCharPressed()) - '0';
+        if (0 <= c && c <= 9) {
+            long long next = (((long long) *number) * 10 + c);
+            if (next < (long long) INT_MAX) *number = (int) next;
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (*number < 10) *number = 0;
+            else *number /= 10;
+        }
+    }
+
+    char text[32];
+    snprintf(text, sizeof(text), "%i", *number);
+    
+    WindowField(window, text, enabled, theme);
 }
 
 WindowManager WindowManagerNew() {
@@ -215,7 +250,7 @@ Window *WindowManagerNext(WindowManager *manager) {
         };
         
         LIST_ADD(&manager->commandsAll, DrawCommandRect(titleRect, windowPrevious->theme->titleColor));
-        LIST_ADD(&manager->commandsAll, DrawCommandString(titlePos, windowPrevious->title, windowPrevious->theme->font, windowPrevious->theme->fontSize, windowPrevious->theme->fontColor));
+        LIST_ADD(&manager->commandsAll, DrawCommandString(titlePos, strdup(windowPrevious->title), windowPrevious->theme->font, windowPrevious->theme->fontSize, windowPrevious->theme->fontColor));
         LIST_ADD(&manager->commandsAll, DrawCommandRect(bodyRect, windowPrevious->theme->bodyColor));
         LIST_ADD_MANY(&manager->commandsAll, manager->commands);
 
@@ -248,6 +283,7 @@ void WindowManagerEnd(WindowManager *manager) {
                     ((float) command->string.fontSize / (float) command->string.font->baseSize),
                     command->string.color
                 );
+                free(command->string.text);
                 break;
         }
     }
