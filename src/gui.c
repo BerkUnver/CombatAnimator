@@ -90,7 +90,7 @@ static void RectToggle(WindowManager *m, Rectangle rect, bool *enabled) {
 
 }
 
-static void WindowField(Window *window, char *text, bool *enabled, TextFieldTheme *theme) { 
+static void WindowField(Window *window, char *text, bool *enabled, FieldTheme *theme) { 
     int textWidth = WindowMeasureText(window, text);
     int fieldWidth = textWidth < theme->fieldWidthMin ? theme->fieldWidthMin : textWidth;
 
@@ -152,7 +152,7 @@ static void WindowField(Window *window, char *text, bool *enabled, TextFieldThem
 
 }
 
-void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme) {
+void WindowFieldText(Window *window, StringBuffer *buffer, bool *enabled, FieldTheme *theme) {
     if (*enabled) {
         char c = GetCharPressed();
         if (' ' <= c && c <= '~') {
@@ -166,7 +166,7 @@ void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFi
     WindowField(window, buffer->raw, enabled, theme);
 }
 
-void WindowNumberField(Window *window, int *number, bool *enabled, TextFieldTheme *theme) {
+void WindowFieldNumber(Window *window, int *number, bool *enabled, FieldTheme *theme) {
     if (*enabled) {
         int c = ((int) GetCharPressed()) - '0';
         if (0 <= c && c <= 9) {

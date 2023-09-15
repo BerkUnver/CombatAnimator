@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
     bool numberFieldEnabled = false;
     int numberFieldNumber = 69420;
 
-    TextFieldTheme textFieldTheme = {
+    FieldTheme textFieldTheme = {
         .fieldWidthMin = 40,
         .fieldMargin = 3,
 
@@ -723,8 +723,8 @@ int main(int argc, char **argv) {
         while ((window = WindowManagerNext(&manager))) {
             WindowButton(window, "Test", &buttonTheme);
             WindowButton(window, "Test2", &buttonTheme);
-            WindowTextField(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
-            WindowNumberField(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme); 
+            WindowFieldText(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
+            WindowFieldNumber(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme); 
         }
         WindowManagerEnd(&manager);
             

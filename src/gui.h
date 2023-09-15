@@ -48,7 +48,7 @@ typedef struct WindowTheme {
     Color fontColor;
 } WindowTheme;
 
-typedef struct TextFieldTheme {
+typedef struct FieldTheme {
     int fieldWidthMin;
     int fieldMargin;
 
@@ -63,7 +63,7 @@ typedef struct TextFieldTheme {
     Color fontColor;
     Color fontHoveredColor;
     Color fontClickedColor;
-} TextFieldTheme;
+} FieldTheme;
 
 struct Window;
 
@@ -99,8 +99,8 @@ DrawCommand DrawCommandString(Vector2 pos, char *text, Font *font, int fontSize,
 void DrawCommandsDraw(LIST(DrawCommand) commands);
 
 bool WindowButton(Window *window, char *text, ButtonTheme *theme);
-void WindowTextField(Window *window, StringBuffer *buffer, bool *enabled, TextFieldTheme *theme);
-void WindowNumberField(Window *window, int *number, bool *enabed, TextFieldTheme *theme);
+void WindowFieldText(Window *window, StringBuffer *buffer, bool *enabled, FieldTheme *theme);
+void WindowFieldNumber(Window *window, int *number, bool *enabed, FieldTheme *theme);
 
 WindowManager WindowManagerNew();
 void WindowManagerFree(WindowManager *manager);
