@@ -269,7 +269,7 @@ int main(int argc, char **argv) {
     Handle draggingHandle = HANDLE_NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
      
-
+    /*
     WindowTheme windowTheme = {
         .font = &fontDefault,
         .fontSize = fontSize * 2,
@@ -315,7 +315,8 @@ int main(int argc, char **argv) {
     };
 
     WindowManager manager = WindowManagerNew();
-    WindowManagerAddWindow(&manager, "Test", &windowTheme, (Vector2) {100, 100}, 0);
+    WindowManagerAddWindow(&manager, "Window 0", &windowTheme, (Vector2) {100, 100}, 0);
+    */
 
     while (!WindowShouldClose()) {
 
@@ -717,22 +718,23 @@ int main(int argc, char **argv) {
             }
         }
 
-        
+        /*        
         WindowManagerStart(&manager);
         Window *window;
         while ((window = WindowManagerNext(&manager))) {
-            WindowButton(window, "Test", &buttonTheme);
-            WindowButton(window, "Test2", &buttonTheme);
+            WindowButton(window, "Test0_0", &buttonTheme);
+            WindowButton(window, "Test0_1", &buttonTheme);
             WindowFieldText(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
-            WindowFieldNumber(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme); 
+            WindowFieldNumber(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme);
         }
         WindowManagerEnd(&manager);
-            
+        */  
         EndDrawing();
     }
+    /*
     StringBufferFree(&textFieldBuffer); 
     WindowManagerFree(&manager);
-
+    */
     EditorHistoryFree(&history);
     EditorStateFree(&state);
     UnloadTexture(texture);

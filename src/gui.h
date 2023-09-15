@@ -78,6 +78,7 @@ typedef struct WindowManager {
     bool mouseDown;
 
     int windowIdx;
+
 } WindowManager;
 
 typedef struct Window {
