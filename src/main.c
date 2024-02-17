@@ -347,7 +347,8 @@ int main(int argc, char **argv) {
                     mode = MODE_IDLE;
                 } else {
                     Vector2 localMousePos = Transform2DToLocal(transform, mousePos);
-                    assert(LayerHandleSet(state.layers + state.layerIdx, state.frameIdx, draggingHandle, localMousePos));
+                    bool snapping = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+                    assert(LayerHandleSet(state.layers + state.layerIdx, state.frameIdx, draggingHandle, localMousePos, snapping));
                 }
                 break;
 

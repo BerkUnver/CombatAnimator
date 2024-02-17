@@ -4,12 +4,10 @@ ifeq (${OS},Windows_NT)
     BUILD_NAME := cac.exe
     OS_PATH := windows
 	# We install it here because it is a default part of PATH
-    INSTALL_PATH := C:/Windows
     COMPILER := gcc
     LIBRARIES_EXTERNAL := -lwinmm -lgdi32 -luser32 -lshell32
 else
     OS_NAME := ${shell uname -s}
-    INSTALL_PATH := /usr/local/bin
     BUILD_NAME := cac
     ifeq (${OS_NAME},Linux)
         OS_PATH := linux
@@ -28,7 +26,6 @@ BUILD_PATH := ../build/${BUILD_NAME}
 
 run:
 	make build
-	cp ${BUILD_PATH} ${INSTALL_PATH}/${BUILD_NAME}
 	(cd "../data" && exec ./${BUILD_PATH} Jab.png)
 
 clean:

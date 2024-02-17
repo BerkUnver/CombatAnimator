@@ -103,7 +103,7 @@ void HandleDraw(Vector2 pos, Color strokeColor);
 
 void LayerDraw(Layer *layer, int frame, Transform2D transform, bool handlesActive);
 Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2 globalMousePos);
-bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos);
+bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos, bool snapping);
 
 cJSON *ShapeSerialize(Shape shape);
 bool ShapeDeserialize(cJSON *json, Shape *shape, int version);

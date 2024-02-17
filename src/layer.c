@@ -301,7 +301,7 @@ Handle LayerHandleSelect(Layer *layer, int frame, Transform2D transform, Vector2
 }
 
 
-bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
+bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos, bool snapping) {
     switch (shape->type) {
         case SHAPE_CIRCLE:
             if (handle != HANDLE_CIRCLE_RADIUS) return false;
@@ -316,7 +316,14 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
 
         case SHAPE_CAPSULE:
             if (handle == HANDLE_CAPSULE_ROTATION) {
-                shape->capsule.rotation = Vector2Rotation(handlePos) + PI / 2.0f;
+                float rotation = Vector2Rotation(handlePos) + PI / 2.0f;
+                if (snapping) {
+                    float scale = 8.0f / (2.0f * PI);
+                    rotation *= scale;
+                    rotation = roundf(rotation);
+                    rotation /= scale;
+                }
+                shape->capsule.rotation = rotation;
                 return true;
             }
             Vector2 handleRotated = Vector2Max(Vector2Rotate(handlePos, -shape->capsule.rotation), 0.0f);
@@ -333,7 +340,7 @@ bool ShapeHandleSet(Shape *shape, Handle handle, Vector2 handlePos) {
     assert(false);
 }
 
-bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos) {
+bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePos, bool snapping) {
     assert(0 <= frame && frame < LIST_COUNT(layer->framesActive));
     if (handle == HANDLE_CENTER) {
         layer->transform.o = Vector2Round(localMousePos);
@@ -350,9 +357,9 @@ bool LayerHandleSet(Layer *layer, int frame, Handle handle, Vector2 localMousePo
                 layer->hitbox.knockbackY = (int) knockback.y;
                 return true;
             }
-            return ShapeHandleSet(&layer->hitbox.shape, handle, handlePos);
+            return ShapeHandleSet(&layer->hitbox.shape, handle, handlePos, snapping);
         case LAYER_SHAPE:
-            return ShapeHandleSet(&layer->shape.shape, handle, handlePos);
+            return ShapeHandleSet(&layer->shape.shape, handle, handlePos, snapping);
         case LAYER_EMPTY:
             return false;
         case LAYER_BEZIER: {
