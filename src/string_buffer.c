@@ -25,6 +25,7 @@ void StringBufferAddChar(StringBuffer *string, char chr) {
     string->raw[string->length] = '\0';
 }
 
+// TODO: use strlen to optimize
 void StringBufferAddString(StringBuffer *string, const char *end){
     char c = end[0];
     int idx = 0;
@@ -47,6 +48,6 @@ void StringBufferClear(StringBuffer *string) {
     string->length = 0;
 }
 
-void StringBufferFree(StringBuffer *string) {
-    free(string->raw);
+char *StringBufferFree(StringBuffer *string) {
+    return string->raw;
 }

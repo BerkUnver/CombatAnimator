@@ -17,6 +17,6 @@ void StringBufferAddChar(StringBuffer *string, char chr);
 void StringBufferAddString(StringBuffer *string, const char *end);
 bool StringBufferRemoveChar(StringBuffer *string);
 void StringBufferClear(StringBuffer *string);
-void StringBufferFree(StringBuffer *string);
+char *StringBufferFree(StringBuffer *string);
 
 #endif

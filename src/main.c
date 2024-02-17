@@ -152,31 +152,32 @@ void RecursiveUpdate(const char *path) {
         // it would be very bad if this didn't work
         if (strcmp(directoryEntry->d_name, ".") == 0 || strcmp(directoryEntry->d_name, "..") == 0) continue;
 
-        StringBuffer fullPath = StringBufferNew();
-        StringBufferAddString(&fullPath, path);
-        StringBufferAddChar(&fullPath, '/');
-        StringBufferAddString(&fullPath, directoryEntry->d_name);
+        StringBuffer fullPathBuffer = StringBufferNew();
+        StringBufferAddString(&fullPathBuffer, path);
+        StringBufferAddChar(&fullPathBuffer, '/');
+        StringBufferAddString(&fullPathBuffer, directoryEntry->d_name);
 
+        char *fullPath = StringBufferFree(&fullPathBuffer); 
         struct stat fileStat;
-        if (stat(fullPath.raw, &fileStat) != 0) {
-            printf("Failed to obtain information about the file at %s. Skipping.\n", fullPath.raw);
+        if (stat(fullPath, &fileStat) != 0) {
+            printf("Failed to obtain information about the file at %s. Skipping.\n", fullPath);
         // no symlink support
         } else if (S_ISDIR(fileStat.st_mode)) {
-            RecursiveUpdate(fullPath.raw);
+            RecursiveUpdate(fullPath);
         } else if (S_ISREG(fileStat.st_mode)) {
             char *dot = strrchr(directoryEntry->d_name, '.');            
             if (dot && strcmp(dot, "."FILE_EXTENSION) == 0) {
                 EditorState state;
-                if (EditorStateDeserialize(&state, fullPath.raw)) {
-                    EditorStateSerialize(&state, fullPath.raw);
+                if (EditorStateDeserialize(&state, fullPath)) {
+                    EditorStateSerialize(&state, fullPath);
                     EditorStateFree(&state);
-                    printf("Successfully updated the combat animation file at %s.\n", fullPath.raw);
+                    printf("Successfully updated the combat animation file at %s.\n", fullPath);
                 } else {
-                    printf("Failed to read a valid combat animation from the file at %s. Skipping.\n", fullPath.raw);
+                    printf("Failed to read a valid combat animation from the file at %s. Skipping.\n", fullPath);
                 }
             }
         }
-        StringBufferFree(&fullPath);
+        free(fullPath);
     }
     closedir(dir);
 }
@@ -203,15 +204,23 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     }
 
-    const char *texturePath = argv[1];
-    
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     // We set the window size later so we can expand to have the right number of rows.
     // We need to init the window first so we can load the texture.
     InitWindow(1, 1, APP_NAME); 
     SetTargetFPS(60);
 
-    Texture2D texture = LoadTexture(texturePath);
+    
+    const char *name = argv[1];
+    
+    StringBuffer textureNameBuffer = StringBufferNew();
+    StringBufferAddString(&textureNameBuffer, name);
+    StringBufferAddString(&textureNameBuffer, ".png");
+
+    char *textureName = StringBufferFree(&textureNameBuffer);
+    Texture2D texture = LoadTexture(textureName);
+    free(textureName);
+
     if (texture.id <= 0) {
         printf("Failed to load texture.\n");
         CloseWindow();
@@ -224,9 +233,13 @@ int main(int argc, char **argv) {
 
     Font fontDefault = GetFontDefault();
     const int fontSize = fontDefault.baseSize;
-
+    
     // load state from file or create new state if load failed
-    char *savePath = ChangeFileExtension(texturePath, FILE_EXTENSION);
+    StringBuffer savePathBuffer = StringBufferNew();
+    StringBufferAddString(&savePathBuffer, name);
+    StringBufferAddString(&savePathBuffer, "."FILE_EXTENSION);
+    char *savePath = StringBufferFree(&savePathBuffer);
+
     EditorState state;
     if (!EditorStateDeserialize(&state, savePath)) state = EditorStateNew(1);
 
@@ -269,55 +282,6 @@ int main(int argc, char **argv) {
     Handle draggingHandle = HANDLE_NONE;
     Vector2 panningSpriteLocalPos = VECTOR2_ZERO;
      
-    /*
-    WindowTheme windowTheme = {
-        .font = &fontDefault,
-        .fontSize = fontSize * 2,
-        .margin = 5,
-
-        .titleColor = PURPLE,
-        .bodyColor = BLUE,
-        .fontColor = (Color) {255, 255, 255, 255}
-    };
-
-    ButtonTheme buttonTheme = {
-        .fontColor = (Color) {255, 255, 255, 255},
-        .fontHoveredColor = (Color) {255, 255, 255, 255},
-        .fontClickedColor = (Color) {235, 235, 235, 255},
-
-        .color = DARKBLUE,
-        .hoveredColor = (Color) {0, 100, 200, 255},
-        .clickedColor = DARKBLUE
-    };
-    
-    bool textFieldEnabled = false;
-    StringBuffer textFieldBuffer = StringBufferNew();
-    StringBufferAddString(&textFieldBuffer, "Text");
-
-    bool numberFieldEnabled = false;
-    int numberFieldNumber = 69420;
-
-    FieldTheme textFieldTheme = {
-        .fieldWidthMin = 40,
-        .fieldMargin = 3,
-
-        .color = buttonTheme.color,
-        .hoveredColor = buttonTheme.hoveredColor,
-        .clickedColor = buttonTheme.clickedColor,
-
-        .fieldColor = (Color) {245, 245, 245, 255},
-        .fieldHoveredColor = (Color) {255, 255, 255, 255},
-        .fieldClickedColor = (Color) {235, 235, 235, 255},
-
-        .fontColor = (Color) {0, 0, 0, 255},
-        .fontHoveredColor = (Color) {0, 0, 0, 255},
-        .fontClickedColor = (Color) {25, 25, 25, 255}
-    };
-
-    WindowManager manager = WindowManagerNew();
-    WindowManagerAddWindow(&manager, "Window 0", &windowTheme, (Vector2) {100, 100}, 0);
-    */
-
     while (!WindowShouldClose()) {
 
         Vector2 mousePos = GetMousePosition();
@@ -718,24 +682,8 @@ int main(int argc, char **argv) {
                 DrawCircle(xPos, layerY, LAYER_ICON_CIRCLE_RADIUS, color);
             }
         }
-
-        /*        
-        WindowManagerStart(&manager);
-        Window *window;
-        while ((window = WindowManagerNext(&manager))) {
-            WindowButton(window, "Test0_0", &buttonTheme);
-            WindowButton(window, "Test0_1", &buttonTheme);
-            WindowFieldText(window, &textFieldBuffer, &textFieldEnabled, &textFieldTheme);
-            WindowFieldNumber(window, &numberFieldNumber, &numberFieldEnabled, &textFieldTheme);
-        }
-        WindowManagerEnd(&manager);
-        */  
         EndDrawing();
     }
-    /*
-    StringBufferFree(&textFieldBuffer); 
-    WindowManagerFree(&manager);
-    */
     EditorHistoryFree(&history);
     EditorStateFree(&state);
     UnloadTexture(texture);

@@ -26,7 +26,7 @@ BUILD_PATH := ../build/${BUILD_NAME}
 
 run:
 	make build
-	(cd "../data" && exec ./${BUILD_PATH} Jab.png)
+	(cd "../data" && exec ./${BUILD_PATH} Jab)
 
 clean:
 	rm ${BUILD_PATH}
