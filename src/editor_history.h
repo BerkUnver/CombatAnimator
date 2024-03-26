@@ -8,8 +8,7 @@
 
 #define HISTORY_BUFFER_SIZE_INCREMENT 1024
 #define FRAME_DURATION_UNIT_PER_SECOND 1000.0f
-#define FRAME_INFO_POS_DEFAULT (Vector2) {.x = 80.0f, .y = 64.0f}
-#define FRAME_INFO_DEFAULT (FrameInfo) {.pos = FRAME_INFO_POS_DEFAULT, .duration = 100, .canCancel = false}
+
 
 // no version: initial version. Treated as 0 internally.
 // 1: changed frameDurations array to frames array. Each frame is a struct containing whether it is cancellable and its duration in ms.

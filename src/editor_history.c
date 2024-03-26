@@ -10,7 +10,13 @@
 
 EditorState EditorStateNew(int frameCount) {
     FrameInfo *frames = malloc(sizeof(FrameInfo) * frameCount);
-    for (int i = 0; i < frameCount; i++) frames[i] = FRAME_INFO_DEFAULT;
+    for (int i = 0; i < frameCount; i++) {
+        frames[i] = (FrameInfo) {
+            .pos = (Vector2) { 0, 0 },
+            .duration = 100,
+            .canCancel = false,
+        };
+    }
 
     return (EditorState) {
         .layerCount = 0,

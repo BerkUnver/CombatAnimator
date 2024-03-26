@@ -415,8 +415,8 @@ int main(int argc, char **argv) {
                     Layer layer;
                     layer.transform = Transform2DIdentity();
                     layer.transform.o = (Vector2) { // spawn at the center of the frame.
-                            .x = (float) texture.width / (float) (state.frameCount * 2),
-                            .y = (float) texture.height / 2.0f
+                            .x = (float) (texture.width / (state.frameCount * 2)),
+                            .y = (float) (texture.height / 2)
                     };
                     
 
